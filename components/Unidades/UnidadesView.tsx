@@ -11,6 +11,7 @@ import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateEventsForMap } from './generateEventsForUnidades';
 import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
+import { useUIStore } from '@/lib/stores/uiStore';
 
 const { Content, Sider } = Layout;
 
@@ -46,6 +47,7 @@ export default function UnidadesView() {
 
   // Use global map store for cross-view visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
+  const floatingFiltersVisible = useUIStore((state) => state.floatingFiltersVisible);
 
   // Get zonas from global store for context layer rendering
   const { zonas, setZonas } = useZonaStore();
@@ -257,7 +259,12 @@ export default function UnidadesView() {
             />
           </Sider>
 
-          <Content className="relative" style={{ flex: 1, height: '100%' }}>
+          <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
+            {floatingFiltersVisible && (
+              <div className="floating-filters-overlay">
+                <AppliedFiltersBar variant="floating" />
+              </div>
+            )}
             <UnidadesMapView
               unidadMarkers={showVehiclesOnMap ? filteredUnidades.map(u => ({
                 id: u.id,

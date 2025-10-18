@@ -49,7 +49,11 @@ const useStableFilters = () => {
   return previousRef.current;
 };
 
-export default function AppliedFiltersBar() {
+interface AppliedFiltersBarProps {
+  variant?: 'header' | 'floating';
+}
+
+export default function AppliedFiltersBar({ variant = 'header' }: AppliedFiltersBarProps) {
   const appliedFilters = useStableFilters();
   const removeFilter = useFilterStore((state) => state.removeFilter);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
@@ -79,69 +83,76 @@ export default function AppliedFiltersBar() {
 
   const handleClearAll = useCallback(() => {
     clearAllFilters();
-    return Promise.resolve();
   }, [clearAllFilters]);
 
-  if (appliedFilters.length === 0) {
+  if (appliedFilters.length === 0 && variant === 'header') {
     return null;
   }
 
+  const rootClassName = variant === 'floating'
+    ? 'applied-filters-bar applied-filters-bar--floating'
+    : 'applied-filters-bar';
+
   return (
-    <div className="applied-filters-bar">
+    <div className={rootClassName}>
       <div className="applied-filters-bar__groups">
-        {(['units', 'events'] as const).map((domain) => {
-          const filters = groupedFilters[domain];
-          if (!filters.length) {
-            return null;
-          }
+        {appliedFilters.length === 0 ? (
+          <span className="applied-filters-bar__empty">No hay filtros activos</span>
+        ) : (
+          (['units', 'events'] as const).map((domain) => {
+            const filters = groupedFilters[domain];
+            if (!filters.length) {
+              return null;
+            }
 
-          return (
-            <div key={domain} className="applied-filters-bar__group">
-              <span className="applied-filters-bar__group-label">{domainLabel[domain]}</span>
-              <div className="applied-filters-bar__group-pills">
-                {filters.map((filter) => {
-                  const IconComponent = domainIcon[filter.domain];
-                  const accent = domainAccent[filter.domain];
-                  const pillLabel = `${filter.label}: ${filter.value}`;
-                  const duplicateNote = filter.count && filter.count > 1 ? ` (+${filter.count - 1})` : '';
+            return (
+              <div key={domain} className="applied-filters-bar__group">
+                <span className="applied-filters-bar__group-label">{domainLabel[domain]}</span>
+                <div className="applied-filters-bar__group-pills">
+                  {filters.map((filter) => {
+                    const IconComponent = domainIcon[filter.domain];
+                    const accent = domainAccent[filter.domain];
+                    const pillLabel = `${filter.label}: ${filter.value}`;
+                    const duplicateNote = filter.count && filter.count > 1 ? ` (+${filter.count - 1})` : '';
 
-                  return (
-                    <Tooltip key={filter.id} title={pillLabel}>
-                      <button
-                        type="button"
-                        className="applied-filter-pill"
-                        data-domain={filter.domain}
-                        onClick={() => removeFilter(filter.id)}
-                        onKeyDown={handleKeyDown(filter.id)}
-                        aria-label={`Remove filter: ${filter.label} ${filter.value}`}
-                        style={{
-                          borderLeftColor: accent,
-                          height: pillHeight
-                        }}
-                      >
-                        <span className="applied-filter-pill__icon" aria-hidden="true">
-                          <IconComponent size={14} weight="bold" color={accent} />
-                        </span>
-                        <span className="applied-filter-pill__label">
-                          {filter.label}:{' '}
-                          <span className="applied-filter-pill__value">{filter.value}</span>
-                          {duplicateNote && (
-                            <span className="applied-filter-pill__duplicate" aria-hidden="true">
-                              {duplicateNote}
-                            </span>
-                          )}
-                        </span>
-                        <span className="applied-filter-pill__close" aria-hidden="true">
-                          <X size={14} weight="bold" />
-                        </span>
-                      </button>
-                    </Tooltip>
-                  );
-                })}
+                    return (
+                      <Tooltip key={filter.id} title={pillLabel}>
+                        <button
+                          type="button"
+                          className="applied-filter-pill"
+                          data-domain={filter.domain}
+                          onClick={() => removeFilter(filter.id)}
+                          onKeyDown={handleKeyDown(filter.id)}
+                          aria-label={`Remove filter: ${filter.label} ${filter.value}`}
+                          style={{
+                            borderLeftColor: accent,
+                            height: pillHeight
+                          }}
+                        >
+                          <span className="applied-filter-pill__icon" aria-hidden="true">
+                            <IconComponent size={14} weight="bold" color={accent} />
+                          </span>
+                          <span className="applied-filter-pill__label">
+                            {filter.label}:{' '}
+                            <span className="applied-filter-pill__value">{filter.value}</span>
+                            {duplicateNote && (
+                              <span className="applied-filter-pill__duplicate" aria-hidden="true">
+                                {duplicateNote}
+                              </span>
+                            )}
+                          </span>
+                          <span className="applied-filter-pill__close" aria-hidden="true">
+                            <X size={14} weight="bold" />
+                          </span>
+                        </button>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       <Button
@@ -150,7 +161,7 @@ export default function AppliedFiltersBar() {
         onClick={handleClearAll}
         className="applied-filters-bar__clear"
       >
-        Limpiar filtros
+        Limpiar
       </Button>
     </div>
   );

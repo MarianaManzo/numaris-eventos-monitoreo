@@ -13,6 +13,7 @@ import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import { useUIStore } from '@/lib/stores/uiStore';
 
 const { Content, Sider } = Layout;
 
@@ -61,6 +62,7 @@ export default function EventosView() {
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const filterByMapVehicles = useFilterStore((state) => state.events.filterByMapVehicles);
   const isFocusModeActive = useFilterStore((state) => state.events.focusMode);
+  const floatingFiltersVisible = useUIStore((state) => state.floatingFiltersVisible);
 
   // Get actual vehicle markers from the shared Unidades generation
   const vehicleMarkers = useMemo(() => {
@@ -341,7 +343,12 @@ export default function EventosView() {
               />
             </Sider>
 
-            <Content className="relative" style={{ flex: 1, height: '100%' }}>
+            <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
+              {floatingFiltersVisible && (
+                <div className="floating-filters-overlay">
+                  <AppliedFiltersBar variant="floating" />
+                </div>
+              )}
               <EventosMapView
                 eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
                   id: e.id,

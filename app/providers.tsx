@@ -112,7 +112,11 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ConfigProvider theme={theme} locale={esES}>
+    <ConfigProvider
+      theme={theme}
+      locale={esES}
+      wave={{ disabled: true }}
+    >
       <AntApp>
         <FilterUrlSync />
         {children}

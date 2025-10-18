@@ -151,6 +151,18 @@ body {
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.05);
 }
 
+.applied-filters-bar--floating {
+  position: static;
+  height: auto;
+  max-height: none;
+  padding: 10px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 6px 30px rgba(15, 23, 42, 0.12);
+  background-color: #ffffffee;
+  backdrop-filter: blur(6px);
+}
+
 .applied-filters-bar__groups {
   display: flex;
   align-items: center;
@@ -191,6 +203,34 @@ body {
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
+}
+
+.floating-filters-overlay {
+  position: absolute;
+  top: 16px;
+  left: 72px;
+  right: 72px;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.floating-filters-overlay > .applied-filters-bar--floating {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 840px;
+  margin: 0 auto;
+}
+
+.applied-filters-bar__empty {
+  font-size: 13px;
+  color: #6b7280;
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  padding: 6px 14px;
+  border: 1px dashed #cbd5e1;
+  white-space: nowrap;
 }
 
 .applied-filter-pill {
