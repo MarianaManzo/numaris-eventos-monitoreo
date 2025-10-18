@@ -11,14 +11,11 @@ interface EventFilterModalProps {
   onEstadoChange: (estado: 'todos' | 'abiertos' | 'cerrados') => void;
   selectedSeveridades: EventSeverity[];
   onSeveridadesChange: (severidades: EventSeverity[]) => void;
-  selectedResponsables: string[];
-  onResponsablesChange: (responsables: string[]) => void;
   selectedEtiquetas: string[];
   onEtiquetasChange: (etiquetas: string[]) => void;
   selectedUnidades?: string[];
   onUnidadesChange?: (unidades: string[]) => void;
   // Available options
-  availableResponsables: string[];
   availableEtiquetas: string[];
   availableUnidades?: string[];
   // Include Unidades section (for main Eventos view)
@@ -42,13 +39,10 @@ export default function EventFilterModal({
   onEstadoChange,
   selectedSeveridades,
   onSeveridadesChange,
-  selectedResponsables,
-  onResponsablesChange,
   selectedEtiquetas,
   onEtiquetasChange,
   selectedUnidades = [],
   onUnidadesChange,
-  availableResponsables,
   availableEtiquetas,
   availableUnidades = [],
   showUnidadesFilter = false,
@@ -270,28 +264,6 @@ export default function EventFilterModal({
             );
           })}
         </div>
-      </div>
-
-      {/* Asignado a - Dropdown */}
-      <div>
-        <div style={{ marginBottom: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-            <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
-          </svg>
-          Asignado a
-        </div>
-        <Select
-          mode="multiple"
-          placeholder="Seleccionar responsables"
-          value={selectedResponsables}
-          onChange={onResponsablesChange}
-          style={{ width: '100%' }}
-          options={availableResponsables.map(r => ({
-            label: r,
-            value: r
-          }))}
-          maxTagCount="responsive"
-        />
       </div>
 
       {/* Etiquetas - Dropdown */}
