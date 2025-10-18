@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Button, Typography, Popover, Input, Switch, Badge, Radio } from 'antd';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Button, Typography, Popover, Input, Badge, Radio } from 'antd';
 import { Funnel, MagnifyingGlass, SortAscending } from 'phosphor-react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
@@ -10,8 +10,8 @@ import type { EventSeverity, EventWithLocation } from '@/lib/events/types';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
 import EventFilterModalContent from '@/components/Events/EventFilterModal';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
-import { getOperationalStatusFromId, type OperationalStatus } from '@/lib/events/eventStatus';
-import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
+import { useFilterStore } from '@/lib/stores/filterStore';
 
 const { Text } = Typography;
 
@@ -35,12 +35,7 @@ interface EventosSidebarProps {
   onEventSelect: (eventId: string | null) => void;
   onFiltersChange: (filteredEvents: Event[]) => void;
   selectedEventId: string | null;
-  showEventsOnMap: boolean;
-  onToggleEventsVisibility: (visible: boolean) => void;
-  filterByMapVehicles: boolean;
-  onToggleFilterByMapVehicles: (enabled: boolean) => void;
   visibleVehicleIds: string[];
-  isFocusModeActive?: boolean;
   onToggleFocusMode?: () => void;
   vehiclesWithEvents?: string[];
   totalVehiclesCount?: number;
@@ -135,35 +130,58 @@ export default function EventosSidebar({
   onEventSelect,
   onFiltersChange,
   selectedEventId,
-  showEventsOnMap,
-  onToggleEventsVisibility,
-  filterByMapVehicles,
-  onToggleFilterByMapVehicles,
   visibleVehicleIds,
-  isFocusModeActive = false,
   onToggleFocusMode,
   vehiclesWithEvents = [],
   totalVehiclesCount = 0
 }: EventosSidebarProps) {
   const router = useRouter();
 
-  // Global map store for context layer visibility
-  const { showVehiclesOnMap, setShowVehiclesOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
-
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
-  const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
-  const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('todos');
-  const [selectedResponsables, setSelectedResponsables] = useState<string[]>([]);
-  const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'vehicle-asc' | 'event-asc'>('date-desc');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [columnWidths] = useState({ evento: 200, fecha: 150, severidad: 120, etiquetas: 130, responsable: 180, unidad: 100 });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  const eventsFilters = useFilterStore((state) => state.events);
+  const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
+
+  const {
+    searchText,
+    etiquetas: selectedEtiquetas,
+    severidades: selectedSeveridades,
+    estado: selectedEstado,
+    responsables: selectedResponsables,
+    unidades: selectedUnidades,
+    filterByMapVehicles,
+    focusMode: isFocusModeActive
+  } = eventsFilters;
+
+  const handleEstadoChange = useCallback((estado: 'todos' | 'abiertos' | 'cerrados') => {
+    setEventsFilters({ estado });
+  }, [setEventsFilters]);
+
+  const handleSeveridadesChange = useCallback((values: EventSeverity[]) => {
+    setEventsFilters({ severidades: values });
+  }, [setEventsFilters]);
+
+  const handleResponsablesChange = useCallback((values: string[]) => {
+    setEventsFilters({ responsables: values });
+  }, [setEventsFilters]);
+
+  const handleEtiquetasChange = useCallback((values: string[]) => {
+    setEventsFilters({ etiquetas: values });
+  }, [setEventsFilters]);
+
+  const handleUnidadesChange = useCallback((values: string[]) => {
+    setEventsFilters({ unidades: values });
+  }, [setEventsFilters]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setEventsFilters({ searchText: value });
+  }, [setEventsFilters]);
 
   // Get unique tags and emails from events
   const availableEtiquetas = useMemo(() => {
@@ -380,7 +398,7 @@ export default function EventosSidebar({
                 suffix={
                   searchText ? (
                     <span
-                      onClick={() => setSearchText('')}
+                      onClick={() => handleSearchChange('')}
                       style={{
                         cursor: 'pointer',
                         display: 'flex',
@@ -396,7 +414,7 @@ export default function EventosSidebar({
                   ) : null
                 }
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 onBlur={() => {
                   if (!searchText) {
                     setIsSearchExpanded(false);
@@ -421,15 +439,15 @@ export default function EventosSidebar({
               content={
                 <EventFilterModalContent
                   selectedEstado={selectedEstado}
-                  onEstadoChange={setSelectedEstado}
+                  onEstadoChange={handleEstadoChange}
                   selectedSeveridades={selectedSeveridades}
-                  onSeveridadesChange={setSelectedSeveridades}
+                  onSeveridadesChange={handleSeveridadesChange}
                   selectedResponsables={selectedResponsables}
-                  onResponsablesChange={setSelectedResponsables}
+                  onResponsablesChange={handleResponsablesChange}
                   selectedEtiquetas={selectedEtiquetas}
-                  onEtiquetasChange={setSelectedEtiquetas}
+                  onEtiquetasChange={handleEtiquetasChange}
                   selectedUnidades={selectedUnidades}
-                  onUnidadesChange={setSelectedUnidades}
+                  onUnidadesChange={handleUnidadesChange}
                   availableResponsables={availableResponsables}
                   availableEtiquetas={availableEtiquetas}
                   availableUnidades={availableUnidades}

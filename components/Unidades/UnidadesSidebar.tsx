@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Button, Typography, Popover, Input, Select, Switch } from 'antd';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Button, Typography, Popover, Input, Select } from 'antd';
 import { Funnel, MagnifyingGlass } from 'phosphor-react';
-import dayjs from 'dayjs';
 import Link from 'next/link';
 import { type Unidad, generateUnidades } from '@/lib/unidades/generateUnidades';
-import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { useFilterStore } from '@/lib/stores/filterStore';
 
 const { Text } = Typography;
+
+const DEFAULT_UNIT_STATUSES = ['Activo', 'Inactivo', 'En ruta', 'Detenido'];
 
 interface UnidadesSidebarProps {
   unidades: Unidad[];
@@ -17,8 +18,6 @@ interface UnidadesSidebarProps {
   onUnidadSelect: (unidadId: string | null) => void;
   onFiltersChange: (filteredUnidades: Unidad[]) => void;
   selectedUnidadId: string | null;
-  showUnidadesOnMap: boolean;
-  onToggleUnidadesVisibility: (visible: boolean) => void;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -42,23 +41,44 @@ export default function UnidadesSidebar({
   onUnidadesGenerated,
   onUnidadSelect,
   onFiltersChange,
-  selectedUnidadId,
-  showUnidadesOnMap,
-  onToggleUnidadesVisibility
+  selectedUnidadId
 }: UnidadesSidebarProps) {
-
-  // Global map store for context layer visibility
-  const { showEventsOnMap, setShowEventsOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
-  const [selectedEstados, setSelectedEstados] = useState<string[]>(['Activo', 'Inactivo', 'En ruta', 'Detenido']);
-  const [selectedResponsables, setSelectedResponsables] = useState<string[]>([]);
   const [columnWidths] = useState({ nombre: 150, estado: 130, etiquetas: 130, responsable: 180 });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  const unitsFilters = useFilterStore((state) => state.units);
+  const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+
+  const {
+    searchText,
+    tags: selectedEtiquetas,
+    status: selectedEstados,
+    responsables: selectedResponsables
+  } = unitsFilters;
+
+  const handleEtiquetasChange = useCallback((values: string[]) => {
+    setUnitsFilters({ tags: values });
+  }, [setUnitsFilters]);
+
+  const handleResponsablesChange = useCallback((values: string[]) => {
+    setUnitsFilters({ responsables: values });
+  }, [setUnitsFilters]);
+
+  const handleEstadoToggle = useCallback((estado: string) => {
+    const isSelected = selectedEstados.includes(estado);
+    const next = isSelected
+      ? selectedEstados.filter((item) => item !== estado)
+      : [...selectedEstados, estado];
+    setUnitsFilters({ status: next.length > 0 ? next : [...DEFAULT_UNIT_STATUSES] });
+  }, [selectedEstados, setUnitsFilters]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setUnitsFilters({ searchText: value });
+  }, [setUnitsFilters]);
 
   // Get unique tags and emails from unidades
   const availableEtiquetas = useMemo(() => {
@@ -156,7 +176,7 @@ export default function UnidadesSidebar({
           mode="multiple"
           placeholder="Seleccionar etiquetas"
           value={selectedEtiquetas}
-          onChange={setSelectedEtiquetas}
+          onChange={handleEtiquetasChange}
           style={{ width: '100%' }}
           options={(availableEtiquetas || []).map(tag => ({ label: tag, value: tag }))}
           maxTagCount="responsive"
@@ -182,13 +202,7 @@ export default function UnidadesSidebar({
             return (
               <div
                 key={estado}
-                onClick={() => {
-                  if (isSelected) {
-                    setSelectedEstados(selectedEstados.filter(e => e !== estado));
-                  } else {
-                    setSelectedEstados([...selectedEstados, estado]);
-                  }
-                }}
+                onClick={() => handleEstadoToggle(estado)}
                 style={{
                   padding: '6px 12px',
                   borderRadius: '20px',
@@ -241,7 +255,7 @@ export default function UnidadesSidebar({
           mode="multiple"
           placeholder="Seleccionar responsables"
           value={selectedResponsables}
-          onChange={setSelectedResponsables}
+          onChange={handleResponsablesChange}
           style={{ width: '100%' }}
           options={(availableResponsables || []).map(email => ({ label: email, value: email }))}
           maxTagCount="responsive"
@@ -253,9 +267,11 @@ export default function UnidadesSidebar({
         <Button
           block
           onClick={() => {
-            setSelectedEtiquetas([]);
-            setSelectedEstados([]);
-            setSelectedResponsables([]);
+            setUnitsFilters({
+              tags: [],
+              status: [...DEFAULT_UNIT_STATUSES],
+              responsables: []
+            });
           }}
           style={{
             display: 'flex',
@@ -297,7 +313,7 @@ export default function UnidadesSidebar({
               suffix={
                 searchText ? (
                   <span
-                    onClick={() => setSearchText('')}
+                    onClick={() => handleSearchChange('')}
                     style={{
                       cursor: 'pointer',
                       display: 'flex',
@@ -313,7 +329,7 @@ export default function UnidadesSidebar({
                 ) : null
               }
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               onBlur={() => {
                 if (!searchText) {
                   setIsSearchExpanded(false);

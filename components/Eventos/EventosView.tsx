@@ -11,6 +11,8 @@ import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
+import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
+import { useFilterStore } from '@/lib/stores/filterStore';
 
 const { Content, Sider } = Layout;
 
@@ -49,15 +51,16 @@ export default function EventosView() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Use global map store for cross-view visibility
-  const { showEventsOnMap, setShowEventsOnMap, showVehiclesOnMap } = useGlobalMapStore();
+  const { showEventsOnMap, setShowEventsOnMap, showVehiclesOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
 
   // Get zonas from global store for context layer rendering
   const { zonas, setZonas } = useZonaStore();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [filterByMapVehicles, setFilterByMapVehicles] = useState(false);
   const [visibleVehicleIds, setVisibleVehicleIds] = useState<string[]>([]);
-  const [isFocusModeActive, setIsFocusModeActive] = useState(false);
+  const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
+  const filterByMapVehicles = useFilterStore((state) => state.events.filterByMapVehicles);
+  const isFocusModeActive = useFilterStore((state) => state.events.focusMode);
 
   // Get actual vehicle markers from the shared Unidades generation
   const vehicleMarkers = useMemo(() => {
@@ -151,9 +154,13 @@ export default function EventosView() {
     setVisibleVehicleIds(visibleIds);
   }, []);
 
+  const handleToggleFilterByMapVehicles = useCallback((value: boolean) => {
+    setEventsFilters({ filterByMapVehicles: value });
+  }, [setEventsFilters]);
+
   const handleToggleFocusMode = useCallback(() => {
-    setIsFocusModeActive(prev => !prev);
-  }, []);
+    setEventsFilters({ focusMode: !isFocusModeActive });
+  }, [isFocusModeActive, setEventsFilters]);
 
   // Calculate vehicles with events for focus mode
   const vehiclesWithEvents = useMemo(() => {
@@ -194,7 +201,9 @@ export default function EventosView() {
       <Layout className="h-screen">
         <MainNavTopMenu selectedMenuItem="monitoreo" />
 
-        <Layout style={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+        <AppliedFiltersBar />
+        <Layout style={{ flex: 1, position: 'relative' }}>
           {/* Collapsible Menu - Overlay */}
           <div style={{
             position: 'absolute',
@@ -252,6 +261,7 @@ export default function EventosView() {
             </Content>
           </Layout>
         </Layout>
+      </div>
       </Layout>
     );
   }
@@ -260,101 +270,111 @@ export default function EventosView() {
     <Layout className="h-screen">
       <MainNavTopMenu selectedMenuItem="monitoreo" />
 
-      <Layout style={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
-        {/* Collapsible Menu - Overlay */}
-        <div style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: menuCollapsed ? '48px' : '240px',
-          transition: 'width 0.3s ease',
-          zIndex: 100,
-        }}>
-          <CollapsibleMenu
-            onSectionChange={setCurrentSection}
-            currentSection={currentSection}
-            isCollapsed={menuCollapsed}
-            onCollapse={setMenuCollapsed}
-          />
-        </div>
-
-        {/* Main Layout with Sidebar and Content */}
-        <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
-          <Sider
-            width={sidebarWidth}
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+        <AppliedFiltersBar />
+        <Layout style={{ flex: 1, position: 'relative' }}>
+          {/* Collapsible Menu - Overlay */}
+          <div
             style={{
-              position: 'relative',
-              background: '#fff',
-              borderRight: '1px solid #f0f0f0',
-              boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-              height: '100%',
-              overflow: 'hidden'
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: menuCollapsed ? '48px' : '240px',
+              transition: 'width 0.3s ease',
+              zIndex: 100,
             }}
           >
-            <EventosSidebar
-              events={events}
-              filteredEvents={filteredEvents}
-              onEventsGenerated={handleEventsGenerated}
-              onEventSelect={handleEventSelect}
-              onFiltersChange={handleFiltersChange}
-              selectedEventId={selectedEventId}
-              showEventsOnMap={showEventsOnMap}
-              onToggleEventsVisibility={setShowEventsOnMap}
-              filterByMapVehicles={filterByMapVehicles}
-              onToggleFilterByMapVehicles={setFilterByMapVehicles}
-              visibleVehicleIds={visibleVehicleIds}
-              isFocusModeActive={isFocusModeActive}
-              onToggleFocusMode={handleToggleFocusMode}
-              vehiclesWithEvents={vehiclesWithEvents}
-              totalVehiclesCount={vehicleMarkers.length}
+            <CollapsibleMenu
+              onSectionChange={setCurrentSection}
+              currentSection={currentSection}
+              isCollapsed={menuCollapsed}
+              onCollapse={setMenuCollapsed}
             />
-            <div
-              onMouseDown={handleSidebarResize}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '8px',
-                cursor: 'col-resize',
-                backgroundColor: 'transparent',
-                zIndex: 1000
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            />
-          </Sider>
+          </div>
 
-          <Content className="relative" style={{ flex: 1, height: '100%' }}>
-            <EventosMapView
-              eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
-                id: e.id,
-                position: e.position,
-                evento: e.evento,
-                fechaCreacion: e.fechaCreacion,
-                severidad: e.severidad,
-                etiqueta: e.etiqueta,
-                responsable: e.responsable,
-                vehicleId: e.vehicleId
-              })) : []}
-              selectedEventId={selectedEventId}
-              selectedEventPosition={selectedEventPosition || undefined}
-              onEventSelect={handleEventSelect}
-              vehicleMarkers={vehicleMarkers}
-              showVehicleMarkers={showVehiclesOnMap}
-              onVisibleVehiclesChange={handleVisibleVehiclesChange}
-              filterByMapVehicles={filterByMapVehicles}
-              onToggleFilterByMapVehicles={setFilterByMapVehicles}
-              visibleVehicleIds={visibleVehicleIds}
-              isFocusModeActive={isFocusModeActive}
-              onToggleFocusMode={handleToggleFocusMode}
-              vehiclesWithEvents={vehiclesWithEvents}
-              zonas={zonas}
-            />
-          </Content>
+          {/* Main Layout with Sidebar and Content */}
+          <Layout
+            style={{
+              marginLeft: menuCollapsed ? '48px' : '240px',
+              transition: 'margin-left 0.3s ease',
+              height: '100%'
+            }}
+          >
+            <Sider
+              width={sidebarWidth}
+              style={{
+                position: 'relative',
+                background: '#fff',
+                borderRight: '1px solid #f0f0f0',
+                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                height: '100%',
+                overflow: 'hidden'
+              }}
+            >
+              <EventosSidebar
+                events={events}
+                filteredEvents={filteredEvents}
+                onEventsGenerated={handleEventsGenerated}
+                onEventSelect={handleEventSelect}
+                onFiltersChange={handleFiltersChange}
+                selectedEventId={selectedEventId}
+                visibleVehicleIds={visibleVehicleIds}
+                onToggleFocusMode={handleToggleFocusMode}
+                vehiclesWithEvents={vehiclesWithEvents}
+                totalVehiclesCount={vehicleMarkers.length}
+              />
+              <div
+                onMouseDown={handleSidebarResize}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '8px',
+                  cursor: 'col-resize',
+                  backgroundColor: 'transparent',
+                  zIndex: 1000
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#cbd5e1')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              />
+            </Sider>
+
+            <Content className="relative" style={{ flex: 1, height: '100%' }}>
+              <EventosMapView
+                eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
+                  id: e.id,
+                  position: e.position,
+                  evento: e.evento,
+                  fechaCreacion: e.fechaCreacion,
+                  severidad: e.severidad,
+                  etiqueta: e.etiqueta,
+                  responsable: e.responsable,
+                  vehicleId: e.vehicleId
+                })) : []}
+                selectedEventId={selectedEventId}
+                selectedEventPosition={selectedEventPosition || undefined}
+                onEventSelect={handleEventSelect}
+                vehicleMarkers={vehicleMarkers}
+                showVehicleMarkers={showVehiclesOnMap}
+                onVisibleVehiclesChange={handleVisibleVehiclesChange}
+                filterByMapVehicles={filterByMapVehicles}
+                onToggleFilterByMapVehicles={handleToggleFilterByMapVehicles}
+                visibleVehicleIds={visibleVehicleIds}
+                isFocusModeActive={isFocusModeActive}
+                onToggleFocusMode={handleToggleFocusMode}
+                vehiclesWithEvents={vehiclesWithEvents}
+                zonas={zonas}
+                showZonasOnMap={showZonasOnMap}
+                onToggleZonasVisibility={setShowZonasOnMap}
+                showEventsOnMap={showEventsOnMap}
+                onToggleEventsVisibility={setShowEventsOnMap}
+              />
+            </Content>
+          </Layout>
         </Layout>
-      </Layout>
+      </div>
     </Layout>
   );
 }

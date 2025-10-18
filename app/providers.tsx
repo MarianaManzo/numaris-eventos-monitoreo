@@ -9,6 +9,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import 'antd/dist/reset.css';
+import FilterUrlSync from '@/components/Filters/FilterUrlSync';
 
 dayjs.extend(customParseFormat);
 dayjs.locale('es');
@@ -113,6 +114,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ConfigProvider theme={theme} locale={esES}>
       <AntApp>
+        <FilterUrlSync />
         {children}
       </AntApp>
     </ConfigProvider>

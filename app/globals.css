@@ -134,3 +134,124 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+.applied-filters-bar {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.05);
+}
+
+.applied-filters-bar__groups {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+@media (min-width: 768px) {
+  .applied-filters-bar__groups {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+}
+
+.applied-filters-bar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.applied-filters-bar__group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.applied-filters-bar__group-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.applied-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  border-left: 4px solid transparent;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.applied-filter-pill:hover {
+  background-color: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.applied-filter-pill:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.applied-filter-pill__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.applied-filter-pill__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.applied-filter-pill__value {
+  font-weight: 600;
+  color: #111827;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.applied-filter-pill__duplicate {
+  margin-left: 4px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.applied-filter-pill__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.applied-filters-bar__clear {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #2563eb;
+}

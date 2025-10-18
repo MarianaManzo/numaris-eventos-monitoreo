@@ -10,6 +10,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateEventsForMap } from './generateEventsForUnidades';
+import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
 
 const { Content, Sider } = Layout;
 
@@ -44,7 +45,7 @@ export default function UnidadesView() {
   const [selectedUnidadId, setSelectedUnidadId] = useState<string | null>(null);
 
   // Use global map store for cross-view visibility
-  const { showVehiclesOnMap, setShowVehiclesOnMap } = useGlobalMapStore();
+  const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
 
   // Get zonas from global store for context layer rendering
   const { zonas, setZonas } = useZonaStore();
@@ -128,7 +129,78 @@ export default function UnidadesView() {
       <Layout className="h-screen">
         <MainNavTopMenu selectedMenuItem="monitoreo" />
 
-        <Layout style={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+          <AppliedFiltersBar />
+          <Layout style={{ flex: 1, position: 'relative' }}>
+            {/* Collapsible Menu - Overlay */}
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: menuCollapsed ? '48px' : '240px',
+              transition: 'width 0.3s ease',
+              zIndex: 100,
+            }}>
+              <CollapsibleMenu
+                onSectionChange={setCurrentSection}
+                currentSection={currentSection}
+                isCollapsed={menuCollapsed}
+                onCollapse={setMenuCollapsed}
+              />
+            </div>
+
+            {/* Main Layout with Sidebar and Content */}
+            <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
+              <Sider
+                width={sidebarWidth}
+                style={{
+                  position: 'relative',
+                  background: '#fff',
+                  borderRight: '1px solid #f0f0f0',
+                  boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                  height: '100%',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Skeleton Loading for Sidebar */}
+                <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Skeleton.Input active style={{ width: '100%', height: 32 }} />
+                </div>
+
+                <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Skeleton.Input active style={{ width: 120, height: 20 }} />
+                  <div style={{ marginLeft: 'auto', width: '30px' }}>
+                    <Skeleton.Button active style={{ width: 30, height: 22 }} />
+                  </div>
+                </div>
+
+                <div style={{ padding: '16px 24px' }}>
+                  <Skeleton active paragraph={{ rows: 8 }} />
+                </div>
+              </Sider>
+
+              <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
+                    <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
+                  </Skeleton.Node>
+                </div>
+              </Content>
+            </Layout>
+          </Layout>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout className="h-screen">
+      <MainNavTopMenu selectedMenuItem="monitoreo" />
+
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+        <AppliedFiltersBar />
+        <Layout style={{ flex: 1, position: 'relative' }}>
           {/* Collapsible Menu - Overlay */}
           <div style={{
             position: 'absolute',
@@ -147,74 +219,8 @@ export default function UnidadesView() {
             />
           </div>
 
-          {/* Main Layout with Sidebar and Content */}
-          <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
-            <Sider
-              width={sidebarWidth}
-              style={{
-                position: 'relative',
-                background: '#fff',
-                borderRight: '1px solid #f0f0f0',
-                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-                height: '100%',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Skeleton Loading for Sidebar */}
-              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
-                <Skeleton.Input active style={{ width: '100%', height: 32 }} />
-              </div>
-
-              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <Skeleton.Input active style={{ width: 120, height: 20 }} />
-                <div style={{ marginLeft: 'auto', width: '30px' }}>
-                  <Skeleton.Button active style={{ width: 30, height: 22 }} />
-                </div>
-              </div>
-
-              <div style={{ padding: '16px 24px' }}>
-                <Skeleton active paragraph={{ rows: 8 }} />
-              </div>
-            </Sider>
-
-            <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
-                  <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
-                </Skeleton.Node>
-              </div>
-            </Content>
-          </Layout>
-        </Layout>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout className="h-screen">
-      <MainNavTopMenu selectedMenuItem="monitoreo" />
-
-      <Layout style={{ height: 'calc(100vh - 64px)', position: 'relative' }}>
-        {/* Collapsible Menu - Overlay */}
-        <div style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: menuCollapsed ? '48px' : '240px',
-          transition: 'width 0.3s ease',
-          zIndex: 100,
-        }}>
-          <CollapsibleMenu
-            onSectionChange={setCurrentSection}
-            currentSection={currentSection}
-            isCollapsed={menuCollapsed}
-            onCollapse={setMenuCollapsed}
-          />
-        </div>
-
         {/* Main Layout with Sidebar and Content */}
-        <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
+          <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
           <Sider
             width={sidebarWidth}
             style={{
@@ -233,8 +239,6 @@ export default function UnidadesView() {
               onUnidadSelect={handleUnidadSelect}
               onFiltersChange={handleFiltersChange}
               selectedUnidadId={selectedUnidadId}
-              showUnidadesOnMap={showVehiclesOnMap}
-              onToggleUnidadesVisibility={setShowVehiclesOnMap}
             />
             <div
               onMouseDown={handleSidebarResize}
@@ -260,18 +264,26 @@ export default function UnidadesView() {
                 position: u.position,
                 nombre: u.nombre,
                 estado: u.estado,
-                heading: u.heading,
-                lastReportMinutes: u.lastReportMinutes
+                etiqueta: u.etiqueta,
+                responsable: u.responsable
               })) : []}
-              eventMarkers={eventMarkers}
               selectedUnidadId={selectedUnidadId}
               selectedUnidadPosition={selectedUnidadPosition || undefined}
               onUnidadSelect={handleUnidadSelect}
+              showVehicleMarkers={showVehiclesOnMap}
+              eventMarkers={eventMarkers}
               zonas={zonas}
+              showZonasOnMap={showZonasOnMap}
+              onToggleZonasVisibility={setShowZonasOnMap}
+              showEventMarkers={showEventsOnMap}
+              onToggleEventsVisibility={setShowEventsOnMap}
+              showVehiclesOnMap={showVehiclesOnMap}
+              onToggleVehiclesVisibility={setShowVehiclesOnMap}
             />
           </Content>
+          </Layout>
         </Layout>
-      </Layout>
+      </div>
     </Layout>
   );
 }
