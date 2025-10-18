@@ -144,6 +144,8 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 16px;
+  height: 72px;
+  max-height: 72px;
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.05);
@@ -151,28 +153,29 @@ body {
 
 .applied-filters-bar__groups {
   display: flex;
-  align-items: flex-start;
-  gap: 24px;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: nowrap;
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
+  padding-bottom: 0;
 }
 
 @media (min-width: 768px) {
   .applied-filters-bar__groups {
-    flex-wrap: wrap;
-    overflow-x: visible;
+    overflow-x: auto;
     padding-bottom: 0;
   }
 }
 
 .applied-filters-bar__group {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   min-width: max-content;
+  white-space: nowrap;
 }
 
 .applied-filters-bar__group-label {
@@ -185,9 +188,9 @@ body {
 
 .applied-filters-bar__group-pills {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .applied-filter-pill {
