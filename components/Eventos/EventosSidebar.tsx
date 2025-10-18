@@ -153,7 +153,6 @@ export default function EventosSidebar({
     etiquetas: selectedEtiquetas,
     severidades: selectedSeveridades,
     estado: selectedEstado,
-    responsables: selectedResponsables,
     unidades: selectedUnidades,
     filterByMapVehicles,
     focusMode: isFocusModeActive
@@ -165,10 +164,6 @@ export default function EventosSidebar({
 
   const handleSeveridadesChange = useCallback((values: EventSeverity[]) => {
     setEventsFilters({ severidades: values });
-  }, [setEventsFilters]);
-
-  const handleResponsablesChange = useCallback((values: string[]) => {
-    setEventsFilters({ responsables: values });
   }, [setEventsFilters]);
 
   const handleEtiquetasChange = useCallback((values: string[]) => {
@@ -189,11 +184,6 @@ export default function EventosSidebar({
     return unique.sort();
   }, [events]);
 
-  const availableResponsables = useMemo(() => {
-    const unique = Array.from(new Set(events.map(e => e.responsable).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [events]);
-
   const availableUnidades = useMemo(() => {
     const unique = Array.from(new Set(events.map(e => e.vehicleId).filter((v): v is string => Boolean(v))));
     return unique.sort();
@@ -207,14 +197,13 @@ export default function EventosSidebar({
     if (selectedSeveridades.length !== 4) count++;
     // Count estado filter only if it's not the default ('todos')
     if (selectedEstado !== 'todos') count++;
-    if (selectedResponsables.length > 0) count++;
     if (selectedUnidades.length > 0) count++;
     // Count map vehicle filter if enabled
     if (filterByMapVehicles) count++;
     // Count focus mode if active
     if (isFocusModeActive) count++;
     return count;
-  }, [selectedEtiquetas, selectedSeveridades, selectedEstado, selectedResponsables, selectedUnidades, filterByMapVehicles, isFocusModeActive]);
+  }, [selectedEtiquetas, selectedSeveridades, selectedEstado, selectedUnidades, filterByMapVehicles, isFocusModeActive]);
 
   // Generate events once on mount
   useEffect(() => {
@@ -267,13 +256,6 @@ export default function EventosSidebar({
     if (selectedSeveridades.length > 0) {
       filtered = filtered.filter(e =>
         selectedSeveridades.includes(e.severidad)
-      );
-    }
-
-    // Filter by responsables
-    if (selectedResponsables.length > 0) {
-      filtered = filtered.filter(e =>
-        e.responsable && selectedResponsables.includes(e.responsable)
       );
     }
 
@@ -437,20 +419,17 @@ export default function EventosSidebar({
             )}
             <Popover
               content={
-                <EventFilterModalContent
-                  selectedEstado={selectedEstado}
-                  onEstadoChange={handleEstadoChange}
-                  selectedSeveridades={selectedSeveridades}
-                  onSeveridadesChange={handleSeveridadesChange}
-                  selectedResponsables={selectedResponsables}
-                  onResponsablesChange={handleResponsablesChange}
-                  selectedEtiquetas={selectedEtiquetas}
-                  onEtiquetasChange={handleEtiquetasChange}
-                  selectedUnidades={selectedUnidades}
-                  onUnidadesChange={handleUnidadesChange}
-                  availableResponsables={availableResponsables}
-                  availableEtiquetas={availableEtiquetas}
-                  availableUnidades={availableUnidades}
+    <EventFilterModalContent
+      selectedEstado={selectedEstado}
+      onEstadoChange={handleEstadoChange}
+      selectedSeveridades={selectedSeveridades}
+      onSeveridadesChange={handleSeveridadesChange}
+      selectedEtiquetas={selectedEtiquetas}
+      onEtiquetasChange={handleEtiquetasChange}
+      selectedUnidades={selectedUnidades}
+      onUnidadesChange={handleUnidadesChange}
+      availableEtiquetas={availableEtiquetas}
+      availableUnidades={availableUnidades}
                   showUnidadesFilter={true}
                   isFocusModeActive={isFocusModeActive}
                   onToggleFocusMode={onToggleFocusMode}

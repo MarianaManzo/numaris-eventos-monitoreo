@@ -23,7 +23,6 @@ interface DateRange {
 
 type EventMultiValueKey =
   | 'severidades'
-  | 'responsables'
   | 'etiquetas'
   | 'unidades'
   | 'assignedUsers'
@@ -40,7 +39,6 @@ type UnitMultiValueKey =
 export interface EventsFilters {
   estado: 'todos' | 'abiertos' | 'cerrados';
   severidades: EventSeverity[];
-  responsables: string[];
   etiquetas: string[];
   unidades: string[];
   dateRange: DateRange | null;
@@ -84,7 +82,6 @@ const DEFAULT_UNIT_STATUS = ['Activo', 'Inactivo', 'En ruta', 'Detenido'];
 export const FILTER_QUERY_KEYS = [
   'events_estado',
   'events_severidades',
-  'events_responsables',
   'events_etiquetas',
   'events_unidades',
   'events_mapScope',
@@ -103,7 +100,6 @@ type FilterQueryKey = (typeof FILTER_QUERY_KEYS)[number];
 const EVENT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
   estado: 'events_estado',
   severidades: 'events_severidades',
-  responsables: 'events_responsables',
   etiquetas: 'events_etiquetas',
   unidades: 'events_unidades',
   filterByMapVehicles: 'events_mapScope',
@@ -123,7 +119,6 @@ const UNIT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
 const createDefaultEventsFilters = (): EventsFilters => ({
   estado: 'todos',
   severidades: [...DEFAULT_EVENT_SEVERITIES],
-  responsables: [],
   etiquetas: [],
   unidades: [],
   dateRange: null,
@@ -194,18 +189,6 @@ const buildAppliedFilters = (events: EventsFilters, units: UnitsFilters): Applie
       });
     });
   }
-
-  events.responsables.forEach((responsable) => {
-    pills.push({
-      id: buildFilterId('events', 'responsables', responsable),
-      domain: 'events',
-      key: 'responsables',
-      label: 'Responsable',
-      value: responsable,
-      removable: true,
-      icon: 'events'
-    });
-  });
 
   events.etiquetas.forEach((etiqueta) => {
     pills.push({
@@ -369,10 +352,6 @@ const buildQueryFromFilters = (events: EventsFilters, units: UnitsFilters) => {
 
   if (!arraysHaveSameMembers(events.severidades, DEFAULT_EVENT_SEVERITIES) && events.severidades.length > 0) {
     params.set(EVENT_QUERY_KEY_MAP.severidades, events.severidades.join(','));
-  }
-
-  if (events.responsables.length > 0) {
-    params.set(EVENT_QUERY_KEY_MAP.responsables, events.responsables.join(','));
   }
 
   if (events.etiquetas.length > 0) {
@@ -708,4 +687,3 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     return buildQueryFromFilters(events, units);
   }
 }));
-
