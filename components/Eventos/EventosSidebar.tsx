@@ -288,7 +288,7 @@ export default function EventosSidebar({
     });
 
     onFiltersChange(sorted);
-  }, [searchText, selectedEtiquetas, selectedSeveridades, selectedEstado, selectedResponsables, selectedUnidades, sortBy, events, onFiltersChange, filterByMapVehicles, visibleVehicleIds]);
+  }, [searchText, selectedEtiquetas, selectedSeveridades, selectedEstado, selectedUnidades, sortBy, events, onFiltersChange, filterByMapVehicles, visibleVehicleIds]);
 
   // Scroll to selected event when clicking from map
   useEffect(() => {
