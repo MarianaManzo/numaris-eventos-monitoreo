@@ -2,27 +2,24 @@
 
 import { useCallback, KeyboardEvent, useMemo, useRef, useEffect } from 'react';
 import { Button, Tooltip } from 'antd';
-import { X, FunnelSimple, Truck, MapTrifold } from 'phosphor-react';
+import { X, FunnelSimple, Truck } from 'phosphor-react';
 import { useFilterStore, type FilterDomain } from '@/lib/stores/filterStore';
 
-const FILTER_DOMAINS: FilterDomain[] = ['units', 'events', 'zones'];
+const FILTER_DOMAINS: FilterDomain[] = ['units', 'events'];
 
 const domainAccent: Record<FilterDomain, string> = {
   events: '#3b82f6',
-  units: '#10b981',
-  zones: '#f97316'
+  units: '#10b981'
 };
 
 const domainIcon = {
   events: FunnelSimple,
-  units: Truck,
-  zones: MapTrifold
+  units: Truck
 } as const;
 
 const domainLabel: Record<FilterDomain, string> = {
   events: 'Eventos:',
-  units: 'Unidades:',
-  zones: 'Zonas:'
+  units: 'Unidades:'
 };
 
 const pillHeight = 32;
@@ -71,8 +68,7 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
       },
       {
         events: [],
-        units: [],
-        zones: []
+        units: []
       }
     );
   }, [appliedFilters]);
