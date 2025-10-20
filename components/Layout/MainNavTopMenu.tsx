@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import { Layout, Menu, Button, Space, Dropdown, Avatar, Badge, List } from 'antd';
-import { UserOutlined, SettingOutlined, BellOutlined, FilterOutlined } from '@ant-design/icons';
+import { UserOutlined, SettingOutlined, BellOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import NumarisLogo from './NumarisLogo';
-import { useUIStore } from '@/lib/stores/uiStore';
 
 const { Header } = Layout;
 
@@ -16,8 +15,6 @@ interface MainNavTopMenuProps {
 
 export default function MainNavTopMenu({ selectedMenuItem = 'monitoreo' }: MainNavTopMenuProps) {
   const router = useRouter();
-  const floatingFiltersVisible = useUIStore((state) => state.floatingFiltersVisible);
-  const toggleFloatingFilters = useUIStore((state) => state.toggleFloatingFilters);
 
   // Mock event notifications data based on eventos structure
   // IDs match the format used in EventosSidebar (event-0, event-1, etc.)
@@ -346,16 +343,6 @@ export default function MainNavTopMenu({ selectedMenuItem = 'monitoreo' }: MainN
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
-
-      {/* Floating filters toggle */}
-      <Button
-        type={floatingFiltersVisible ? 'primary' : 'default'}
-        icon={<FilterOutlined />}
-        onClick={toggleFloatingFilters}
-        style={{ marginRight: '16px' }}
-      >
-        Filtros mapa
-      </Button>
 
       {/* Navigation Menu - Right aligned */}
       <Menu

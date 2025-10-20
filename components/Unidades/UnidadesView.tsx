@@ -10,8 +10,6 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateEventsForMap } from './generateEventsForUnidades';
-import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
-import { useUIStore } from '@/lib/stores/uiStore';
 import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
@@ -48,7 +46,6 @@ export default function UnidadesView() {
 
   // Use global map store for cross-view visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
-  const floatingFiltersVisible = useUIStore((state) => state.floatingFiltersVisible);
 
   // Get zonas from global store for context layer rendering
   const { zonas, setZonas } = useZonaStore();
@@ -132,9 +129,8 @@ export default function UnidadesView() {
       <Layout className="h-screen">
         <MainNavTopMenu selectedMenuItem="monitoreo" />
 
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
-          <AppliedFiltersBar />
-          <Layout style={{ flex: 1, position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+        <Layout style={{ flex: 1, position: 'relative' }}>
             {/* Collapsible Menu - Overlay */}
             <div style={{
               position: 'absolute',
@@ -260,11 +256,9 @@ export default function UnidadesView() {
           </Sider>
 
           <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
-            {floatingFiltersVisible && (
-              <div className="floating-filters-overlay">
-                <FloatingFilterControls />
-              </div>
-            )}
+            <div className="floating-filters-overlay">
+              <FloatingFilterControls />
+            </div>
             <UnidadesMapView
               unidadMarkers={showVehiclesOnMap ? filteredUnidades.map(u => ({
                 id: u.id,

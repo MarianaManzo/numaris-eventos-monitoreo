@@ -11,9 +11,7 @@ import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
-import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
 import { useFilterStore } from '@/lib/stores/filterStore';
-import { useUIStore } from '@/lib/stores/uiStore';
 import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
@@ -63,7 +61,6 @@ export default function EventosView() {
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const filterByMapVehicles = useFilterStore((state) => state.events.filterByMapVehicles);
   const isFocusModeActive = useFilterStore((state) => state.events.focusMode);
-  const floatingFiltersVisible = useUIStore((state) => state.floatingFiltersVisible);
 
   // Get actual vehicle markers from the shared Unidades generation
   const vehicleMarkers = useMemo(() => {
@@ -205,7 +202,6 @@ export default function EventosView() {
         <MainNavTopMenu selectedMenuItem="monitoreo" />
 
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
-        <AppliedFiltersBar />
         <Layout style={{ flex: 1, position: 'relative' }}>
           {/* Collapsible Menu - Overlay */}
           <div style={{
@@ -344,11 +340,9 @@ export default function EventosView() {
             </Sider>
 
             <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
-              {floatingFiltersVisible && (
-                <div className="floating-filters-overlay">
-                  <FloatingFilterControls />
-                </div>
-              )}
+              <div className="floating-filters-overlay">
+                <FloatingFilterControls />
+              </div>
               <EventosMapView
                 eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
                   id: e.id,
