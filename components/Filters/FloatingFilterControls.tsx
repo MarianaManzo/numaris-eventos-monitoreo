@@ -178,7 +178,16 @@ const renderFilterValue = (
       <>
         {filter.label}:{' '}
         <span className="floating-filter-chip" style={colorStyle}>
-          {filter.value}
+          <span className="floating-filter-chip__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M3 5a2 2 0 0 1 2-2h7.172a2 2 0 0 1 1.414.586l7.828 7.828a2 2 0 0 1 0 2.828l-5.172 5.172a2 2 0 0 1-2.828 0L3.586 10.414A2 2 0 0 1 3 9V5Z"
+                fill="currentColor"
+              />
+              <circle cx="7.5" cy="7.5" r="1.5" fill="#ffffff" />
+            </svg>
+          </span>
+          <span>{filter.value}</span>
         </span>
       </>
     );

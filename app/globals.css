@@ -302,6 +302,18 @@ body {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  gap: 6px;
+}
+
+.floating-filter-chip__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-filter-chip__icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .floating-filter-state {
