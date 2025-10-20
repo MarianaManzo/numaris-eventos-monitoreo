@@ -250,6 +250,11 @@ body {
   margin-left: 4px;
 }
 
+.floating-filter-button__caret {
+  color: #6b7280;
+  display: inline-flex;
+}
+
 .floating-filter-item {
   display: flex;
   align-items: center;
@@ -271,6 +276,16 @@ body {
 .floating-filter-empty {
   font-size: 13px;
   color: #94a3b8;
+}
+
+.floating-filter-clear {
+  font-weight: 600;
+  color: #475569 !important;
+  opacity: 0.85;
+}
+
+.floating-filter-clear:hover {
+  opacity: 1;
 }
 
 .applied-filters-bar__empty {

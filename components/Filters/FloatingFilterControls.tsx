@@ -25,6 +25,7 @@ const DOMAIN_CONFIG = [
 export default function FloatingFilterControls() {
   const appliedFilters = useFilterStore((state) => state.appliedFilters);
   const removeFilter = useFilterStore((state) => state.removeFilter);
+  const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
 
   const grouped = useMemo(() => {
     return appliedFilters.reduce<Record<'events' | 'units', typeof appliedFilters>>(
@@ -99,6 +100,9 @@ export default function FloatingFilterControls() {
             </Dropdown>
           );
         })}
+        <Button type="link" size="small" className="floating-filter-clear" onClick={clearAllFilters}>
+          Limpiar todo
+        </Button>
       </Space>
     </div>
   );
