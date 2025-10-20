@@ -124,8 +124,8 @@ const renderFilterValue = (
 ) => {
   if (domain === 'units' && filter.key === 'unidades') {
     return (
-      <div className="floating-filter-unit-layout">
-        <span className="floating-filter-unit-label">{filter.label}:</span>
+      <>
+        {filter.label}:{' '}
         <span className="floating-filter-unit-value">
           <span className="floating-filter-unit-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none">
@@ -135,9 +135,9 @@ const renderFilterValue = (
               <circle cx="17" cy="17" r="2" fill="#ffffff" />
             </svg>
           </span>
-          {filter.value}
+          <span>{filter.value}</span>
         </span>
-      </div>
+      </>
     );
   }
 

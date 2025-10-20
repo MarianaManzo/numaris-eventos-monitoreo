@@ -273,24 +273,12 @@ body {
   color: #1f2937;
 }
 
-.floating-filter-unit-layout {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.floating-filter-unit-label {
-  font-weight: 600;
-  color: #334155;
-}
-
 .floating-filter-unit-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 20px;
   height: 20px;
-  margin-right: 6px;
 }
 
 .floating-filter-unit-icon svg {
@@ -303,6 +291,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-weight: 600;
+  color: #334155;
 }
 
 .floating-filter-state {
