@@ -274,7 +274,6 @@ export default function EventosView() {
       <MainNavTopMenu selectedMenuItem="monitoreo" />
 
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
-        <AppliedFiltersBar />
         <Layout style={{ flex: 1, position: 'relative' }}>
           {/* Collapsible Menu - Overlay */}
           <div
