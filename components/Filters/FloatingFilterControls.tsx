@@ -167,9 +167,35 @@ const renderFilterValue = (
     );
   }
 
+  if ((domain === 'events' && filter.key === 'etiquetas') || (domain === 'units' && filter.key === 'tags')) {
+    const hue = Math.abs(hashString(filter.value)) % 360;
+    const colorStyle: React.CSSProperties = {
+      backgroundColor: `hsla(${hue}, 80%, 90%, 1)`,
+      color: `hsla(${hue}, 70%, 35%, 1)`
+    };
+
+    return (
+      <>
+        {filter.label}:{' '}
+        <span className="floating-filter-chip" style={colorStyle}>
+          {filter.value}
+        </span>
+      </>
+    );
+  }
+
   return (
     <>
       {filter.label}: {filter.value}
     </>
   );
+};
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
 };
