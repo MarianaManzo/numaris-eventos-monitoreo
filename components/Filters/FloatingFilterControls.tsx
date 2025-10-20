@@ -57,7 +57,7 @@ export default function FloatingFilterControls() {
 
   return (
     <div className="floating-filter-controls">
-      <Space>
+      <Space className="floating-filter-button-group">
         {DOMAIN_CONFIG.map(({ key, label, icon }) => {
           const filters = grouped[key];
           const items =
@@ -105,15 +105,15 @@ export default function FloatingFilterControls() {
             </Dropdown>
           );
         })}
-        <Button
-          type="default"
-          size="middle"
-          className="floating-filter-clear"
-          onClick={clearAllFilters}
-        >
-          Limpiar todo
-        </Button>
       </Space>
+      <Button
+        type="default"
+        size="middle"
+        className="floating-filter-clear"
+        onClick={clearAllFilters}
+      >
+        Limpiar todo
+      </Button>
     </div>
   );
 }

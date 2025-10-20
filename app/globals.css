@@ -229,6 +229,11 @@ body {
   width: auto;
   display: flex;
   justify-content: flex-start;
+  gap: 12px;
+}
+
+.floating-filter-button-group {
+  display: inline-flex;
   gap: 8px;
 }
 
