@@ -142,16 +142,31 @@ const renderFilterValue = (
   }
 
   if (domain === 'events' && filter.key === 'estado') {
+    const isOpen = filter.value === 'abiertos';
     return (
       <>
         {filter.label}:{' '}
-        <span className={
-          filter.value === 'abiertos'
-            ? 'floating-filter-state floating-filter-state--open'
-            : 'floating-filter-state floating-filter-state--closed'
-        }>
-          <span className="floating-filter-state__dot" />
-          {filter.value === 'abiertos' ? 'Abierto' : 'Cerrado'}
+        <span
+          className={
+            isOpen
+              ? 'floating-filter-state floating-filter-state--open'
+              : 'floating-filter-state floating-filter-state--closed'
+          }
+        >
+          <span className="floating-filter-state__icon" aria-hidden="true">
+            {isOpen ? (
+              <svg viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="7" fill="#4ade80" />
+                <circle cx="8" cy="8" r="3" fill="#ffffff" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="7" stroke="#94a3b8" strokeWidth="2" fill="#ffffff" />
+                <path d="M5 8l2 2 4-4" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            )}
+          </span>
+          {isOpen ? 'Abierto' : 'Cerrado'}
         </span>
       </>
     );

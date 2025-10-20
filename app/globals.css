@@ -331,11 +331,9 @@ body {
   color: #64748b;
 }
 
-.floating-filter-state__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: currentColor;
+.floating-filter-state__icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .floating-filter-severity {
