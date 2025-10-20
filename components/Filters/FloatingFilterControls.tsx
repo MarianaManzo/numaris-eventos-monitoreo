@@ -146,13 +146,11 @@ const renderFilterValue = (
     return (
       <>
         {filter.label}:{' '}
-        <span
-          className={
-            isOpen
-              ? 'floating-filter-state floating-filter-state--open'
-              : 'floating-filter-state floating-filter-state--closed'
-          }
-        >
+        <span className={
+          isOpen
+            ? 'floating-filter-state floating-filter-state--open'
+            : 'floating-filter-state floating-filter-state--closed'
+        }>
           <span className="floating-filter-state__icon" aria-hidden="true">
             {isOpen ? (
               <svg viewBox="0 0 16 16" fill="none">
