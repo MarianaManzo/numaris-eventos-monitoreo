@@ -142,7 +142,9 @@ const renderFilterValue = (
   }
 
   if (domain === 'events' && filter.key === 'estado') {
-    const isOpen = filter.value === 'abiertos';
+    const normalized = filter.value.toLowerCase();
+    const isOpen = normalized === 'abiertos' || normalized === 'abierto';
+    const label = isOpen ? 'Abierto' : 'Cerrado';
     return (
       <>
         {filter.label}:{' '}
@@ -164,7 +166,7 @@ const renderFilterValue = (
               </svg>
             )}
           </span>
-          {isOpen ? 'Abierto' : 'Cerrado'}
+          {label}
         </span>
       </>
     );
