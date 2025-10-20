@@ -129,10 +129,12 @@ const renderFilterValue = (
         <span className="floating-filter-unit-value">
           <span className="floating-filter-unit-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none">
-              <rect x="1" y="9" width="22" height="8" rx="2" fill="#4ade80" />
-              <path d="M17 8H7l1.2-2.4A2 2 0 0 1 10 4h4a2 2 0 0 1 1.8 1.1L17 8Z" fill="#4ade80" />
-              <circle cx="7" cy="17" r="2" fill="#ffffff" />
-              <circle cx="17" cy="17" r="2" fill="#ffffff" />
+              <path
+                d="M4 10a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3l1 5v3a1 1 0 0 1-1 1h-1a2 2 0 1 1-4 0H9a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1v-3l1-5Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <rect x="7" y="7" width="10" height="3" rx="1.5" fill="currentColor" />
             </svg>
           </span>
           <span>{filter.value}</span>
@@ -142,9 +144,7 @@ const renderFilterValue = (
   }
 
   if (domain === 'events' && filter.key === 'estado') {
-    const normalized = filter.value.toLowerCase();
-    const isOpen = normalized === 'abiertos' || normalized === 'abierto';
-    const label = isOpen ? 'Abierto' : 'Cerrado';
+    const isOpen = filter.value === 'abiertos';
     return (
       <>
         {filter.label}:{' '}
@@ -166,7 +166,7 @@ const renderFilterValue = (
               </svg>
             )}
           </span>
-          {label}
+          {isOpen ? 'Abierto' : 'Cerrado'}
         </span>
       </>
     );

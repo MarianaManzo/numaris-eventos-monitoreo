@@ -320,16 +320,15 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 500;
-  color: #1f2937;
+  font-weight: 600;
 }
 
-.floating-filter-state--open .floating-filter-state__icon svg circle:first-child {
-  fill: #4ade80;
+.floating-filter-state--open {
+  color: #16a34a;
 }
 
-.floating-filter-state--closed .floating-filter-state__icon svg circle:first-child {
-  stroke: #94a3b8;
+.floating-filter-state--closed {
+  color: #64748b;
 }
 
 .floating-filter-state__icon svg {
