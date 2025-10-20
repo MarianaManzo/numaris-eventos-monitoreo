@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import type { EventSeverity } from '@/lib/events/types';
 
-export type FilterDomain = 'events' | 'units';
+export type FilterDomain = 'events' | 'units' | 'zones';
 
-export type FilterDomainIcon = 'events' | 'units';
+export type FilterDomainIcon = 'events' | 'units' | 'zones';
 
 export interface AppliedFilter {
   id: string;
@@ -60,15 +60,24 @@ export interface UnitsFilters {
   searchText: string;
 }
 
+export interface ZonesFilters {
+  tags: string[];
+  responsables: string[];
+  searchText: string;
+}
+
 interface FilterStoreState {
   events: EventsFilters;
   units: UnitsFilters;
+  zones: ZonesFilters;
   appliedFilters: AppliedFilter[];
   hydrationReady: boolean;
   setEventsFilters: (partial: Partial<EventsFilters>) => void;
   toggleEventFilterValue: (key: EventMultiValueKey, value: string) => void;
   setUnitsFilters: (partial: Partial<UnitsFilters>) => void;
   toggleUnitFilterValue: (key: UnitMultiValueKey, value: string) => void;
+  setZonesFilters: (partial: Partial<ZonesFilters>) => void;
+  toggleZoneFilterValue: (key: keyof ZonesFilters, value: string) => void;
   removeFilter: (filterId: string) => void;
   clearAllFilters: () => void;
   clearDomainFilters: (domain: FilterDomain) => void;
@@ -92,7 +101,10 @@ export const FILTER_QUERY_KEYS = [
   'units_responsables',
   'units_zones',
   'units_brandModels',
-  'units_q'
+  'units_q',
+  'zones_tags',
+  'zones_responsables',
+  'zones_q'
 ] as const;
 
 type FilterQueryKey = (typeof FILTER_QUERY_KEYS)[number];
@@ -114,6 +126,12 @@ const UNIT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
   zones: 'units_zones',
   brandModels: 'units_brandModels',
   searchText: 'units_q'
+};
+
+const ZONE_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
+  tags: 'zones_tags',
+  responsables: 'zones_responsables',
+  searchText: 'zones_q'
 };
 
 const createDefaultEventsFilters = (): EventsFilters => ({
@@ -140,6 +158,12 @@ const createDefaultUnitsFilters = (): UnitsFilters => ({
   searchText: ''
 });
 
+const createDefaultZonesFilters = (): ZonesFilters => ({
+  tags: [],
+  responsables: [],
+  searchText: ''
+});
+
 const buildFilterId = (domain: FilterDomain, key: string, value?: string) => {
   const encodedValue = value !== undefined ? encodeURIComponent(value) : '';
   return `${domain}|${key}|${encodedValue}`;
@@ -160,7 +184,11 @@ const arraysHaveSameMembers = (a: string[], b: string[]) => {
   return b.every((value) => setA.has(value));
 };
 
-const buildAppliedFilters = (events: EventsFilters, units: UnitsFilters): AppliedFilter[] => {
+const buildAppliedFilters = (
+  events: EventsFilters,
+  units: UnitsFilters,
+  zones: ZonesFilters = createDefaultZonesFilters()
+): AppliedFilter[] => {
   const pills: AppliedFilter[] = [];
 
   // Events filters
@@ -325,6 +353,43 @@ const buildAppliedFilters = (events: EventsFilters, units: UnitsFilters): Applie
     });
   }
 
+  // Zones filters
+  zones.tags.forEach((tag) => {
+    pills.push({
+      id: buildFilterId('zones', 'tags', tag),
+      domain: 'zones',
+      key: 'tags',
+      label: 'Etiqueta',
+      value: tag,
+      removable: true,
+      icon: 'zones'
+    });
+  });
+
+  zones.responsables.forEach((responsable) => {
+    pills.push({
+      id: buildFilterId('zones', 'responsables', responsable),
+      domain: 'zones',
+      key: 'responsables',
+      label: 'Responsable',
+      value: responsable,
+      removable: true,
+      icon: 'zones'
+    });
+  });
+
+  if (zones.searchText.trim().length > 0) {
+    pills.push({
+      id: buildFilterId('zones', 'searchText', zones.searchText.trim()),
+      domain: 'zones',
+      key: 'searchText',
+      label: 'Búsqueda',
+      value: zones.searchText.trim(),
+      removable: true,
+      icon: 'zones'
+    });
+  }
+
   // Aggregate duplicates to support +N indicator
   const aggregated = new Map<string, AppliedFilter>();
   pills.forEach((pill) => {
@@ -343,7 +408,11 @@ const buildAppliedFilters = (events: EventsFilters, units: UnitsFilters): Applie
   return Array.from(aggregated.values());
 };
 
-const buildQueryFromFilters = (events: EventsFilters, units: UnitsFilters) => {
+const buildQueryFromFilters = (
+  events: EventsFilters,
+  units: UnitsFilters,
+  zones: ZonesFilters = createDefaultZonesFilters()
+) => {
   const params = new URLSearchParams();
 
   if (events.estado !== 'todos') {
@@ -398,6 +467,18 @@ const buildQueryFromFilters = (events: EventsFilters, units: UnitsFilters) => {
     params.set(UNIT_QUERY_KEY_MAP.searchText, units.searchText.trim());
   }
 
+  if (zones.tags.length > 0) {
+    params.set(ZONE_QUERY_KEY_MAP.tags, zones.tags.join(','));
+  }
+
+  if (zones.responsables.length > 0) {
+    params.set(ZONE_QUERY_KEY_MAP.responsables, zones.responsables.join(','));
+  }
+
+  if (zones.searchText.trim().length > 0) {
+    params.set(ZONE_QUERY_KEY_MAP.searchText, zones.searchText.trim());
+  }
+
   return params;
 };
 
@@ -414,6 +495,7 @@ const parseSearchParams = (input?: URLSearchParams | string | null) => {
 export const useFilterStore = create<FilterStoreState>((set, get) => ({
   events: createDefaultEventsFilters(),
   units: createDefaultUnitsFilters(),
+  zones: createDefaultZonesFilters(),
   appliedFilters: [],
   hydrationReady: false,
 
@@ -422,7 +504,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       const events = { ...state.events, ...partial };
       return {
         events,
-        appliedFilters: buildAppliedFilters(events, state.units)
+        appliedFilters: buildAppliedFilters(events, state.units, state.zones)
       };
     });
   },
@@ -438,7 +520,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       const events = { ...state.events, [key]: nextValues };
       return {
         events,
-        appliedFilters: buildAppliedFilters(events, state.units)
+        appliedFilters: buildAppliedFilters(events, state.units, state.zones)
       };
     });
   },
@@ -448,7 +530,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       const units = { ...state.units, ...partial };
       return {
         units,
-        appliedFilters: buildAppliedFilters(state.events, units)
+        appliedFilters: buildAppliedFilters(state.events, units, state.zones)
       };
     });
   },
@@ -464,7 +546,33 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       const units = { ...state.units, [key]: nextValues };
       return {
         units,
-        appliedFilters: buildAppliedFilters(state.events, units)
+        appliedFilters: buildAppliedFilters(state.events, units, state.zones)
+      };
+    });
+  },
+
+  setZonesFilters: (partial) => {
+    set((state) => {
+      const zones = { ...state.zones, ...partial };
+      return {
+        zones,
+        appliedFilters: buildAppliedFilters(state.events, state.units, zones)
+      };
+    });
+  },
+
+  toggleZoneFilterValue: (key, value) => {
+    set((state) => {
+      const current = state.zones[key as keyof ZonesFilters];
+      if (!Array.isArray(current)) {
+        return {};
+      }
+      const exists = current.includes(value);
+      const nextValues = exists ? current.filter((item) => item !== value) : [...current, value];
+      const zones = { ...state.zones, [key]: nextValues };
+      return {
+        zones,
+        appliedFilters: buildAppliedFilters(state.events, state.units, zones)
       };
     });
   },
@@ -488,7 +596,6 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
               events.severidades = next.length > 0 ? next : [...DEFAULT_EVENT_SEVERITIES];
             }
             break;
-          case 'responsables':
           case 'etiquetas':
           case 'unidades':
           case 'assignedUsers':
@@ -513,7 +620,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
         }
         return {
           events,
-          appliedFilters: buildAppliedFilters(events, state.units)
+          appliedFilters: buildAppliedFilters(events, state.units, state.zones)
         };
       });
       return;
@@ -547,19 +654,49 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
 
         return {
           units,
-          appliedFilters: buildAppliedFilters(state.events, units)
+          appliedFilters: buildAppliedFilters(state.events, units, state.zones)
         };
       });
+    }
+
+    if (domain === 'zones') {
+      set((state) => {
+        const zones = { ...state.zones };
+        switch (key) {
+          case 'tags':
+          case 'responsables':
+            if (value) {
+              const arrayKey = key as 'tags' | 'responsables';
+              const current = zones[arrayKey] ?? [];
+              zones[arrayKey] = current.filter((item) => item !== value);
+            }
+            break;
+          case 'searchText':
+            zones.searchText = '';
+            break;
+          default:
+            break;
+        }
+
+        return {
+          zones,
+          appliedFilters: buildAppliedFilters(state.events, state.units, zones)
+        };
+      });
+      return;
     }
   },
 
   clearAllFilters: () => {
     const events = createDefaultEventsFilters();
     const units = createDefaultUnitsFilters();
+    const zones = createDefaultZonesFilters();
+    const zones = createDefaultZonesFilters();
     set({
       events,
       units,
-      appliedFilters: buildAppliedFilters(events, units)
+      zones,
+      appliedFilters: buildAppliedFilters(events, units, zones)
     });
   },
 
@@ -568,7 +705,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       const events = createDefaultEventsFilters();
       set((state) => ({
         events,
-        appliedFilters: buildAppliedFilters(events, state.units)
+        appliedFilters: buildAppliedFilters(events, state.units, state.zones)
       }));
       return;
     }
@@ -577,7 +714,16 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       const units = createDefaultUnitsFilters();
       set((state) => ({
         units,
-        appliedFilters: buildAppliedFilters(state.events, units)
+        appliedFilters: buildAppliedFilters(state.events, units, state.zones)
+      }));
+      return;
+    }
+
+    if (domain === 'zones') {
+      const zones = createDefaultZonesFilters();
+      set((state) => ({
+        zones,
+        appliedFilters: buildAppliedFilters(state.events, state.units, zones)
       }));
     }
   },
@@ -589,7 +735,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     if (!hasFilterParams) {
       // Still mark hydration ready so subsequent sync works
       set((state) => ({
-        appliedFilters: buildAppliedFilters(state.events, state.units),
+        appliedFilters: buildAppliedFilters(state.events, state.units, state.zones),
         hydrationReady: true
       }));
       return;
@@ -609,11 +755,6 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       if (severidades.length > 0) {
         events.severidades = severidades;
       }
-    }
-
-    const responsablesParam = params.get(EVENT_QUERY_KEY_MAP.responsables);
-    if (responsablesParam) {
-      events.responsables = responsablesParam.split(',').map((value) => value.trim()).filter(Boolean);
     }
 
     const etiquetasParam = params.get(EVENT_QUERY_KEY_MAP.etiquetas);
@@ -674,16 +815,32 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       units.searchText = unitsSearch;
     }
 
+    const zoneTagsParam = params.get(ZONE_QUERY_KEY_MAP.tags);
+    if (zoneTagsParam) {
+      zones.tags = zoneTagsParam.split(',').map((value) => value.trim()).filter(Boolean);
+    }
+
+    const zoneResponsablesParam = params.get(ZONE_QUERY_KEY_MAP.responsables);
+    if (zoneResponsablesParam) {
+      zones.responsables = zoneResponsablesParam.split(',').map((value) => value.trim()).filter(Boolean);
+    }
+
+    const zonesSearch = params.get(ZONE_QUERY_KEY_MAP.searchText);
+    if (zonesSearch) {
+      zones.searchText = zonesSearch;
+    }
+
     set({
       events,
       units,
-      appliedFilters: buildAppliedFilters(events, units),
+      zones,
+      appliedFilters: buildAppliedFilters(events, units, zones),
       hydrationReady: true
     });
   },
 
   toQueryParams: () => {
-    const { events, units } = get();
-    return buildQueryFromFilters(events, units);
+    const { events, units, zones } = get();
+    return buildQueryFromFilters(events, units, zones);
   }
 }));

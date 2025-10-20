@@ -11,11 +11,14 @@ interface EventFilterModalProps {
   onEstadoChange: (estado: 'todos' | 'abiertos' | 'cerrados') => void;
   selectedSeveridades: EventSeverity[];
   onSeveridadesChange: (severidades: EventSeverity[]) => void;
+  selectedResponsables?: string[];
+  onResponsablesChange?: (responsables: string[]) => void;
   selectedEtiquetas: string[];
   onEtiquetasChange: (etiquetas: string[]) => void;
   selectedUnidades?: string[];
   onUnidadesChange?: (unidades: string[]) => void;
   // Available options
+  availableResponsables?: string[];
   availableEtiquetas: string[];
   availableUnidades?: string[];
   // Include Unidades section (for main Eventos view)
@@ -39,10 +42,13 @@ export default function EventFilterModal({
   onEstadoChange,
   selectedSeveridades,
   onSeveridadesChange,
+  selectedResponsables: _selectedResponsables = [],
+  onResponsablesChange: _onResponsablesChange,
   selectedEtiquetas,
   onEtiquetasChange,
   selectedUnidades = [],
   onUnidadesChange,
+  availableResponsables: _availableResponsables = [],
   availableEtiquetas,
   availableUnidades = [],
   showUnidadesFilter = false,

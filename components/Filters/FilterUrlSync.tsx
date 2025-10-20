@@ -16,6 +16,7 @@ export default function FilterUrlSync() {
 
   const events = useFilterStore((state) => state.events);
   const units = useFilterStore((state) => state.units);
+  const zones = useFilterStore((state) => state.zones);
   const hydrationReady = useFilterStore((state) => state.hydrationReady);
   const hydrateFromQuery = useFilterStore((state) => state.hydrateFromQuery);
   const toQueryParams = useFilterStore((state) => state.toQueryParams);
@@ -59,7 +60,7 @@ export default function FilterUrlSync() {
 
     const nextUrl = nextQueryString.length > 0 ? `${pathname}?${nextQueryString}` : pathname;
     router.replace(nextUrl, { scroll: false });
-  }, [events, units, hydrationReady, pathname, router, searchParams, toQueryParams]);
+  }, [events, units, zones, hydrationReady, pathname, router, searchParams, toQueryParams]);
 
   return null;
 }

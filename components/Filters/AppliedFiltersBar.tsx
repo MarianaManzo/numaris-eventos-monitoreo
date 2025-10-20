@@ -2,22 +2,27 @@
 
 import { useCallback, KeyboardEvent, useMemo, useRef, useEffect } from 'react';
 import { Button, Tooltip } from 'antd';
-import { X, FunnelSimple, Truck } from 'phosphor-react';
-import { useFilterStore } from '@/lib/stores/filterStore';
+import { X, FunnelSimple, Truck, MapTrifold } from 'phosphor-react';
+import { useFilterStore, type FilterDomain } from '@/lib/stores/filterStore';
 
-const domainAccent: Record<'events' | 'units', string> = {
+const FILTER_DOMAINS: FilterDomain[] = ['units', 'events', 'zones'];
+
+const domainAccent: Record<FilterDomain, string> = {
   events: '#3b82f6',
-  units: '#10b981'
+  units: '#10b981',
+  zones: '#f97316'
 };
 
 const domainIcon = {
   events: FunnelSimple,
-  units: Truck
+  units: Truck,
+  zones: MapTrifold
 } as const;
 
-const domainLabel: Record<'events' | 'units', string> = {
+const domainLabel: Record<FilterDomain, string> = {
   events: 'Eventos:',
-  units: 'Unidades:'
+  units: 'Unidades:',
+  zones: 'Zonas:'
 };
 
 const pillHeight = 32;
@@ -59,14 +64,15 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
 
   const groupedFilters = useMemo(() => {
-    return appliedFilters.reduce<Record<'events' | 'units', typeof appliedFilters>>(
+    return appliedFilters.reduce<Record<FilterDomain, typeof appliedFilters>>(
       (acc, filter) => {
         acc[filter.domain] = [...acc[filter.domain], filter];
         return acc;
       },
       {
         events: [],
-        units: []
+        units: [],
+        zones: []
       }
     );
   }, [appliedFilters]);
@@ -99,7 +105,7 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
         {appliedFilters.length === 0 ? (
           <span className="applied-filters-bar__empty">No hay filtros activos</span>
         ) : (
-          (['units', 'events'] as const).map((domain) => {
+          FILTER_DOMAINS.map((domain) => {
             const filters = groupedFilters[domain];
             if (!filters.length) {
               return null;
