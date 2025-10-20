@@ -85,6 +85,7 @@ export default function FloatingFilterControls() {
               <Button className="floating-filter-button" icon={icon}>
                 {label}
                 {filters.length > 0 && <Tag className="floating-filter-button__tag">{filters.length}</Tag>}
+                <span className="floating-filter-button__caret">▾</span>
               </Button>
             </Dropdown>
           );
@@ -93,4 +94,3 @@ export default function FloatingFilterControls() {
     </div>
   );
 }
-
