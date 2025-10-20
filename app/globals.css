@@ -208,19 +208,20 @@ body {
 .floating-filters-overlay {
   position: absolute;
   top: 16px;
-  left: 72px;
-  right: 72px;
+  left: 0;
+  right: 0;
   z-index: 2000;
   display: flex;
   justify-content: center;
   pointer-events: none;
+  padding: 0 72px;
 }
 
 .floating-filters-overlay > .applied-filters-bar--floating {
   pointer-events: auto;
   width: 100%;
-  max-width: 840px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .applied-filters-bar__empty {
