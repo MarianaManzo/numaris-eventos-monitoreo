@@ -14,6 +14,7 @@ import { useZonaStore } from '@/lib/stores/zonaStore';
 import AppliedFiltersBar from '@/components/Filters/AppliedFiltersBar';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useUIStore } from '@/lib/stores/uiStore';
+import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
 
@@ -346,7 +347,7 @@ export default function EventosView() {
             <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
               {floatingFiltersVisible && (
                 <div className="floating-filters-overlay">
-                  <AppliedFiltersBar variant="floating" />
+                  <FloatingFilterControls />
                 </div>
               )}
               <EventosMapView
