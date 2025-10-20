@@ -300,6 +300,18 @@ body {
   color: #1d4ed8 !important;
 }
 
+.floating-filter-remove {
+  font-size: 18px;
+  color: #9ca3af !important;
+  padding: 0 !important;
+  height: auto !important;
+  line-height: 1;
+}
+
+.floating-filter-remove:hover {
+  color: #ef4444 !important;
+}
+
 .applied-filters-bar__empty {
   font-size: 13px;
   color: #6b7280;

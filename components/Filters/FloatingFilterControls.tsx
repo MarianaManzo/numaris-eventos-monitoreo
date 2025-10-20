@@ -74,8 +74,13 @@ export default function FloatingFilterControls() {
                     <span className="floating-filter-item__count">(+{filter.count - 1})</span>
                   )}
                 </span>
-                <Button type="link" size="small" onClick={handleRemove(filter.id)}>
-                  Quitar
+                <Button
+                  type="text"
+                  size="small"
+                  className="floating-filter-remove"
+                  onClick={handleRemove(filter.id)}
+                >
+                  ×
                 </Button>
               </div>
             )
