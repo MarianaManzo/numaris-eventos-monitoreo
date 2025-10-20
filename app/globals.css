@@ -212,9 +212,9 @@ body {
   right: 0;
   z-index: 2000;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   pointer-events: none;
-  padding: 0 72px;
+  padding: 0 72px 0 16px;
 }
 
 .floating-filters-overlay > .applied-filters-bar--floating {
@@ -226,11 +226,10 @@ body {
 
 .floating-filter-controls {
   pointer-events: auto;
-  width: calc(100% - 72px);
-  max-width: 820px;
+  width: auto;
   display: flex;
   justify-content: flex-start;
-  margin-left: 16px;
+  gap: 8px;
 }
 
 .floating-filter-button {
