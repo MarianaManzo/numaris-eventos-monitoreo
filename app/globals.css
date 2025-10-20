@@ -273,6 +273,21 @@ body {
   color: #1f2937;
 }
 
+.floating-filter-unit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+}
+
+.floating-filter-unit-icon svg {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
 .floating-filter-item__count {
   margin-left: 4px;
   color: #6b7280;
