@@ -692,6 +692,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     const units = createDefaultUnitsFilters();
     const zones = createDefaultZonesFilters();
     const zones = createDefaultZonesFilters();
+    const zones = createDefaultZonesFilters();
     set({
       events,
       units,
