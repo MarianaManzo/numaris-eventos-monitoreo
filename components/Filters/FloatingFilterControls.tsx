@@ -3,6 +3,7 @@
 import { useMemo, MouseEvent } from 'react';
 import { Button, Dropdown, Space, Tag } from 'antd';
 import { FunnelSimple, Truck } from 'phosphor-react';
+import { DownOutlined } from '@ant-design/icons';
 import { useFilterStore } from '@/lib/stores/filterStore';
 
 const DOMAIN_CONFIG = [
@@ -85,7 +86,7 @@ export default function FloatingFilterControls() {
               <Button className="floating-filter-button" icon={icon}>
                 {label}
                 {filters.length > 0 && <Tag className="floating-filter-button__tag">{filters.length}</Tag>}
-                <span className="floating-filter-button__caret">▾</span>
+                <DownOutlined className="floating-filter-button__caret" style={{ fontSize: 18 }} />
               </Button>
             </Dropdown>
           );
