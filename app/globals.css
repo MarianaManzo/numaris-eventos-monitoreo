@@ -273,6 +273,17 @@ body {
   color: #1f2937;
 }
 
+.floating-filter-unit-layout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floating-filter-unit-label {
+  font-weight: 600;
+  color: #334155;
+}
+
 .floating-filter-unit-icon {
   display: inline-flex;
   align-items: center;
@@ -286,6 +297,63 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 4px;
+}
+
+.floating-filter-unit-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floating-filter-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.floating-filter-state--open {
+  color: #16a34a;
+}
+
+.floating-filter-state--closed {
+  color: #64748b;
+}
+
+.floating-filter-state__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.floating-filter-severity {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.floating-filter-severity--alta {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.floating-filter-severity--media {
+  background-color: #ffedd5;
+  color: #f97316;
+}
+
+.floating-filter-severity--baja {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.floating-filter-severity--informativa {
+  background-color: #cffafe;
+  color: #0e7490;
 }
 
 .floating-filter-item__count {
