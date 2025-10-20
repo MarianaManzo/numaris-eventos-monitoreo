@@ -42,6 +42,11 @@ export default function FloatingFilterControls() {
     );
   }, [appliedFilters]);
 
+  const totalFilters = grouped.events.length + grouped.units.length;
+  if (totalFilters === 0) {
+    return null;
+  }
+
   const handleRemove =
     (filterId: string) =>
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -100,7 +105,12 @@ export default function FloatingFilterControls() {
             </Dropdown>
           );
         })}
-        <Button type="link" size="small" className="floating-filter-clear" onClick={clearAllFilters}>
+        <Button
+          type="default"
+          size="middle"
+          className="floating-filter-clear"
+          onClick={clearAllFilters}
+        >
           Limpiar todo
         </Button>
       </Space>
