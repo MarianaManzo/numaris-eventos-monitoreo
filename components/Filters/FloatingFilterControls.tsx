@@ -60,37 +60,32 @@ export default function FloatingFilterControls() {
       <Space className="floating-filter-button-group">
         {DOMAIN_CONFIG.map(({ key, label, icon }) => {
           const filters = grouped[key];
-          const items =
-            filters.length > 0
-              ? filters.map((filter) => ({
-                  key: filter.id,
-                  label: (
-                    <div className="floating-filter-item">
-                      <span className="floating-filter-item__text">
-                        {filter.label}: {filter.value}
-                        {filter.count && filter.count > 1 && (
-                          <span className="floating-filter-item__count">(+{filter.count - 1})</span>
-                        )}
-                      </span>
-                      <Button type="link" size="small" onClick={handleRemove(filter.id)}>
-                        Quitar
-                      </Button>
-                    </div>
-                  )
-                }))
-              : [
-                  {
-                    key: 'empty',
-                    label: <span className="floating-filter-empty">Sin filtros activos</span>,
-                    disabled: true
-                  }
-                ];
+          if (filters.length === 0) {
+            return null;
+          }
+
+          const items = filters.map((filter) => ({
+            key: filter.id,
+            label: (
+              <div className="floating-filter-item">
+                <span className="floating-filter-item__text">
+                  {filter.label}: {filter.value}
+                  {filter.count && filter.count > 1 && (
+                    <span className="floating-filter-item__count">(+{filter.count - 1})</span>
+                  )}
+                </span>
+                <Button type="link" size="small" onClick={handleRemove(filter.id)}>
+                  Quitar
+                </Button>
+              </div>
+            )
+          }));
 
           return (
             <Dropdown key={key} menu={{ items }} trigger={['click']} placement="bottomLeft">
               <Button className="floating-filter-button" icon={icon}>
                 {label}
-                {filters.length > 0 && <Tag className="floating-filter-button__tag">{filters.length}</Tag>}
+                <Tag className="floating-filter-button__tag">{filters.length}</Tag>
                 <svg
                   className="floating-filter-button__caret"
                   width={18}
