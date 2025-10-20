@@ -319,21 +319,16 @@ body {
 .floating-filter-state {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-
-.floating-filter-state--open {
-  color: #16a34a;
-}
-
-.floating-filter-state--closed {
-  color: #64748b;
+  gap: 4px;
+  font-weight: 400;
+  color: #111827;
+  line-height: 1;
 }
 
 .floating-filter-state__icon svg {
   width: 16px;
   height: 16px;
+  display: block;
 }
 
 .floating-filter-severity {

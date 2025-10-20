@@ -144,15 +144,19 @@ const renderFilterValue = (
   }
 
   if (domain === 'events' && filter.key === 'estado') {
-    const isOpen = filter.value === 'abiertos';
+    const normalized = filter.value.trim().toLowerCase();
+    const isOpen = normalized === 'abiertos' || normalized === 'abierto';
+    const label = isOpen ? 'Abierto' : 'Cerrado';
     return (
       <>
         {filter.label}:{' '}
-        <span className={
-          isOpen
-            ? 'floating-filter-state floating-filter-state--open'
-            : 'floating-filter-state floating-filter-state--closed'
-        }>
+        <span
+          className={
+            isOpen
+              ? 'floating-filter-state floating-filter-state--open'
+              : 'floating-filter-state floating-filter-state--closed'
+          }
+        >
           <span className="floating-filter-state__icon" aria-hidden="true">
             {isOpen ? (
               <svg viewBox="0 0 16 16" fill="none">
@@ -166,7 +170,7 @@ const renderFilterValue = (
               </svg>
             )}
           </span>
-          {isOpen ? 'Abierto' : 'Cerrado'}
+          {label}
         </span>
       </>
     );
