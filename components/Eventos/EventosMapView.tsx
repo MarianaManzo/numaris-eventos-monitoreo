@@ -88,6 +88,10 @@ interface EventosMapViewProps {
   zonas?: Zona[]; // NEW: Zonas to render as context layers
   selectedZonaId?: string | null; // NEW: Selected zona ID
   onZonaSelect?: (zonaId: string | null) => void; // NEW: Zona selection callback
+  showZonasOnMap?: boolean;
+  onToggleZonasVisibility?: (show: boolean) => void;
+  showEventsOnMap?: boolean;
+  onToggleEventsVisibility?: (show: boolean) => void;
 }
 
 const getSeverityColor = (severidad: string) => {
@@ -121,14 +125,25 @@ export default function EventosMapView({
   vehiclesWithEvents = [],
   zonas = [],
   selectedZonaId = null,
-  onZonaSelect
+  onZonaSelect,
+  showZonasOnMap: showZonasOnMapProp,
+  onToggleZonasVisibility,
+  showEventsOnMap: showEventsOnMapProp,
+  onToggleEventsVisibility
 }: EventosMapViewProps) {
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Global map store for cross-view layer visibility
-  const { showVehiclesOnMap, showZonasOnMap } = useGlobalMapStore();
+  const {
+    showVehiclesOnMap,
+    showEventsOnMap: globalShowEventsOnMap,
+    showZonasOnMap: globalShowZonasOnMap
+  } = useGlobalMapStore();
+
+  const eventsVisible = showEventsOnMapProp ?? globalShowEventsOnMap;
+  const zonasVisible = showZonasOnMapProp ?? globalShowZonasOnMap;
 
   useEffect(() => {
     setIsClient(true);
@@ -339,7 +354,7 @@ export default function EventosMapView({
           subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
         />
 
-        {(() => {
+        {eventsVisible && (() => {
           // Determine if we should enable clustering (lazy clustering approach)
           const shouldCluster = eventMarkers.length >= 15;
 
@@ -616,7 +631,7 @@ export default function EventosMapView({
         })()}
 
         {/* Render zonas as context layer when global visibility is ON */}
-        {showZonasOnMap && zonas.map((zona) => {
+        {zonasVisible && zonas.map((zona) => {
           // Only render visible zonas
           if (!zona.visible) return null;
 
