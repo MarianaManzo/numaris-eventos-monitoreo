@@ -20,7 +20,6 @@ import { useMapFitBounds } from '@/hooks/useMapFitBounds';
 import type { EventLocation } from '@/lib/events/generateEvent';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import { calculateDistanceBetweenPositions } from '@/lib/utils/geoUtils';
-import { createEventClusterIcon } from './MarkerClusterGroup';
 
 interface EventMarkerData {
   id: string;
@@ -74,13 +73,8 @@ const SimpleArrowPolyline = dynamic(
   { ssr: false }
 );
 
-const MarkerClusterGroup = dynamic(
-  () => import('./MarkerClusterGroup'),
-  { ssr: false }
-);
-
-const ClusteredVehicleMarkers = dynamic(
-  () => import('./ClusteredVehicleMarkers'),
+const UnidadMarker = dynamic(
+  () => import('./UnidadMarker'),
   { ssr: false }
 );
 
@@ -89,6 +83,8 @@ interface VehicleMarkerData {
   position: [number, number];
   nombre: string;
   estado: 'en_movimiento' | 'detenido' | 'sin_comunicacion';
+  heading?: number;
+  lastReportMinutes?: number;
 }
 
 interface UnifiedMapViewProps extends UnifiedMapProviderProps {
@@ -138,7 +134,7 @@ export default function UnifiedMapView({
   const selectedEventIdRef = useRef<string | null>(null); // Track current selected event for timeout checks
 
   // Stable no-op onClick handler for vehicle markers to prevent infinite re-renders
-  const handleVehicleMarkerClick = useCallback(() => {
+  const handleVehicleMarkerClick = useCallback((id?: string) => {
     // No-op for non-interactive markers in Historial view
   }, []);
 
@@ -891,8 +887,7 @@ export default function UnifiedMapView({
     }, 300);
   };
 
-  // Memoize clustered vehicle data to prevent infinite re-renders
-  // The markers array prop must have a stable reference for ClusteredVehicleMarkers useEffect
+  // Memoize vehicle marker data to maintain stable references
   const clusteredVehicleData = useMemo(() => {
     const estadoMap = {
       en_movimiento: 'En ruta',
@@ -905,11 +900,10 @@ export default function UnifiedMapView({
       position: vehicle.position,
       nombre: vehicle.nombre,
       estado: estadoMap[vehicle.estado] ?? 'En ruta',
-      heading: 'heading' in vehicle && typeof vehicle.heading === 'number' ? vehicle.heading : 0,
-      lastReportMinutes: 'lastReportMinutes' in vehicle && typeof vehicle.lastReportMinutes === 'number' ? vehicle.lastReportMinutes : 0,
-      onClick: handleVehicleMarkerClick // Use stable reference to prevent infinite re-renders
+      heading: vehicle.heading ?? 0,
+      lastReportMinutes: vehicle.lastReportMinutes ?? 0
     }));
-  }, [vehicleMarkers, handleVehicleMarkerClick]);
+  }, [vehicleMarkers]);
 
   if (!isClient) {
     return <div className="w-full h-full bg-gray-100 animate-pulse" />;
@@ -1021,13 +1015,8 @@ export default function UnifiedMapView({
           );
         })}
 
-        {/* Render event markers - with optional clustering for ≥5 markers */}
+        {/* Render event markers without clustering */}
         {(() => {
-          // Determine if we should enable clustering (lazy clustering approach)
-          // Lower threshold (5) for vehicle day views where events spread across large areas
-          const shouldCluster = eventMarkers.length >= 5;
-
-          // Render markers function - used both with and without clustering
           const renderEventMarkers = () => eventMarkers.map(event => {
           // Extract location data if available
           const locationData = event.locationData;
@@ -1192,30 +1181,26 @@ export default function UnifiedMapView({
           );
           });
 
-          // Conditional rendering: wrap in cluster group if ≥5 markers, otherwise render directly
-          if (shouldCluster) {
-            return (
-              <MarkerClusterGroup
-                maxClusterRadius={80}
-                spiderfyOnMaxZoom={true}
-                showCoverageOnHover={false}
-                zoomToBoundsOnClick={true}
-                disableClusteringAtZoom={13}
-                iconCreateFunction={createEventClusterIcon}
-              >
-                {renderEventMarkers()}
-              </MarkerClusterGroup>
-            );
-          }
-
-          // Render markers without clustering for < 15 markers
+          // Render markers individually (clustering disabled)
           return renderEventMarkers();
         })()}
 
-        {/* Render vehicle markers using ClusteredVehicleMarkers component */}
-        {showVehicleMarkers && vehicleMarkers.length > 0 && (
-          <ClusteredVehicleMarkers markers={clusteredVehicleData} />
-        )}
+        {/* Render vehicle markers individually (clustering disabled) */}
+        {showVehicleMarkers && vehicleMarkers.length > 0 &&
+          clusteredVehicleData.map((vehicle) => (
+            <UnidadMarker
+              key={vehicle.id}
+              position={vehicle.position}
+              nombre={vehicle.nombre}
+              estado={vehicle.estado}
+              unidadId={vehicle.id}
+              isSelected={false}
+              onSelect={() => handleVehicleMarkerClick(vehicle.id)}
+              heading={vehicle.heading}
+              lastReportMinutes={vehicle.lastReportMinutes}
+            />
+          ))
+        }
       </MapContainer>
 
       <MapToolbar
