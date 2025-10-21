@@ -69,6 +69,13 @@ interface UnidadesMapViewProps {
   selectedZonaId?: string | null; // NEW: Selected zona ID
   onEventSelect?: (eventId: string | null) => void; // NEW: Event selection callback
   onZonaSelect?: (zonaId: string | null) => void; // NEW: Zona selection callback
+  showVehicleMarkers?: boolean; // Optional, default true
+  showVehiclesOnMap?: boolean;
+  onToggleVehiclesVisibility?: (visible: boolean) => void;
+  showZonasOnMap?: boolean;
+  onToggleZonasVisibility?: (visible: boolean) => void;
+  showEventMarkers?: boolean;
+  onToggleEventsVisibility?: (visible: boolean) => void;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -111,7 +118,14 @@ export default function UnidadesMapView({
   selectedEventId = null,
   selectedZonaId = null,
   onEventSelect,
-  onZonaSelect
+  onZonaSelect,
+  showVehicleMarkers = true,
+  showVehiclesOnMap: showVehiclesOnMapProp,
+  onToggleVehiclesVisibility,
+  showZonasOnMap: showZonasOnMapProp,
+  onToggleZonasVisibility,
+  showEventMarkers: showEventMarkersProp,
+  onToggleEventsVisibility
 }: UnidadesMapViewProps) {
   const [map, setMap] = useState<L.Map | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -120,8 +134,71 @@ export default function UnidadesMapView({
   const center: LatLngExpression = [20.659699, -103.349609]; // Guadalajara
   const zoom = 13;
 
-  // Global map store for cross-view layer visibility
-  const { showEventsOnMap, showZonasOnMap, showVehiclesOnMap } = useGlobalMapStore();
+  // Global map store for cross-view layer visibility (fallback when explicit props are not provided)
+  const {
+    showEventsOnMap: storeShowEventsOnMap,
+    showZonasOnMap: storeShowZonasOnMap,
+    showVehiclesOnMap: storeShowVehiclesOnMap,
+    setShowEventsOnMap,
+    setShowZonasOnMap,
+    setShowVehiclesOnMap
+  } = useGlobalMapStore();
+
+  const vehiclesContextVisible = showVehiclesOnMapProp ?? storeShowVehiclesOnMap;
+  const eventsVisible = showEventMarkersProp ?? storeShowEventsOnMap;
+  const zonasVisible = showZonasOnMapProp ?? storeShowZonasOnMap;
+  const primaryVehiclesVisible = showVehicleMarkers && vehiclesContextVisible;
+
+  const handleToggleVehiclesVisibility = () => {
+    const next = !vehiclesContextVisible;
+    if (onToggleVehiclesVisibility) {
+      onToggleVehiclesVisibility(next);
+    } else {
+      setShowVehiclesOnMap(next);
+    }
+  };
+
+  const handleToggleEventsVisibility = () => {
+    const next = !eventsVisible;
+    if (onToggleEventsVisibility) {
+      onToggleEventsVisibility(next);
+    } else {
+      setShowEventsOnMap(next);
+    }
+  };
+
+  const handleToggleZonasVisibility = () => {
+    const next = !zonasVisible;
+    if (onToggleZonasVisibility) {
+      onToggleZonasVisibility(next);
+    } else {
+      setShowZonasOnMap(next);
+    }
+  };
+
+  const layerOptions = [
+    {
+      id: 'vehicles',
+      label: 'Vehículos',
+      icon: 'vehicles' as const,
+      isVisible: vehiclesContextVisible,
+      onToggle: handleToggleVehiclesVisibility
+    },
+    {
+      id: 'events',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: eventsVisible,
+      onToggle: handleToggleEventsVisibility
+    },
+    {
+      id: 'zones',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: zonasVisible,
+      onToggle: handleToggleZonasVisibility
+    }
+  ];
 
   const { applyFitBounds } = useMapFitBounds({ mapRef });
 
@@ -270,7 +347,7 @@ export default function UnidadesMapView({
           subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
         />
 
-        {unidadMarkers.map((unidad) => (
+        {primaryVehiclesVisible && unidadMarkers.map((unidad) => (
           <UnidadMarker
             key={unidad.id}
             position={unidad.position}
@@ -285,8 +362,8 @@ export default function UnidadesMapView({
           />
         ))}
 
-        {/* Render events as context layer when global visibility is ON */}
-        {showVehiclesOnMap && unidadMarkers.map((unidad) => (
+        {/* Render vehicles as context layer when visibility toggle is ON */}
+        {vehiclesContextVisible && unidadMarkers.map((unidad) => (
           <UnidadMarker
             key={`context-unidad-${unidad.id}`}
             position={unidad.position}
@@ -300,7 +377,7 @@ export default function UnidadesMapView({
           />
         ))}
 
-        {showEventsOnMap && eventMarkers.map((event) => (
+        {eventsVisible && eventMarkers.map((event) => (
           <EventMarker
             key={`context-event-${event.id}`}
             position={event.position}
@@ -317,7 +394,7 @@ export default function UnidadesMapView({
         ))}
 
         {/* Render zonas as context layer when global visibility is ON */}
-        {showZonasOnMap && zonas.map((zona) => {
+        {zonasVisible && zonas.map((zona) => {
           // Only render visible zonas
           if (!zona.visible) return null;
 
@@ -341,6 +418,7 @@ export default function UnidadesMapView({
           onRecenterRoute={handleRecenterUnidades}
           onToggleFullscreen={handleToggleFullscreen}
           isFullscreen={isFullscreen}
+          layers={layerOptions}
         />
       )}
     </div>

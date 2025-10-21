@@ -252,7 +252,7 @@ export function generateGuadalajaraZonas(): Zona[] {
       id: 'zona-periferico',
       nombre: 'PERIFÉRICO',
       color: '#06b6d4', // Cyan
-      icon: 'Highway',
+      icon: 'Road',
       coordinates: createRectangle(
         [-103.450, 20.730],
         [-103.410, 20.690]

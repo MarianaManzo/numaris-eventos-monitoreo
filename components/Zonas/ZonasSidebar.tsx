@@ -1,15 +1,48 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
 import { Button, Typography, Popover, Input, Select, Switch } from 'antd';
-import { Funnel, MagnifyingGlass, Buildings, House, Factory, Storefront, TreeEvergreen, Park, Hospital, Airplane, GraduationCap, Highway, Car, WarningOctagon } from 'phosphor-react';
+import type { IconProps } from 'phosphor-react';
+import {
+  Funnel,
+  MagnifyingGlass,
+  Buildings,
+  House,
+  Factory,
+  Storefront,
+  TreeEvergreen,
+  Airplane,
+  GraduationCap,
+  Path as Road,
+  Car,
+  WarningOctagon,
+  FirstAid
+} from 'phosphor-react';
 import { generateGuadalajaraZonas, getUniqueTags, filterZonas } from '@/lib/zonas/generateZonas';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
-import * as PhosphorIcons from 'phosphor-react';
 
 const { Text } = Typography;
+
+const ICONS: Record<string, ComponentType<IconProps>> = {
+  Buildings,
+  House,
+  Factory,
+  Storefront,
+  TreeEvergreen,
+  Airplane,
+  GraduationCap,
+  Road,
+  Car,
+  WarningOctagon,
+  Park: TreeEvergreen,
+  Hospital: FirstAid
+};
+
+function getIconComponent(name?: string): ComponentType<IconProps> {
+  return (name && ICONS[name]) || WarningOctagon;
+}
 
 interface ZonasSidebarProps {
   zonasWithRelations: ZonaWithRelations[];
@@ -90,12 +123,6 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
 
   const handleZonaClick = (zonaId: string) => {
     selectZona(selectedZonaId === zonaId ? null : zonaId);
-  };
-
-  // Get phosphor icon component by name
-  const getIconComponent = (iconName: string) => {
-    const iconKey = iconName as keyof typeof PhosphorIcons;
-    return PhosphorIcons[iconKey] || Buildings; // Fallback to Buildings
   };
 
   // Define filter content for Popover

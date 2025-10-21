@@ -21,20 +21,26 @@ interface DateRange {
   end: string;
 }
 
-type EventMultiValueKey =
-  | 'severidades'
-  | 'etiquetas'
-  | 'unidades'
-  | 'assignedUsers'
-  | 'location'
-  | 'eventTypes';
+type EventMultiValueMap = {
+  severidades: EventSeverity;
+  etiquetas: string;
+  unidades: string;
+  assignedUsers: string;
+  location: string;
+  eventTypes: string;
+};
 
-type UnitMultiValueKey =
-  | 'tags'
-  | 'zones'
-  | 'brandModels'
-  | 'status'
-  | 'responsables';
+type EventMultiValueKey = keyof EventMultiValueMap;
+
+type UnitMultiValueMap = {
+  tags: string;
+  zones: string;
+  brandModels: string;
+  status: string;
+  responsables: string;
+};
+
+type UnitMultiValueKey = keyof UnitMultiValueMap;
 
 export interface EventsFilters {
   estado: 'todos' | 'abiertos' | 'cerrados';
@@ -66,9 +72,9 @@ interface FilterStoreState {
   appliedFilters: AppliedFilter[];
   hydrationReady: boolean;
   setEventsFilters: (partial: Partial<EventsFilters>) => void;
-  toggleEventFilterValue: (key: EventMultiValueKey, value: string) => void;
+  toggleEventFilterValue: <K extends EventMultiValueKey>(key: K, value: EventMultiValueMap[K]) => void;
   setUnitsFilters: (partial: Partial<UnitsFilters>) => void;
-  toggleUnitFilterValue: (key: UnitMultiValueKey, value: string) => void;
+  toggleUnitFilterValue: <K extends UnitMultiValueKey>(key: K, value: UnitMultiValueMap[K]) => void;
   removeFilter: (filterId: string) => void;
   clearAllFilters: () => void;
   clearDomainFilters: (domain: FilterDomain) => void;
@@ -139,6 +145,33 @@ const createDefaultUnitsFilters = (): UnitsFilters => ({
   responsables: [],
   searchText: ''
 });
+
+const toggleArrayValue = <T>(collection: readonly T[], value: T): T[] =>
+  collection.includes(value)
+    ? collection.filter((item) => item !== value)
+    : [...collection, value];
+
+const removeEventMultiValue = <K extends EventMultiValueKey>(
+  events: EventsFilters,
+  key: K,
+  value: EventMultiValueMap[K]
+): EventMultiValueMap[K][] => {
+  const filtered = (events[key] as EventMultiValueMap[K][])
+    .filter((item) => item !== value);
+  events[key] = filtered as EventsFilters[K];
+  return filtered;
+};
+
+const removeUnitMultiValue = <K extends UnitMultiValueKey>(
+  units: UnitsFilters,
+  key: K,
+  value: UnitMultiValueMap[K]
+): UnitMultiValueMap[K][] => {
+  const filtered = (units[key] as UnitMultiValueMap[K][])
+    .filter((item) => item !== value);
+  units[key] = filtered as UnitsFilters[K];
+  return filtered;
+};
 
 const buildFilterId = (domain: FilterDomain, key: string, value?: string) => {
   const encodedValue = value !== undefined ? encodeURIComponent(value) : '';
@@ -427,15 +460,17 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     });
   },
 
-  toggleEventFilterValue: (key, value) => {
+  toggleEventFilterValue: <K extends EventMultiValueKey>(key: K, value: EventMultiValueMap[K]) => {
     set((state) => {
-      const current = state.events[key] as string[];
+      const current = state.events[key] as EventMultiValueMap[K][];
       if (!current) {
         return {};
       }
-      const exists = current.includes(value);
-      const nextValues = exists ? current.filter((item) => item !== value) : [...current, value];
-      const events = { ...state.events, [key]: nextValues };
+      const nextValues = toggleArrayValue(current, value);
+      const events = {
+        ...state.events,
+        [key]: nextValues
+      } as EventsFilters;
       return {
         events,
         appliedFilters: buildAppliedFilters(events, state.units)
@@ -453,15 +488,17 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     });
   },
 
-  toggleUnitFilterValue: (key, value) => {
+  toggleUnitFilterValue: <K extends UnitMultiValueKey>(key: K, value: UnitMultiValueMap[K]) => {
     set((state) => {
-      const current = state.units[key] as string[];
+      const current = state.units[key] as UnitMultiValueMap[K][];
       if (!current) {
         return {};
       }
-      const exists = current.includes(value);
-      const nextValues = exists ? current.filter((item) => item !== value) : [...current, value];
-      const units = { ...state.units, [key]: nextValues };
+      const nextValues = toggleArrayValue(current, value);
+      const units = {
+        ...state.units,
+        [key]: nextValues
+      } as UnitsFilters;
       return {
         units,
         appliedFilters: buildAppliedFilters(state.events, units)
@@ -484,7 +521,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
             break;
           case 'severidades':
             if (value) {
-              const next = events.severidades.filter((item) => item !== value);
+              const next = removeEventMultiValue(events, 'severidades', value as EventSeverity);
               events.severidades = next.length > 0 ? next : [...DEFAULT_EVENT_SEVERITIES];
             }
             break;
@@ -495,8 +532,11 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
           case 'location':
           case 'eventTypes':
             if (value) {
-              const current = events[key as EventMultiValueKey];
-              events[key as EventMultiValueKey] = current.filter((item) => item !== value);
+              removeEventMultiValue(
+                events,
+                key as EventMultiValueKey,
+                value as EventMultiValueMap[EventMultiValueKey]
+              );
             }
             break;
           case 'filterByMapVehicles':
@@ -528,13 +568,16 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
           case 'brandModels':
           case 'responsables':
             if (value) {
-              const current = units[key as UnitMultiValueKey];
-              units[key as UnitMultiValueKey] = current.filter((item) => item !== value);
+              removeUnitMultiValue(
+                units,
+                key as UnitMultiValueKey,
+                value as UnitMultiValueMap[UnitMultiValueKey]
+              );
             }
             break;
           case 'status':
             if (value) {
-              const next = units.status.filter((item) => item !== value);
+              const next = removeUnitMultiValue(units, 'status', value as UnitMultiValueMap['status']);
               units.status = next.length > 0 ? next : [...DEFAULT_UNIT_STATUS];
             }
             break;
