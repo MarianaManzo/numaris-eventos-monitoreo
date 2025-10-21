@@ -65,17 +65,11 @@ export default function EventListView({
   const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('todos');
   const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
   const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
-  const [selectedResponsables, setSelectedResponsables] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'event-asc'>('date-desc');
 
-  // Get unique tags and responsables from events for filter dropdowns
+  // Get unique tags from events for filter dropdowns
   const availableEtiquetas = useMemo(() => {
     const unique = Array.from(new Set(events.map(e => e.etiqueta).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [events]);
-
-  const availableResponsables = useMemo(() => {
-    const unique = Array.from(new Set(events.map(e => e.responsable).filter((v): v is string => Boolean(v))));
     return unique.sort();
   }, [events]);
 
@@ -85,9 +79,8 @@ export default function EventListView({
     if (selectedEstado !== 'todos') count++; // Count when not showing all
     if (selectedEtiquetas.length > 0) count++;
     if (selectedSeveridades.length !== 4) count++;
-    if (selectedResponsables.length > 0) count++;
     return count;
-  }, [selectedEstado, selectedEtiquetas, selectedSeveridades, selectedResponsables]);
+  }, [selectedEstado, selectedEtiquetas, selectedSeveridades]);
 
   // Apply filters and sorting to events
   const filteredAndSortedEvents = useMemo(() => {
@@ -128,13 +121,6 @@ export default function EventListView({
       );
     }
 
-    // Filter by responsables
-    if (selectedResponsables.length > 0) {
-      filtered = filtered.filter(e =>
-        e.responsable && selectedResponsables.includes(e.responsable)
-      );
-    }
-
     // Apply sorting
     const severityOrder = { 'Alta': 0, 'Media': 1, 'Baja': 2, 'Informativa': 3 };
     const sorted = [...filtered].sort((a, b) => {
@@ -155,7 +141,7 @@ export default function EventListView({
     });
 
     return sorted;
-  }, [events, searchText, selectedEstado, selectedEtiquetas, selectedSeveridades, selectedResponsables, sortBy]);
+  }, [events, searchText, selectedEstado, selectedEtiquetas, selectedSeveridades, sortBy]);
 
   // Severity counts based on filtered events
   const severityCounts = useMemo(() => ({
@@ -325,11 +311,8 @@ export default function EventListView({
                   onEstadoChange={setSelectedEstado}
                   selectedSeveridades={selectedSeveridades}
                   onSeveridadesChange={setSelectedSeveridades}
-                  selectedResponsables={selectedResponsables}
-                  onResponsablesChange={setSelectedResponsables}
                   selectedEtiquetas={selectedEtiquetas}
                   onEtiquetasChange={setSelectedEtiquetas}
-                  availableResponsables={availableResponsables}
                   availableEtiquetas={availableEtiquetas}
                   showUnidadesFilter={false}
                 />

@@ -393,7 +393,6 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
   const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
   const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
   const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('abiertos');
-  const [selectedResponsables, setSelectedResponsables] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'vehicle-asc' | 'event-asc'>('date-desc');
 
   // Handle tab change with loading state
@@ -421,14 +420,9 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
   // Generate events once per vehicle (regenerate when unidadId changes)
   const events = useMemo(() => generateRandomEvents(), [unidadId]);
 
-  // Get unique tags and emails from events for filter dropdowns
+  // Get unique tags from events for filter dropdowns
   const availableEtiquetas = useMemo(() => {
     const unique = Array.from(new Set(events.map(e => e.etiqueta).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [events]);
-
-  const availableResponsables = useMemo(() => {
-    const unique = Array.from(new Set(events.map(e => e.responsable).filter((v): v is string => Boolean(v))));
     return unique.sort();
   }, [events]);
 
@@ -440,9 +434,8 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
     if (selectedSeveridades.length !== 4) count++;
     // Count estado filter only if it's not the default ('abiertos')
     if (selectedEstado !== 'abiertos') count++;
-    if (selectedResponsables.length > 0) count++;
     return count;
-  }, [selectedEtiquetas, selectedSeveridades, selectedEstado, selectedResponsables]);
+  }, [selectedEtiquetas, selectedSeveridades, selectedEstado]);
 
   // Apply filters and sorting to events
   const filteredAndSortedEvents = useMemo(() => {
@@ -481,13 +474,6 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
       }
     });
 
-    // Filter by responsables
-    if (selectedResponsables.length > 0) {
-      filtered = filtered.filter(e =>
-        e.responsable && selectedResponsables.includes(e.responsable)
-      );
-    }
-
     // Apply sorting
     const severityOrder = { 'Alta': 0, 'Media': 1, 'Baja': 2, 'Informativa': 3 };
     const sorted = [...filtered].sort((a, b) => {
@@ -511,7 +497,7 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
     });
 
     return sorted;
-  }, [events, searchText, selectedEtiquetas, selectedSeveridades, selectedEstado, selectedResponsables, sortBy]);
+  }, [events, searchText, selectedEtiquetas, selectedSeveridades, selectedEstado, sortBy]);
 
   const severityCounts = useMemo(() => ({
     Alta: filteredAndSortedEvents.filter(e => e.severidad === 'Alta').length,
@@ -1089,11 +1075,8 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
                         onEstadoChange={setSelectedEstado}
                         selectedSeveridades={selectedSeveridades}
                         onSeveridadesChange={setSelectedSeveridades}
-                        selectedResponsables={selectedResponsables}
-                        onResponsablesChange={setSelectedResponsables}
                         selectedEtiquetas={selectedEtiquetas}
                         onEtiquetasChange={setSelectedEtiquetas}
-                        availableResponsables={availableResponsables}
                         availableEtiquetas={availableEtiquetas}
                         showUnidadesFilter={false}
                       />

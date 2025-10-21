@@ -171,7 +171,6 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
   const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
   const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
   const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('todos');
-  const [selectedResponsables, setSelectedResponsables] = useState<string[]>([]);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const trajectoryListRef = useRef<HTMLDivElement>(null);
   const trajectoryItemsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -285,14 +284,9 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
     return generateEventsForDate(selectedDate);
   }, [selectedDate]);
 
-  // Get unique etiquetas and responsables for filter dropdowns
+  // Get unique etiquetas for filter dropdowns
   const availableEtiquetas = useMemo(() => {
     const unique = Array.from(new Set(allEvents.map((e: Event & { etiqueta?: string }) => e.etiqueta).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [allEvents]);
-
-  const availableResponsables = useMemo(() => {
-    const unique = Array.from(new Set(allEvents.map(e => e.responsable).filter((v): v is string => Boolean(v))));
     return unique.sort();
   }, [allEvents]);
 
@@ -326,15 +320,8 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
       );
     }
 
-    // Filter by responsables
-    if (selectedResponsables.length > 0) {
-      filtered = filtered.filter(e =>
-        e.responsable && selectedResponsables.includes(e.responsable)
-      );
-    }
-
     return filtered;
-  }, [allEvents, selectedSeveridades, selectedEstado, selectedEtiquetas, selectedResponsables]);
+  }, [allEvents, selectedSeveridades, selectedEstado, selectedEtiquetas]);
 
   // Notify parent of filtered event IDs for map marker filtering
   useEffect(() => {
@@ -358,9 +345,8 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
     if (selectedSeveridades.length !== 4) count++;
     // Count estado filter if it's not the default ('todos')
     if (selectedEstado !== 'todos') count++;
-    if (selectedResponsables.length > 0) count++;
     return count;
-  }, [selectedEtiquetas, selectedSeveridades, selectedEstado, selectedResponsables]);
+  }, [selectedEtiquetas, selectedSeveridades, selectedEstado]);
 
   const handleEventClick = (eventId: string) => {
     onEventSelect(eventId, 'list');
@@ -645,11 +631,8 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
                 onEstadoChange={setSelectedEstado}
                 selectedSeveridades={selectedSeveridades}
                 onSeveridadesChange={setSelectedSeveridades}
-                selectedResponsables={selectedResponsables}
-                onResponsablesChange={setSelectedResponsables}
                 selectedEtiquetas={selectedEtiquetas}
                 onEtiquetasChange={setSelectedEtiquetas}
-                availableResponsables={availableResponsables}
                 availableEtiquetas={availableEtiquetas}
                 showUnidadesFilter={false}
               />

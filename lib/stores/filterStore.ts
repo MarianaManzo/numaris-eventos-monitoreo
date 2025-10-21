@@ -525,7 +525,6 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
               events.severidades = next.length > 0 ? next : [...DEFAULT_EVENT_SEVERITIES];
             }
             break;
-          case 'responsables':
           case 'etiquetas':
           case 'unidades':
           case 'assignedUsers':
@@ -652,11 +651,6 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
       if (severidades.length > 0) {
         events.severidades = severidades;
       }
-    }
-
-    const responsablesParam = params.get(EVENT_QUERY_KEY_MAP.responsables);
-    if (responsablesParam) {
-      events.responsables = responsablesParam.split(',').map((value) => value.trim()).filter(Boolean);
     }
 
     const etiquetasParam = params.get(EVENT_QUERY_KEY_MAP.etiquetas);
