@@ -894,14 +894,19 @@ export default function UnifiedMapView({
   // Memoize clustered vehicle data to prevent infinite re-renders
   // The markers array prop must have a stable reference for ClusteredVehicleMarkers useEffect
   const clusteredVehicleData = useMemo(() => {
+    const estadoMap = {
+      en_movimiento: 'En ruta',
+      detenido: 'Detenido',
+      sin_comunicacion: 'Inactivo'
+    } as const;
+
     return vehicleMarkers.map((vehicle) => ({
       id: vehicle.id,
       position: vehicle.position,
       nombre: vehicle.nombre,
-      estado: vehicle.estado,
-      velocidad: 0,
-      heading: 0,
-      lastReportMinutes: 0,
+      estado: estadoMap[vehicle.estado] ?? 'En ruta',
+      heading: 'heading' in vehicle && typeof vehicle.heading === 'number' ? vehicle.heading : 0,
+      lastReportMinutes: 'lastReportMinutes' in vehicle && typeof vehicle.lastReportMinutes === 'number' ? vehicle.lastReportMinutes : 0,
       onClick: handleVehicleMarkerClick // Use stable reference to prevent infinite re-renders
     }));
   }, [vehicleMarkers, handleVehicleMarkerClick]);
