@@ -61,7 +61,7 @@ export default function EventFilterModal({
   const handleLimpiar = () => {
     onEstadoChange('todos');
     onSeveridadesChange(['Alta', 'Media', 'Baja', 'Informativa']);
-    onResponsablesChange([]);
+    _onResponsablesChange?.([]);
     onEtiquetasChange([]);
     if (showUnidadesFilter && onUnidadesChange) {
       onUnidadesChange([]);
