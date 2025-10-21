@@ -121,7 +121,7 @@ export default function UnidadesMapView({
   const zoom = 13;
 
   // Global map store for cross-view layer visibility
-  const { showEventsOnMap, showZonasOnMap } = useGlobalMapStore();
+  const { showEventsOnMap, showZonasOnMap, showVehiclesOnMap } = useGlobalMapStore();
 
   const { applyFitBounds } = useMapFitBounds({ mapRef });
 
@@ -286,48 +286,35 @@ export default function UnidadesMapView({
         ))}
 
         {/* Render events as context layer when global visibility is ON */}
-        {showEventsOnMap && (() => {
-          // Determine if we should cluster events (lazy clustering)
-          const shouldClusterEvents = eventMarkers.length >= 15;
+        {showVehiclesOnMap && unidadMarkers.map((unidad) => (
+          <UnidadMarker
+            key={`context-unidad-${unidad.id}`}
+            position={unidad.position}
+            nombre={unidad.nombre}
+            estado={unidad.estado}
+            unidadId={unidad.id}
+            isSelected={false}
+            onSelect={() => onUnidadSelect(unidad.id)}
+            heading={unidad.heading}
+            lastReportMinutes={unidad.lastReportMinutes}
+          />
+        ))}
 
-          if (shouldClusterEvents) {
-            // Use ClusteredEventMarkers for context layer with reduced opacity
-            const clusteredEventData = eventMarkers.map(event => ({
-              id: event.id,
-              position: event.position,
-              evento: event.evento,
-              fechaCreacion: event.fechaCreacion,
-              severidad: event.severidad,
-              isSelected: selectedEventId === event.id,
-              onClick: onEventSelect ? () => onEventSelect(event.id) : () => {}
-            }));
-
-            return (
-              <ClusteredEventMarkers
-                markers={clusteredEventData}
-                opacity={0.7}
-                size="small"
-              />
-            );
-          }
-
-          // For non-clustering, render individual markers with reduced visibility
-          return eventMarkers.map((event) => (
-            <EventMarker
-              key={event.id}
-              position={event.position}
-              evento={event.evento}
-              fechaCreacion={event.fechaCreacion}
-              severidad={event.severidad}
-              color={getSeverityColor(event.severidad)}
-              eventId={event.id}
-              isSelected={selectedEventId === event.id}
-              onSelect={onEventSelect || (() => {})}
-              etiqueta={event.etiqueta}
-              responsable={event.responsable}
-            />
-          ));
-        })()}
+        {showEventsOnMap && eventMarkers.map((event) => (
+          <EventMarker
+            key={`context-event-${event.id}`}
+            position={event.position}
+            evento={event.evento}
+            fechaCreacion={event.fechaCreacion}
+            severidad={event.severidad}
+            color={getSeverityColor(event.severidad)}
+            eventId={event.id}
+            isSelected={false}
+            onSelect={onEventSelect || (() => {})}
+            etiqueta={event.etiqueta}
+            responsable={event.responsable}
+          />
+        ))}
 
         {/* Render zonas as context layer when global visibility is ON */}
         {showZonasOnMap && zonas.map((zona) => {
