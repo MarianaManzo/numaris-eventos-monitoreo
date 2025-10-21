@@ -156,10 +156,6 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
   })() : [];
 
   // Stable onClick handler to prevent infinite re-renders
-  const handleVehicleMarkerClick = useCallback(() => {
-    // No-op for now - could navigate to vehicle detail or show popup in future
-  }, []);
-
   // Memoize vehicle position to prevent array reference changes causing infinite re-renders
   const vehicleCurrentPosition = useMemo(() => {
     if (!unidadId) return null;
@@ -182,10 +178,9 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
       id: unidadId,
       position: vehicleCurrentPosition,
       nombre: vehicleName,
-      estado: 'En ruta' as const, // ClusteredVehicleMarkers expects 'En ruta', not 'en_movimiento'
-      onClick: handleVehicleMarkerClick // Use stable reference from useCallback
+      estado: 'en_movimiento' as const
     }];
-  }, [activeTab, unidadId, vehicleCurrentPosition, vehicleName, handleVehicleMarkerClick]);
+  }, [activeTab, unidadId, vehicleCurrentPosition, vehicleName]);
 
   if (isLoading) {
     return (
