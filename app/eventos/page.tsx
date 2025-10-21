@@ -1,9 +1,10 @@
-'use client';
+import { Suspense } from 'react';
+import EventosPageClient from './page.client';
 
-import dynamic from 'next/dynamic';
-
-const EventosView = dynamic(() => import('@/components/Eventos/EventosView'), { ssr: false });
-
-export default function EventosPage() {
-  return <EventosView />;
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <EventosPageClient />
+    </Suspense>
+  );
 }

@@ -6,7 +6,7 @@ import esES from 'antd/locale/es_ES';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import 'antd/dist/reset.css';
 import FilterUrlSync from '@/components/Filters/FilterUrlSync';
@@ -120,7 +120,9 @@ export function Providers({ children }: { children: ReactNode }) {
       wave={{ disabled: true }}
     >
       <AntApp>
-        <FilterUrlSync />
+        <Suspense fallback={null}>
+          <FilterUrlSync />
+        </Suspense>
         {children}
       </AntApp>
     </ConfigProvider>

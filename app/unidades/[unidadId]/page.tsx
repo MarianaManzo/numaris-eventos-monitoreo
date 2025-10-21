@@ -1,42 +1,37 @@
-'use client';
+import { Suspense } from 'react';
+import UnidadDetailClient from './page.client';
 
-import dynamic from 'next/dynamic';
-import { use, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useRouteStore } from '@/lib/stores/routeStore';
+type UnidadRouteParams = {
+  params: { unidadId: string };
+};
 
-const MainView = dynamic(() => import('@/components/Route/MainView'), { ssr: false });
-const DayView = dynamic(() => import('@/components/Route/DayView'), { ssr: false });
-
-export default function UnidadDetailPage({ params }: { params: Promise<{ unidadId: string }> }) {
-  const { unidadId } = use(params);
-  const searchParams = useSearchParams();
-  const { viewMode, setViewMode } = useRouteStore();
-
-  // Restore state from URL on page load
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlTab = searchParams.get('tab');
-      const urlView = searchParams.get('view');
-
-      // Restore view mode from URL or default to 'main'
-      if (urlView === 'day') {
-        setViewMode('day');
-      } else {
-        setViewMode('main');
-      }
-
-      // Restore active tab from URL if present
-      if (urlTab) {
-        localStorage.setItem('mainview-active-tab', urlTab);
-      }
-    }
-  }, [searchParams, setViewMode]);
-
-  // Switch to DayView when viewMode is 'day'
-  if (viewMode === 'day') {
-    return <DayView />;
+const isUnidadRouteParams = (value: unknown): value is UnidadRouteParams => {
+  if (!value || typeof value !== 'object') {
+    return false;
   }
 
-  return <MainView unidadId={unidadId} />;
+  const params = (value as Record<string, unknown>).params;
+
+  return (
+    params !== undefined &&
+    params !== null &&
+    typeof params === 'object' &&
+    typeof (params as Record<string, unknown>).unidadId === 'string'
+  );
+};
+
+export default function Page(props: unknown) {
+  if (!isUnidadRouteParams(props)) {
+    throw new Error('Expected params to contain a unidadId string.');
+  }
+
+  const {
+    params: { unidadId },
+  } = props;
+
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <UnidadDetailClient unidadId={unidadId} />
+    </Suspense>
+  );
 }

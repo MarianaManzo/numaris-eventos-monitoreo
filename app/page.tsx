@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import HomeClient from './HomeClient';
+import HomeClient from './HomeClient.client';
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

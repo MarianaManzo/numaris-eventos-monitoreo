@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import MockupFocusModeClient from './Client';
+import MockupFocusModeClient from './Client.client';
 
 export const dynamic = 'force-static';
 
