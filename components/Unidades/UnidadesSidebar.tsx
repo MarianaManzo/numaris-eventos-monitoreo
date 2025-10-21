@@ -97,7 +97,7 @@ export default function UnidadesSidebar({
       const generated = generateUnidades();
       onUnidadesGenerated(generated);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   // Apply filters
   useEffect(() => {

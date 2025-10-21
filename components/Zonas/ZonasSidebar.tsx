@@ -46,7 +46,7 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
       const generated = generateGuadalajaraZonas();
       setZonas(generated);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   // Get available tags
   const availableTags = useMemo(() => {
@@ -94,8 +94,8 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
 
   // Get phosphor icon component by name
   const getIconComponent = (iconName: string) => {
-    const IconComponent = (PhosphorIcons as any)[iconName];
-    return IconComponent || Buildings; // Fallback to Buildings
+    const iconKey = iconName as keyof typeof PhosphorIcons;
+    return PhosphorIcons[iconKey] || Buildings; // Fallback to Buildings
   };
 
   // Define filter content for Popover

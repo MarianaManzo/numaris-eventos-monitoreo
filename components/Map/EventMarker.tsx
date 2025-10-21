@@ -1,7 +1,7 @@
 'use client';
 
 import { Marker /* , Popup */ } from 'react-leaflet';
-import type { LatLngExpression } from 'leaflet';
+import type { LatLngExpression, Marker as LeafletMarker, MarkerOptions } from 'leaflet';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 // import EventPopup from './EventPopup'; // DISABLED: Popup feature temporarily disabled
@@ -36,7 +36,6 @@ interface EventMarkerProps {
 }
 
 // Shared navigation state across all EventMarker instances (currently unused but kept for future features)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const globalNavigationInProgress = false;
 
 // Helper function to darken a color
@@ -57,12 +56,16 @@ const darkenColor = (color: string, percent: number = 30): string => {
   return `#${toHex(darken(r))}${toHex(darken(g))}${toHex(darken(b))}`;
 };
 
+type MarkerWithSeverity = LeafletMarker & {
+  options: MarkerOptions & { severidad?: EventSeverity };
+};
+
 export default function EventMarker({ position, evento, fechaCreacion, severidad, color, eventId, isSelected, showPopup, isDimmed = false, onSelect, onDeselect, vehicleName = 'XKHD-2390', vehicleId, address = 'Anillo Perif. Nte. Manuel Gómez Morín 7743...', etiqueta, responsable, startTime, endTime, startAddress, viewDate, forceStatus, useOperationalStatus = false, disableAutoPan = false }: EventMarkerProps) {
   // Default showPopup to isSelected if not provided (backward compatibility)
   const shouldShowPopup = showPopup !== undefined ? showPopup : isSelected;
   const [L, setL] = useState<typeof import('leaflet') | null>(null);
   const severityStyle = getSeverityColor(severidad);
-  const markerRef = useRef<L.Marker | null>(null);
+  const markerRef = useRef<LeafletMarker | null>(null);
 
   // Calculate status based on viewDate and event times OR operational status
   const getStatus = (): 'Iniciado' | 'Finalizado' | 'En curso' | 'Abierto' | 'Cerrado' | 'En progreso' => {
@@ -128,6 +131,12 @@ export default function EventMarker({ position, evento, fechaCreacion, severidad
       setL(leaflet.default);
     });
   }, []);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      (markerRef.current as MarkerWithSeverity).options.severidad = severidad;
+    }
+  }, [severidad]);
 
   // DISABLED: Open popup automatically when shouldShowPopup is true, close when false
   // Feature temporarily disabled - markers will show selection state (border/pill) without popup
@@ -314,8 +323,6 @@ export default function EventMarker({ position, evento, fechaCreacion, severidad
           onSelect(eventId);
         }
       }}
-      // @ts-ignore - Add custom property for clustering
-      severidad={severidad}
     />
   );
 }

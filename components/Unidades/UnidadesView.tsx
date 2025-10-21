@@ -61,7 +61,7 @@ export default function UnidadesView() {
       const generated = generateGuadalajaraZonas();
       setZonas(generated);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   // Initial loading effect
   useEffect(() => {

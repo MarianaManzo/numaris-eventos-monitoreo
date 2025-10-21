@@ -3,6 +3,7 @@
 import { useEffect, useRef, createContext, useContext } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import type { MarkerClusterEvent } from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -29,6 +30,10 @@ interface MarkerClusterGroupProps {
   iconCreateFunction?: (cluster: L.MarkerCluster) => L.DivIcon;
   onClusterClick?: (cluster: L.MarkerCluster) => void;
 }
+
+type MarkerWithSeverity = L.Marker & {
+  options: L.MarkerOptions & { severidad?: string };
+};
 
 /**
  * MarkerClusterGroup - Wraps leaflet.markercluster for React Leaflet
@@ -65,14 +70,13 @@ export default function MarkerClusterGroup({
       zoomToBoundsOnClick,
       disableClusteringAtZoom,
       iconCreateFunction: iconCreateFunction || createDefaultClusterIcon,
-      // Custom cluster click handler
-      // @ts-ignore - MarkerClusterGroup has this event
-      clusterclick: (event: any) => {
-        if (onClusterClick) {
-          onClusterClick(event.layer);
-        }
-      }
     });
+
+    if (onClusterClick) {
+      clusterGroup.on('clusterclick', (event: MarkerClusterEvent) => {
+        onClusterClick(event.layer);
+      });
+    }
 
     clusterGroupRef.current = clusterGroup;
     map.addLayer(clusterGroup);
@@ -185,8 +189,8 @@ export function createEventClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
     'Informativa': 0
   };
 
-  markers.forEach((marker: any) => {
-    const severity = marker.options.severidad || 'Informativa';
+  markers.forEach((marker) => {
+    const severity = (marker as MarkerWithSeverity).options.severidad || 'Informativa';
     if (severity in severityCounts) {
       severityCounts[severity as keyof typeof severityCounts]++;
     }

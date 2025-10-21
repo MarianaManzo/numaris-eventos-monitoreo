@@ -5,6 +5,10 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 
+type MarkerWithVehicleStatus = L.Marker & {
+  options: L.MarkerOptions & { estado?: VehicleMarkerData['estado'] };
+};
+
 interface VehicleMarkerData {
   id: string;
   position: [number, number];
@@ -73,7 +77,7 @@ export default function ClusteredVehicleMarkers({
       });
 
       // Store estado for cluster icon calculation
-      (marker.options as any).estado = markerData.estado;
+      (marker as MarkerWithVehicleStatus).options.estado = markerData.estado;
 
       clusterGroup.addLayer(marker);
     });

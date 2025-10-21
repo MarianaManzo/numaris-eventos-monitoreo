@@ -23,9 +23,11 @@ const ensureAntdReact19Compat = () => {
       host.__antdRoot__ = createRoot(host);
     }
     host.__antdRoot__.render(node);
-    return () => {
-      host.__antdRoot__?.unmount();
-      delete host.__antdRoot__;
+    return async () => {
+      if (host.__antdRoot__) {
+        host.__antdRoot__.unmount();
+        delete host.__antdRoot__;
+      }
     };
   });
 };

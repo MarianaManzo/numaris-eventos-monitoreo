@@ -211,7 +211,7 @@ export default function EventosSidebar({
       const generated = generateRandomEvents();
       onEventsGenerated(generated);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   // Apply filters - NEW: Binary toggle logic for Estado + Map vehicle filter
   useEffect(() => {

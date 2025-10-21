@@ -37,7 +37,7 @@ export default function Home() {
     } else {
       console.log('[Home] Found', routes.length, 'existing valid routes');
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
   if (viewMode === 'day') {
     return <DayView />;

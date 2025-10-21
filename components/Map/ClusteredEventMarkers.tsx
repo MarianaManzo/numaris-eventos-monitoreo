@@ -7,6 +7,10 @@ import 'leaflet.markercluster';
 import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
 import type { EventSeverity } from '@/lib/events/types';
 
+type MarkerWithSeverity = L.Marker & {
+  options: L.MarkerOptions & { severidad?: EventSeverity };
+};
+
 interface EventMarkerData {
   id: string;
   position: [number, number];
@@ -72,7 +76,7 @@ export default function ClusteredEventMarkers({
       });
 
       // Store severidad for cluster icon calculation
-      (marker.options as any).severidad = markerData.severidad;
+      (marker as MarkerWithSeverity).options.severidad = markerData.severidad;
 
       clusterGroup.addLayer(marker);
     });
@@ -199,7 +203,9 @@ function createEventClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
 
   // Get all child markers and determine highest severity
   const childMarkers = cluster.getAllChildMarkers();
-  const severities = childMarkers.map((marker: any) => marker.options.severidad).filter(Boolean);
+  const severities = childMarkers
+    .map((marker) => (marker as MarkerWithSeverity).options.severidad)
+    .filter((severity): severity is EventSeverity => Boolean(severity));
 
   // Severity priority order: Alta > Media > Baja > Informativa
   const severityPriority: Record<EventSeverity, number> = {
