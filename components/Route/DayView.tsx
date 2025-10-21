@@ -842,10 +842,6 @@ export default function DayView() {
     return getVehicleCurrentPosition(unidadId);
   }, [unidadId]);
 
-  // Stable onClick handler for vehicle markers to prevent infinite re-renders
-  const handleVehicleMarkerClick = useCallback(() => {
-    // No-op for now - could navigate to vehicle detail or show popup in future
-  }, []);
 
   useEffect(() => {
     // Clear the navigation tab setting after using it
@@ -1233,13 +1229,12 @@ export default function DayView() {
         id: unidadId, // Use actual vehicle ID
         position: vehicleCurrentPosition,
         nombre: vehicleName, // Use memoized vehicle name
-        estado: 'En ruta' as const, // ClusteredVehicleMarkers expects 'En ruta', not 'en_movimiento'
-        onClick: handleVehicleMarkerClick // Use stable reference from useCallback
+        estado: 'en_movimiento' as const
       });
     }
 
     return markers;
-  }, [generateRouteForDate, vehicleCurrentPosition, unidadId, vehicleName, handleVehicleMarkerClick]);
+  }, [generateRouteForDate, vehicleCurrentPosition, unidadId, vehicleName]);
 
   const reporteMarkers = useMemo(() => {
     if (!generateRouteForDate) return [];
