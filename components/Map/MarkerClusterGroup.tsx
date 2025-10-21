@@ -22,6 +22,7 @@ interface MarkerData {
 
 interface MarkerClusterGroupProps {
   children?: ReactNode;
+  markers?: MarkerData[]; // optional: compatibility when markers array is provided
   maxClusterRadius?: number;
   spiderfyOnMaxZoom?: boolean;
   showCoverageOnHover?: boolean;
