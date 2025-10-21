@@ -40,6 +40,30 @@ const MapContainer = dynamic(
   { ssr: false }
 );
 
+const toCoordinateTuple = (coord: LatLngExpression): [number, number] => {
+  if (Array.isArray(coord)) {
+    const [lat, lng] = coord;
+    return [lat, lng];
+  }
+
+  if (typeof coord === 'object' && coord !== null) {
+    if ('lat' in coord && 'lng' in coord) {
+      const { lat, lng } = coord as { lat: number; lng: number };
+      return [lat, lng];
+    }
+
+    if ('latitude' in coord && 'longitude' in coord) {
+      const { latitude, longitude } = coord as { latitude: number; longitude: number };
+      return [latitude, longitude];
+    }
+  }
+
+  return [0, 0];
+};
+
+const normalizeCoordinates = (coords: LatLngExpression[]): [number, number][] =>
+  coords.map((coord) => toCoordinateTuple(coord));
+
 const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
   { ssr: false }
@@ -286,7 +310,7 @@ export default function UnifiedMapView({
               });
             } else {
               // For other views, use the hook's applyFitBounds function
-              applyFitBounds(allCoordinates, {
+              applyFitBounds(normalizeCoordinates(allCoordinates), {
                 paddingTopLeft: [275, 50],
                 paddingBottomRight: [50, 50],
                 maxZoom: 16,
