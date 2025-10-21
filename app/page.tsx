@@ -2,13 +2,15 @@ import { Suspense } from 'react';
 import HomeClient from './HomeClient';
 
 type PageProps = {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function Page({ searchParams }: PageProps) {
+export default async function Page({ searchParams }: PageProps) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+
   return (
     <Suspense fallback={<div className="min-h-screen bg-white" />}>
-      <HomeClient initialParams={searchParams} />
+      <HomeClient initialParams={resolvedParams} />
     </Suspense>
   );
 }
