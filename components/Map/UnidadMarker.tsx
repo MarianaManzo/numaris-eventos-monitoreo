@@ -17,6 +17,8 @@ interface UnidadMarkerProps {
   address?: string;
   heading?: number; // Direction vehicle is facing in degrees (0-360)
   lastReportMinutes?: number; // Minutes since last report
+  isDimmed?: boolean;
+  isRelatedToSelectedEvent?: boolean;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -59,7 +61,9 @@ export default function UnidadMarker({
   onDeselect,
   address = 'Anillo Perif. Nte. Manuel Gómez Morín 7743...',
   heading = 0,
-  lastReportMinutes = 0
+  lastReportMinutes = 0,
+  isDimmed = false,
+  isRelatedToSelectedEvent = false
 }: UnidadMarkerProps) {
   const [L, setL] = useState<typeof import('leaflet') | null>(null);
   const estadoStyle = getEstadoColor(estado);
@@ -187,6 +191,8 @@ export default function UnidadMarker({
   const markerColor = getMarkerColor();
   const isMoving = estado === 'En ruta' || estado === 'Activo';
   const rotation = isMoving ? heading : 0;
+  const borderColor = isRelatedToSelectedEvent ? '#f97316' : '#1867ff';
+  const markerOpacity = isDimmed ? 0.45 : 1;
 
   const iconHtml = `
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -204,10 +210,11 @@ export default function UnidadMarker({
         align-items: center;
         justify-content: center;
         color: white;
-        border: 3px solid #1867ff;
-        box-shadow: 0 3px 10px rgba(0,0,0,${isSelected ? '0.35' : '0.25'});
+        border: 3px solid ${borderColor};
+        box-shadow: 0 3px 10px rgba(0,0,0,${isSelected ? '0.35' : '0.2'});
         transition: all 0.2s;
         cursor: pointer;
+        opacity: ${markerOpacity};
       ">
         <svg
           width="${Math.min(width, height) * 0.6}"
