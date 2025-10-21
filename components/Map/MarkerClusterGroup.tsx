@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.markercluster';
@@ -20,6 +21,7 @@ interface MarkerData {
 }
 
 interface MarkerClusterGroupProps {
+  children?: ReactNode;
   markers: MarkerData[]; // Array of marker data to render
   maxClusterRadius?: number;
   spiderfyOnMaxZoom?: boolean;
