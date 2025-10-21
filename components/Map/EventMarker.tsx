@@ -30,7 +30,7 @@ interface EventMarkerProps {
   endTime?: Dayjs;
   startAddress?: string;
   viewDate?: Dayjs;
-  forceStatus?: 'Iniciado' | 'Finalizado' | 'En curso';
+  forceStatus?: 'Iniciado' | 'Finalizado' | 'En curso' | 'Inicio/Fin';
   useOperationalStatus?: boolean; // Use operational status (Abierto/Cerrado/En progreso) instead of lifecycle status
   disableAutoPan?: boolean; // Disable auto-pan when popup opens (for dual marker views)
 }
@@ -68,7 +68,7 @@ export default function EventMarker({ position, evento, fechaCreacion, severidad
   const markerRef = useRef<LeafletMarker | null>(null);
 
   // Calculate status based on viewDate and event times OR operational status
-  const getStatus = (): 'Iniciado' | 'Finalizado' | 'En curso' | 'Abierto' | 'Cerrado' | 'En progreso' => {
+  const getStatus = (): 'Iniciado' | 'Finalizado' | 'En curso' | 'Abierto' | 'Cerrado' | 'En progreso' | 'Inicio/Fin' => {
     // If forceStatus is provided, use it (for separate Inicio/Fin markers in historical view)
     if (forceStatus) {
       return forceStatus;
@@ -172,6 +172,8 @@ export default function EventMarker({ position, evento, fechaCreacion, severidad
       statusLabel = 'Inicio';
     } else if (forceStatus === 'Finalizado') {
       statusLabel = 'Fin';
+    } else if (forceStatus === 'Inicio/Fin') {
+      statusLabel = 'Inicio/Fin';
     } else if (!forceStatus) {
       // Single marker (not in historical dual-marker view) - show based on operational status
       const operationalStatus = status as 'Abierto' | 'Cerrado' | 'En progreso';
