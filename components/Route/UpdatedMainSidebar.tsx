@@ -392,7 +392,7 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
   const [searchText, setSearchText] = useState('');
   const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
   const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
-  const [selectedEstado, setSelectedEstado] = useState<'abiertos' | 'cerrados'>('abiertos');
+  const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('abiertos');
   const [selectedResponsables, setSelectedResponsables] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'vehicle-asc' | 'event-asc'>('date-desc');
 
