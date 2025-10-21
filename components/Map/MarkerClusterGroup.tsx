@@ -3,7 +3,6 @@
 import { useEffect, useRef, createContext, useContext } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import type { MarkerClusterEvent } from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -73,8 +72,8 @@ export default function MarkerClusterGroup({
     });
 
     if (onClusterClick) {
-      clusterGroup.on('clusterclick', (event: MarkerClusterEvent) => {
-        onClusterClick(event.layer);
+      clusterGroup.on('clusterclick', (event) => {
+        onClusterClick(event.layer as L.MarkerCluster);
       });
     }
 
