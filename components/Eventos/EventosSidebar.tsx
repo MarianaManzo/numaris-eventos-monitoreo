@@ -441,7 +441,7 @@ export default function EventosSidebar({
               trigger="click"
               open={filterModalOpen}
               onOpenChange={setFilterModalOpen}
-              placement="rightTop"
+              placement="bottomLeft"
             >
               <Badge count={activeFilterCount} offset={[-4, 4]}>
                 <Button
