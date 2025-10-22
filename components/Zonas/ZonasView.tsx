@@ -8,7 +8,7 @@ import CollapsibleMenu from '@/components/Layout/CollapsibleMenu';
 import dynamic from 'next/dynamic';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
-import { isPointInZona } from '@/lib/zonas/generateZonas';
+import { isPointInZona, calculateCentroid } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
 
 const { Content, Sider } = Layout;
@@ -108,7 +108,7 @@ export default function ZonasView() {
     }));
   }, []);
 
-  // Generate mock event data (simplified)
+  // Generate contextual event data anchored to zonas
   const eventMarkers = useMemo<Array<{
     id: string;
     position: [number, number];
@@ -119,9 +119,27 @@ export default function ZonasView() {
     responsable?: string;
     vehicleId?: string;
   }>>(() => {
-    // Return empty array for now - can add mock events later
-    return [];
-  }, []);
+    const severities: Array<'Alta' | 'Media' | 'Baja' | 'Informativa'> = ['Alta', 'Media', 'Baja', 'Informativa'];
+    return zonas.flatMap((zona, zonaIndex) => {
+      const centroid = calculateCentroid(zona.coordinates);
+      const [lat, lng] = centroid;
+
+      const variations: Array<[number, number]> = [
+        [0, 0],
+        [0.0012, -0.0008]
+      ];
+
+      return variations.map(([latOffset, lngOffset], idx) => ({
+        id: `zona-${zona.id}-event-${idx}`,
+        position: [lat + latOffset, lng + lngOffset] as [number, number],
+        evento: `Evento ${idx + 1}`,
+        fechaCreacion: new Date().toISOString(),
+        severidad: severities[(zonaIndex + idx) % severities.length],
+        etiqueta: zona.nombre,
+        vehicleId: `unidad-${((zonaIndex + idx) % 20) + 1}`
+      }));
+    });
+  }, [zonas]);
 
   // Calculate zona relationships
   const zonasWithRelations: ZonaWithRelations[] = useMemo(() => {
