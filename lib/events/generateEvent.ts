@@ -68,7 +68,7 @@ const eventTemplates = [
   { evento: 'Ralentí prolongado', severidad: 'Informativa' as const },
 ];
 
-const tags = [
+export const EVENT_TAGS = [
   'Walmart', 'OXXO', 'Soriana', 'Costco', 'Home Depot',
   'Liverpool', 'Chedraui', 'Sam\'s Club', 'Bodega Aurrera',
   'Office Depot', 'Best Buy', 'Elektra', 'Coppel', 'Suburbia',
@@ -203,7 +203,7 @@ export function generateEventById(eventId: string, referenceDate?: Dayjs): Event
   const second = random(0, 59, validIndex * 100 + 3);
   const eventDateTime = baseTime.hour(hour).minute(minute).second(second);
 
-  const randomTag = tags[seed % tags.length];
+  const randomTag = EVENT_TAGS[seed % EVENT_TAGS.length];
   const randomEmail = emails[seed % emails.length];
   // Use templateIndex to match EventosSidebar's instruction mapping
   const instructionText = instructionTemplates[templateIndex % instructionTemplates.length];

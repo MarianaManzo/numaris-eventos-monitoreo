@@ -10,6 +10,7 @@ import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { isPointInZona, calculateCentroid } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
+import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
 
@@ -215,6 +216,9 @@ export default function ZonasView() {
             </Sider>
 
             <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
+              <div className="floating-filters-overlay">
+                <FloatingFilterControls />
+              </div>
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
                   <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
@@ -282,6 +286,9 @@ export default function ZonasView() {
           </Sider>
 
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
+            <div className="floating-filters-overlay">
+              <FloatingFilterControls />
+            </div>
             <ZonasMapView
               zonas={zonas}
               selectedZonaId={selectedZonaId}

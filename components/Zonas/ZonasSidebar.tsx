@@ -20,6 +20,7 @@ import {
 } from 'phosphor-react';
 import { generateGuadalajaraZonas, getUniqueTags, filterZonas } from '@/lib/zonas/generateZonas';
 import { useZonaStore } from '@/lib/stores/zonaStore';
+import { useFilterStore } from '@/lib/stores/filterStore';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
 
@@ -72,6 +73,7 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
     deselectAllZonas,
     getVisibleZonas
   } = useZonaStore();
+  const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
 
   // Generate zonas once on mount
   useEffect(() => {
@@ -92,6 +94,10 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
     const filteredIds = new Set(filtered.map(z => z.id));
     return zonasWithRelations.filter(z => filteredIds.has(z.id));
   }, [zonasWithRelations, searchQuery, filteredTags, zonas]);
+
+  useEffect(() => {
+    setUnitsFilters({ zoneTags: filteredTags });
+  }, [filteredTags, setUnitsFilters]);
 
   const visibleZonas = getVisibleZonas();
   const visibleCount = visibleZonas.length;

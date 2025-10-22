@@ -2,27 +2,11 @@
 
 import { useMemo, MouseEvent, useState, useCallback } from 'react';
 import { Button, Dropdown, Space, Tag, Input, Checkbox, Empty } from 'antd';
-import type { MenuProps } from 'antd';
 import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
-import { useFilterStore } from '@/lib/stores/filterStore';
+import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
-
-const DOMAIN_CONFIG = [
-  {
-    key: 'units' as const,
-    label: 'Unidades',
-    icon: <Truck size={16} />
-  },
-  {
-    key: 'events' as const,
-    label: 'Eventos',
-    icon: <FunnelSimple size={16} />
-  }
-] satisfies Array<{
-  key: 'events' | 'units';
-  label: string;
-  icon: React.ReactNode;
-}>;
+import { EVENT_TAGS } from '@/lib/events/generateEvent';
+import type { EventSeverity } from '@/lib/events/types';
 
 interface FloatingFilterControlsProps {
   unidadId?: string;
@@ -36,6 +20,13 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const unitsFilters = useFilterStore((state) => state.units);
   const selectedZones = unitsFilters.zones;
   const selectedZoneTags = unitsFilters.zoneTags;
+  const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
+  const toggleEventFilterValue = useFilterStore((state) => state.toggleEventFilterValue);
+  const eventsFilters = useFilterStore((state) => state.events);
+  const selectedEventTags = eventsFilters.etiquetas;
+  const selectedSeveridades = eventsFilters.severidades;
+  const selectedEstado = eventsFilters.estado;
+
 
   const grouped = useMemo(() => {
     return appliedFilters.reduce<Record<'events' | 'units', typeof appliedFilters>>(
@@ -52,8 +43,6 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     );
   }, [appliedFilters]);
 
-  const totalFilters = grouped.events.length + grouped.units.length;
-
   const zonas = useMemo(() => generateGuadalajaraZonas(), []);
   const zonaTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -65,9 +54,15 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
 
   const [isZoneDropdownOpen, setZoneDropdownOpen] = useState(false);
   const [zoneSearch, setZoneSearch] = useState('');
-  const [tagSearch, setTagSearch] = useState('');
+  const [zoneTagSearch, setZoneTagSearch] = useState('');
   const [zonesCollapsed, setZonesCollapsed] = useState(false);
-  const [tagsCollapsed, setTagsCollapsed] = useState(false);
+  const [zoneTagsCollapsed, setZoneTagsCollapsed] = useState(false);
+  const [isEventDropdownOpen, setEventDropdownOpen] = useState(false);
+  const [eventStateCollapsed, setEventStateCollapsed] = useState(false);
+  const [eventSeverityCollapsed, setEventSeverityCollapsed] = useState(false);
+  const [eventTagsCollapsed, setEventTagsCollapsed] = useState(false);
+  const [severitySearch, setSeveritySearch] = useState('');
+  const [eventTagSearch, setEventTagSearch] = useState('');
 
   const handleRemove =
     (filterId: string) =>
@@ -76,46 +71,6 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
       event.stopPropagation();
       removeFilter(filterId);
     };
-
-  const buildDropdownItems = (
-    domain: 'events' | 'units',
-    filters: typeof appliedFilters
-  ): MenuProps['items'] =>
-    filters.map((filter) => ({
-      key: filter.id,
-      label: (
-        <div className="floating-filter-item">
-          <span className="floating-filter-item__text">
-            {renderFilterValue(domain, filter)}
-            {filter.count && filter.count > 1 && (
-              <span className="floating-filter-item__count">(+{filter.count - 1})</span>
-            )}
-          </span>
-          {filter.removable && (
-            <Button
-              type="text"
-              size="small"
-              className="floating-filter-remove"
-              onClick={handleRemove(filter.id)}
-            >
-              ×
-            </Button>
-          )}
-        </div>
-      )
-    }));
-
-  const createEmptyMenuItems = (key: string, text: string): MenuProps['items'] => [
-    {
-      key,
-      label: (
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>
-          {text}
-        </span>
-      ),
-      disabled: true
-    }
-  ];
 
   const filteredZonas = useMemo(() => {
     const query = zoneSearch.trim().toLowerCase();
@@ -128,12 +83,36 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   }, [zonas, zoneSearch]);
 
   const filteredZonaTags = useMemo(() => {
-    const query = tagSearch.trim().toLowerCase();
+    const query = zoneTagSearch.trim().toLowerCase();
     if (!query) {
       return zonaTags;
     }
     return zonaTags.filter((tag) => tag.toLowerCase().includes(query));
-  }, [zonaTags, tagSearch]);
+  }, [zonaTags, zoneTagSearch]);
+
+  const eventTagOptions = useMemo(() => {
+    const tagSet = new Set<string>(EVENT_TAGS);
+    selectedEventTags.forEach((tag) => tagSet.add(tag));
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+  }, [selectedEventTags]);
+
+  const filteredSeverities = useMemo(() => {
+    const query = severitySearch.trim().toLowerCase();
+    if (!query) {
+      return DEFAULT_EVENT_SEVERITIES;
+    }
+    return DEFAULT_EVENT_SEVERITIES.filter((severity) =>
+      severity.toLowerCase().includes(query)
+    );
+  }, [severitySearch]);
+
+  const filteredEventTags = useMemo(() => {
+    const query = eventTagSearch.trim().toLowerCase();
+    if (!query) {
+      return eventTagOptions;
+    }
+    return eventTagOptions.filter((tag) => tag.toLowerCase().includes(query));
+  }, [eventTagOptions, eventTagSearch]);
 
   const toggleZoneSelection = useCallback((zoneName: string) => {
     const exists = selectedZones.includes(zoneName);
@@ -154,41 +133,94 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const handleClearZones = useCallback(() => {
     setUnitsFilters({ zones: [], zoneTags: [] });
     setZoneSearch('');
-    setTagSearch('');
+    setZoneTagSearch('');
   }, [setUnitsFilters]);
 
-  if (unidadId) {
-    const unitFilter = grouped.units.find((filter) => filter.key === 'unidadContext');
-    const eventFilters = grouped.events.filter((filter) => filter.key !== 'unidades');
+  const handleEstadoToggle = useCallback((value: 'abiertos' | 'cerrados') => {
+    const current = new Set<'abiertos' | 'cerrados'>(
+      eventsFilters.estado === 'abiertos'
+        ? ['abiertos']
+        : eventsFilters.estado === 'cerrados'
+          ? ['cerrados']
+          : ['abiertos', 'cerrados']
+    );
 
-    const unitLabel = unitFilter?.value ?? unidadId;
-    const zoneSelectionCount = selectedZones.length + selectedZoneTags.length;
-    const zonaLabel = (() => {
-      if (zoneSelectionCount === 0) {
-        return 'Todas las zonas';
+    if (current.has(value)) {
+      current.delete(value);
+    } else {
+      current.add(value);
+    }
+
+    if (current.size === 0 || current.size === 2) {
+      setEventsFilters({ estado: 'todos' });
+    } else if (current.has('abiertos')) {
+      setEventsFilters({ estado: 'abiertos' });
+    } else {
+      setEventsFilters({ estado: 'cerrados' });
+    }
+  }, [eventsFilters.estado, setEventsFilters]);
+
+  const toggleSeverity = useCallback((severity: EventSeverity) => {
+    toggleEventFilterValue('severidades', severity);
+  }, [toggleEventFilterValue]);
+
+  const toggleEventTagSelection = useCallback((tag: string) => {
+    const exists = selectedEventTags.includes(tag);
+    const nextTags = exists
+      ? selectedEventTags.filter((value) => value !== tag)
+      : [...selectedEventTags, tag];
+    setEventsFilters({ etiquetas: nextTags });
+  }, [selectedEventTags, setEventsFilters]);
+
+  const handleClearEvents = useCallback(() => {
+    setEventsFilters({
+      estado: 'todos',
+      severidades: [...DEFAULT_EVENT_SEVERITIES],
+      etiquetas: []
+    });
+    setSeveritySearch('');
+    setEventTagSearch('');
+  }, [setEventsFilters]);
+
+  const zoneSelectionCount = selectedZones.length + selectedZoneTags.length;
+  const zonaLabel = (() => {
+    if (zoneSelectionCount === 0) {
+      return 'Todas las zonas';
+    }
+
+    if (zoneSelectionCount === 1) {
+      if (selectedZoneTags.length === 1) {
+        return selectedZoneTags[0];
       }
-
-      if (zoneSelectionCount === 1) {
-        if (selectedZoneTags.length === 1) {
-          return selectedZoneTags[0];
-        }
-        if (selectedZones.length === 1) {
-          return selectedZones[0];
-        }
+      if (selectedZones.length === 1) {
+        return selectedZones[0];
       }
+    }
 
-      return '';
-    })();
-    const showZonaLabel = zonaLabel.length > 0;
+    return '';
+  })();
+  const showZonaLabel = zonaLabel.length > 0;
 
-    const eventItems = eventFilters.length > 0
-      ? buildDropdownItems('events', eventFilters)
-      : createEmptyMenuItems('events-empty', 'Sin filtros activos');
-    const eventsCount = eventFilters.length;
+  const selectedEstadoSet = (() => {
+    if (selectedEstado === 'abiertos') {
+      return new Set<'abiertos' | 'cerrados'>(['abiertos']);
+    }
+    if (selectedEstado === 'cerrados') {
+      return new Set<'abiertos' | 'cerrados'>(['cerrados']);
+    }
+    return new Set<'abiertos' | 'cerrados'>(['abiertos', 'cerrados']);
+  })();
 
-    return (
-      <div className="floating-filter-controls">
-        <Space className="floating-filter-button-group">
+  const isAllSeveritiesSelected = selectedSeveridades.length === DEFAULT_EVENT_SEVERITIES.length && DEFAULT_EVENT_SEVERITIES.every((severity) => selectedSeveridades.includes(severity));
+  const eventSelectionCount =
+    (selectedEstado === 'todos' ? 0 : selectedEstadoSet.size) +
+    (isAllSeveritiesSelected ? 0 : selectedSeveridades.length) +
+    selectedEventTags.length;
+
+  const renderControlsContent = (showUnitButton: boolean, unitLabel?: string) => (
+    <div className="floating-filter-controls">
+      <Space className="floating-filter-button-group">
+        {showUnitButton && (
           <Button
             className="floating-filter-button floating-filter-button--static"
             icon={<Truck size={16} color="#1f2937" />}
@@ -198,11 +230,525 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
             Unidad
             <span style={{ marginLeft: 8, fontWeight: 600, color: '#475569' }}>{unitLabel}</span>
           </Button>
+        )}
 
-          <Dropdown menu={{ items: eventItems }} trigger={['click']} placement="bottomLeft">
+        <Dropdown
+          open={isEventDropdownOpen}
+          onOpenChange={setEventDropdownOpen}
+          trigger={['click']}
+          placement="bottomLeft"
+          popupRender={() => (
+            <div
+              style={{
+                width: 280,
+                padding: '12px',
+                background: '#fff',
+                borderRadius: '12px',
+                boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEventStateCollapsed((value) => !value)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    color: '#0f172a',
+                    fontWeight: 600
+                  }}
+                >
+                  <span>Estado ({selectedEstadoSet.size})</span>
+                  <CaretDown
+                    size={14}
+                    weight="bold"
+                    style={{
+                      transition: 'transform 0.2s ease',
+                      transform: eventStateCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                    }}
+                  />
+                </button>
+                {!eventStateCollapsed && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '8px'
+                    }}
+                  >
+                    {(['abiertos', 'cerrados'] as const).map((value) => {
+                      const label = value === 'abiertos' ? 'Abiertos' : 'Cerrados';
+                      return (
+                        <label
+                          key={value}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: 13,
+                            color: '#334155',
+                            cursor: 'pointer',
+                            userSelect: 'none'
+                          }}
+                        >
+                          <Checkbox
+                            checked={selectedEstadoSet.has(value)}
+                            onChange={() => handleEstadoToggle(value)}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEventSeverityCollapsed((value) => !value)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    color: '#0f172a',
+                    fontWeight: 600
+                  }}
+                >
+                  <span>Severidad ({selectedSeveridades.length})</span>
+                  <CaretDown
+                    size={14}
+                    weight="bold"
+                    style={{
+                      transition: 'transform 0.2s ease',
+                      transform: eventSeverityCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                    }}
+                  />
+                </button>
+                {!eventSeverityCollapsed && (
+                  <>
+                    <Input
+                      allowClear
+                      size="small"
+                      placeholder="Buscar severidad"
+                      value={severitySearch}
+                      onChange={(event) => setSeveritySearch(event.target.value)}
+                    />
+                    <div
+                      style={{
+                        maxHeight: 160,
+                        overflowY: 'auto',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        padding: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                      }}
+                    >
+                      {filteredSeverities.length === 0 ? (
+                        <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      ) : (
+                        filteredSeverities.map((severity) => (
+                          <label
+                            key={severity}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: 13,
+                              color: '#334155',
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedSeveridades.includes(severity)}
+                              onChange={() => toggleSeverity(severity as EventSeverity)}
+                            />
+                            <span>{severity}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEventTagsCollapsed((value) => !value)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    color: '#0f172a',
+                    fontWeight: 600
+                  }}
+                >
+                  <span>Etiquetas ({selectedEventTags.length})</span>
+                  <CaretDown
+                    size={14}
+                    weight="bold"
+                    style={{
+                      transition: 'transform 0.2s ease',
+                      transform: eventTagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                    }}
+                  />
+                </button>
+                {!eventTagsCollapsed && (
+                  <>
+                    <Input
+                      allowClear
+                      size="small"
+                      placeholder="Buscar etiqueta"
+                      value={eventTagSearch}
+                      onChange={(event) => setEventTagSearch(event.target.value)}
+                    />
+                    <div
+                      style={{
+                        maxHeight: 160,
+                        overflowY: 'auto',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        padding: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                      }}
+                    >
+                      {filteredEventTags.length === 0 ? (
+                        <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      ) : (
+                        filteredEventTags.map((tag) => (
+                          <label
+                            key={tag}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: 13,
+                              color: '#334155',
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedEventTags.includes(tag)}
+                              onChange={() => toggleEventTagSelection(tag)}
+                            />
+                            <span>{tag}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button size="small" type="link" onClick={handleClearEvents}>
+                  Limpiar
+                </Button>
+              </div>
+            </div>
+          )}
+        >
+          <Button className="floating-filter-button" icon={<FunnelSimple size={16} />}>
+            Eventos
+            {eventSelectionCount > 0 && (
+              <Tag className="floating-filter-button__tag">{eventSelectionCount}</Tag>
+            )}
+            <svg
+              className="floating-filter-button__caret"
+              width={18}
+              height={18}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
+            </svg>
+          </Button>
+        </Dropdown>
+
+        <Dropdown
+          open={isZoneDropdownOpen}
+          onOpenChange={setZoneDropdownOpen}
+          trigger={['click']}
+          placement="bottomLeft"
+          popupRender={() => (
+            <div
+              style={{
+                width: 280,
+                padding: '12px',
+                background: '#fff',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEventStateCollapsed((value) => !value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>Estado ({selectedEstadoSet.size})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      style={{
+                        transition: 'transform 0.2s ease',
+                        transform: eventStateCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                      }}
+                    />
+                  </button>
+                  {!eventStateCollapsed && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '8px'
+                      }}
+                    >
+                      {(['abiertos', 'cerrados'] as const).map((value) => {
+                        const label = value === 'abiertos' ? 'Abiertos' : 'Cerrados';
+                        return (
+                          <label
+                            key={value}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: 13,
+                              color: '#334155',
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedEstadoSet.has(value)}
+                              onChange={() => handleEstadoToggle(value)}
+                            />
+                            <span>{label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEventSeverityCollapsed((value) => !value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>Severidad ({selectedSeveridades.length})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      style={{
+                        transition: 'transform 0.2s ease',
+                        transform: eventSeverityCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                      }}
+                    />
+                  </button>
+                  {!eventSeverityCollapsed && (
+                    <>
+                      <Input
+                        allowClear
+                        size="small"
+                        placeholder="Buscar severidad"
+                        value={severitySearch}
+                        onChange={(event) => setSeveritySearch(event.target.value)}
+                      />
+                      <div
+                        style={{
+                          maxHeight: 160,
+                          overflowY: 'auto',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        {filteredSeverities.length === 0 ? (
+                          <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        ) : (
+                          filteredSeverities.map((severity) => (
+                            <label
+                              key={severity}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: 13,
+                                color: '#334155',
+                                cursor: 'pointer',
+                                userSelect: 'none'
+                              }}
+                            >
+                              <Checkbox
+                                checked={selectedSeveridades.includes(severity)}
+                                onChange={() => toggleSeverity(severity as EventSeverity)}
+                              />
+                              <span>{severity}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEventTagsCollapsed((value) => !value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>Etiquetas ({selectedEventTags.length})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      style={{
+                        transition: 'transform 0.2s ease',
+                        transform: eventTagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                      }}
+                    />
+                  </button>
+                  {!eventTagsCollapsed && (
+                    <>
+                      <Input
+                        allowClear
+                        size="small"
+                        placeholder="Buscar etiqueta"
+                        value={eventTagSearch}
+                        onChange={(event) => setEventTagSearch(event.target.value)}
+                      />
+                      <div
+                        style={{
+                          maxHeight: 160,
+                          overflowY: 'auto',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        {filteredEventTags.length === 0 ? (
+                          <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        ) : (
+                          filteredEventTags.map((tag) => (
+                            <label
+                              key={tag}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: 13,
+                                color: '#334155',
+                                cursor: 'pointer',
+                                userSelect: 'none'
+                              }}
+                            >
+                              <Checkbox
+                                checked={selectedEventTags.includes(tag)}
+                                onChange={() => toggleEventTagSelection(tag)}
+                              />
+                              <span>{tag}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button size="small" type="link" onClick={handleClearEvents}>
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+            )}
+          >
             <Button className="floating-filter-button" icon={<FunnelSimple size={16} />}>
               Eventos
-              <Tag className="floating-filter-button__tag">{eventsCount}</Tag>
+              {eventSelectionCount > 0 && (
+                <Tag className="floating-filter-button__tag">{eventSelectionCount}</Tag>
+              )}
               <svg
                 className="floating-filter-button__caret"
                 width={18}
@@ -316,7 +862,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button
                     type="button"
-                    onClick={() => setTagsCollapsed((value) => !value)}
+                    onClick={() => setZoneTagsCollapsed((value) => !value)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -331,23 +877,23 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
                     }}
                   >
                     <span>Etiquetas ({selectedZoneTags.length})</span>
-                    <CaretDown
-                      size={14}
-                      weight="bold"
-                      style={{
-                        transition: 'transform 0.2s ease',
-                        transform: tagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-                      }}
-                    />
-                  </button>
-                  {!tagsCollapsed && (
-                    <>
-                      <Input
-                        allowClear
-                        size="small"
-                        placeholder="Buscar etiqueta"
-                        value={tagSearch}
-                        onChange={(event) => setTagSearch(event.target.value)}
+            <CaretDown
+              size={14}
+              weight="bold"
+              style={{
+                transition: 'transform 0.2s ease',
+                transform: zoneTagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+              }}
+            />
+          </button>
+          {!zoneTagsCollapsed && (
+            <>
+              <Input
+                allowClear
+                size="small"
+                placeholder="Buscar etiqueta"
+                value={zoneTagSearch}
+                onChange={(event) => setZoneTagSearch(event.target.value)}
                       />
                       <div
                         style={{
@@ -391,79 +937,32 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button size="small" type="link" onClick={handleClearZones}>
-                    Limpiar
-                  </Button>
-                </div>
-              </div>
-            )}
-          >
-            <Button className="floating-filter-button" icon={<MapPin size={16} />}>
-              Zonas
-              {zoneSelectionCount > 0 && (
-                <Tag className="floating-filter-button__tag">{zoneSelectionCount}</Tag>
-              )}
-              {showZonaLabel && (
-                <span style={{ marginLeft: 8, fontWeight: 600, color: '#1f2937' }}>{zonaLabel}</span>
-              )}
-              <svg
-                className="floating-filter-button__caret"
-                width={18}
-                height={18}
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
-              </svg>
-            </Button>
-          </Dropdown>
-        </Space>
-        <Button
-          type="default"
-          size="middle"
-          className="floating-filter-clear"
-          onClick={clearAllFilters}
-        >
-          Limpiar todo
-        </Button>
-      </div>
-    );
-  }
-
-  if (totalFilters === 0) {
-    return null;
-  }
-
-  return (
-    <div className="floating-filter-controls">
-      <Space className="floating-filter-button-group">
-        {DOMAIN_CONFIG.map(({ key, label, icon }) => {
-          const filters = grouped[key];
-          if (filters.length === 0) {
-            return null;
-          }
-
-          const items = buildDropdownItems(key, filters);
-
-          return (
-            <Dropdown key={key} menu={{ items }} trigger={['click']} placement="bottomLeft">
-              <Button className="floating-filter-button" icon={icon}>
-                {label}
-                <Tag className="floating-filter-button__tag">{filters.length}</Tag>
-                <svg
-                  className="floating-filter-button__caret"
-                  width={18}
-                  height={18}
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
-                </svg>
+                Limpiar
               </Button>
-            </Dropdown>
-          );
-        })}
+            </div>
+          </div>
+        )}
+        >
+          <Button className="floating-filter-button" icon={<MapPin size={16} />}>
+            Zonas
+            {zoneSelectionCount > 0 && (
+              <Tag className="floating-filter-button__tag">{zoneSelectionCount}</Tag>
+            )}
+            {showZonaLabel && (
+              <span style={{ marginLeft: 8, fontWeight: 600, color: '#1f2937' }}>{zonaLabel}</span>
+            )}
+            <svg
+              className="floating-filter-button__caret"
+              width={18}
+              height={18}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
+            </svg>
+          </Button>
+        </Dropdown>
       </Space>
       <Button
         type="default"
@@ -475,6 +974,14 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
       </Button>
     </div>
   );
+
+  if (unidadId) {
+    const unitFilter = grouped.units.find((filter) => filter.key === 'unidadContext');
+    const unitLabel = unitFilter?.value ?? unidadId;
+    return renderControlsContent(true, unitLabel);
+  }
+
+  return renderControlsContent(false);
 }
 
 const renderFilterValue = (
