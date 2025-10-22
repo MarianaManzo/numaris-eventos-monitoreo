@@ -58,7 +58,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const zonaTags = useMemo(() => {
     const tagSet = new Set<string>();
     zonas.forEach((zona) => {
-      zona.etiquetas.forEach((tag) => tagSet.add(tag));
+      zona.etiquetas?.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [zonas]);
