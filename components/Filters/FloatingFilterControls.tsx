@@ -217,6 +217,9 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     (isAllSeveritiesSelected ? 0 : selectedSeveridades.length) +
     selectedEventTags.length;
 
+  const eventDropdownOpen = isEventDropdownOpen && !isZoneDropdownOpen;
+  const zoneDropdownOpen = isZoneDropdownOpen && !isEventDropdownOpen;
+
   const renderControlsContent = (showUnitButton: boolean, unitLabel?: string) => (
     <div className="floating-filter-controls">
       <Space className="floating-filter-button-group">
@@ -232,9 +235,25 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
           </Button>
         )}
 
+        {!showUnitButton && (
+          <Button
+            className="floating-filter-button floating-filter-button--static"
+            icon={<Truck size={16} color="#1f2937" />}
+            aria-disabled="true"
+            tabIndex={-1}
+          >
+            Unidades
+          </Button>
+        )}
+
         <Dropdown
-          open={isEventDropdownOpen}
-          onOpenChange={setEventDropdownOpen}
+          open={eventDropdownOpen}
+          onOpenChange={(open) => {
+            setEventDropdownOpen(open);
+            if (open) {
+              setZoneDropdownOpen(false);
+            }
+          }}
           trigger={['click']}
           placement="bottomLeft"
           popupRender={() => (
@@ -498,8 +517,13 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
         </Dropdown>
 
         <Dropdown
-          open={isZoneDropdownOpen}
-          onOpenChange={setZoneDropdownOpen}
+          open={zoneDropdownOpen}
+          onOpenChange={(open) => {
+            setZoneDropdownOpen(open);
+            if (open) {
+              setEventDropdownOpen(false);
+            }
+          }}
           trigger={['click']}
           placement="bottomLeft"
           popupRender={() => (
