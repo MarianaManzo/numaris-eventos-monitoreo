@@ -1805,7 +1805,7 @@ export default function DayView() {
             height: '100%'
           }}>
             <div className="floating-filters-overlay">
-              <FloatingFilterControls />
+              <FloatingFilterControls unidadId={unidadId} />
             </div>
             <SingleRouteMapView
               route={generateRouteForDate ? {
