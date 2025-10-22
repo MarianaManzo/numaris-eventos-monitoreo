@@ -5,6 +5,7 @@ import type { LatLngExpression } from 'leaflet';
 import { Play, Lightning, Car, WifiHigh, BatteryCharging, Thermometer, MapPin } from 'phosphor-react';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 
 interface UnidadMarkerProps {
   position: LatLngExpression;
@@ -19,6 +20,7 @@ interface UnidadMarkerProps {
   lastReportMinutes?: number; // Minutes since last report
   isDimmed?: boolean;
   isRelatedToSelectedEvent?: boolean;
+  showLabel?: boolean;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -63,11 +65,14 @@ export default function UnidadMarker({
   heading = 0,
   lastReportMinutes = 0,
   isDimmed = false,
-  isRelatedToSelectedEvent = false
+  isRelatedToSelectedEvent = false,
+  showLabel = undefined
 }: UnidadMarkerProps) {
   const [L, setL] = useState<typeof import('leaflet') | null>(null);
   const estadoStyle = getEstadoColor(estado);
   const markerRef = useRef<L.Marker | null>(null);
+  const globalShowLabel = useGlobalMapStore((state) => state.showVehicleLabels);
+  const effectiveShowLabel = showLabel ?? globalShowLabel;
 
   const formatDate = () => {
     const date = new Date();
@@ -194,8 +199,24 @@ export default function UnidadMarker({
   const borderColor = isRelatedToSelectedEvent ? '#f97316' : '#1867ff';
   const markerOpacity = isDimmed ? 0.45 : 1;
 
+  const labelHtml = effectiveShowLabel
+    ? `<div style="
+        padding: 4px 10px;
+        background-color: #1867ff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        white-space: nowrap;
+        font-family: 'Source Sans 3', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+      ">
+        ${nombre}
+      </div>`
+    : '';
+
   const iconHtml = `
-    <div style="display: flex; align-items: center; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: ${effectiveShowLabel ? 8 : 0}px;">
       <div class="unidad-marker-icon" style="
         width: ${width}px;
         height: ${height}px;
@@ -225,19 +246,7 @@ export default function UnidadMarker({
           ${getMarkerIcon()}
         </svg>
       </div>
-      <div style="
-        padding: 4px 10px;
-        background-color: #1867ff;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        white-space: nowrap;
-        font-family: 'Source Sans 3', sans-serif;
-        font-size: 11px;
-        font-weight: 600;
-        color: white;
-      ">
-        ${nombre}
-      </div>
+      ${labelHtml}
     </div>
     <style>
       .unidad-marker-icon:hover {
@@ -249,7 +258,7 @@ export default function UnidadMarker({
 
   // Calculate total width including label, but anchor at circle center
   const estimatedLabelWidth = nombre.length * 7; // Rough estimate
-  const totalWidth = width + 8 + Math.max(60, estimatedLabelWidth);
+  const totalWidth = effectiveShowLabel ? width + 8 + Math.max(60, estimatedLabelWidth) : width;
 
   const customIcon = L.divIcon({
     html: iconHtml,

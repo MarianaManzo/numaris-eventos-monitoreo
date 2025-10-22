@@ -142,7 +142,11 @@ export default function EventosMapView({
     showZonasOnMap: globalShowZonasOnMap,
     setShowVehiclesOnMap,
     setShowEventsOnMap,
-    setShowZonasOnMap
+    setShowZonasOnMap,
+    showVehicleLabels,
+    setShowVehicleLabels,
+    showEventLabels,
+    setShowEventLabels
   } = useGlobalMapStore();
 
   const eventsVisible = showEventsOnMapProp ?? globalShowEventsOnMap;
@@ -191,6 +195,23 @@ export default function EventosMapView({
       icon: 'zones' as const,
       isVisible: zonasVisible,
       onToggle: handleToggleZonasVisibility
+    }
+  ];
+
+  const labelLayers = [
+    {
+      id: 'event-labels',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventLabels,
+      onToggle: () => setShowEventLabels(!showEventLabels)
+    },
+    {
+      id: 'vehicle-labels',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehicleLabels,
+      onToggle: () => setShowVehicleLabels(!showVehicleLabels)
     }
   ];
 
@@ -523,6 +544,7 @@ export default function EventosMapView({
                     responsable={event.responsable}
                     forceStatus="Inicio/Fin"
                     disableAutoPan={true}
+                    showLabel={showEventLabels}
                   />
                 );
               }
@@ -554,6 +576,7 @@ export default function EventosMapView({
                     responsable={event.responsable}
                     forceStatus="Inicio"
                     disableAutoPan={true}
+                    showLabel={showEventLabels}
                   />
 
                   {/* Fin marker */}
@@ -580,6 +603,7 @@ export default function EventosMapView({
                     responsable={event.responsable}
                     forceStatus="Fin"
                     disableAutoPan={true}
+                    showLabel={showEventLabels}
                   />
                 </React.Fragment>
               );
@@ -605,6 +629,7 @@ export default function EventosMapView({
                 etiqueta={event.etiqueta}
                 responsable={event.responsable}
                 useOperationalStatus={true}
+                showLabel={showEventLabels}
               />
             );
           });
@@ -657,6 +682,7 @@ export default function EventosMapView({
                 markers={clusteredVehicleData}
                 opacity={0.7}
                 size="small"
+                showLabels={showVehicleLabels}
               />
             );
           }
@@ -674,6 +700,7 @@ export default function EventosMapView({
                 onSelect={() => {}} // No-op for non-interactive markers
                 heading={vehicle.heading}
                 lastReportMinutes={vehicle.lastReportMinutes}
+                showLabel={showVehicleLabels}
               />
             );
           });
@@ -865,6 +892,7 @@ export default function EventosMapView({
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
         layers={layerOptions}
+        labelLayers={labelLayers}
       />
     </div>
   );

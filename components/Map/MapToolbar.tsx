@@ -1,6 +1,6 @@
 'use client';
 
-import { FrameCorners, CornersOut, Target } from 'phosphor-react';
+import { FrameCorners, CornersOut, Target, TextT } from 'phosphor-react';
 import { useState } from 'react';
 import LayerToggleButton from './LayerToggleButton';
 
@@ -22,6 +22,7 @@ interface MapToolbarProps {
   onToggleFullscreen?: () => void;
   isFullscreen?: boolean;
   layers?: LayerOption[];
+  labelLayers?: LayerOption[];
 }
 
 export default function MapToolbar({
@@ -34,6 +35,7 @@ export default function MapToolbar({
   onToggleFullscreen,
   isFullscreen,
   layers,
+  labelLayers,
 }: MapToolbarProps) {
   const [isRecenterPressed, setIsRecenterPressed] = useState(false);
   const [isFitEventVehiclePressed, setIsFitEventVehiclePressed] = useState(false);
@@ -73,6 +75,14 @@ export default function MapToolbar({
           </button>
         )}
         {layers && layers.length > 0 && <LayerToggleButton layers={layers} />}
+        {labelLayers && labelLayers.length > 0 && (
+          <LayerToggleButton
+            layers={labelLayers}
+            buttonIcon={(active) => <TextT size={20} weight="fill" color={active ? 'white' : '#1867ff'} />}
+            buttonTooltip="Etiquetas del mapa"
+            popoverTitle="Etiquetas visibles"
+          />
+        )}
         {/* Fit Event + Vehicle Button - Only shows when event is selected */}
         {hasEventAndVehicle && onFitEventAndVehicle && (
           <button

@@ -4,6 +4,7 @@ import { Marker /* , Popup */ } from 'react-leaflet';
 import type { LatLngExpression, Marker as LeafletMarker, MarkerOptions } from 'leaflet';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
+import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 // import EventPopup from './EventPopup'; // DISABLED: Popup feature temporarily disabled
 import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
 import type { EventSeverity, EventStatus } from '@/lib/events/types';
@@ -33,6 +34,7 @@ interface EventMarkerProps {
   forceStatus?: 'Iniciado' | 'Finalizado' | 'En curso' | 'Inicio/Fin';
   useOperationalStatus?: boolean; // Use operational status (Abierto/Cerrado/En progreso) instead of lifecycle status
   disableAutoPan?: boolean; // Disable auto-pan when popup opens (for dual marker views)
+  showLabel?: boolean;
 }
 
 // Shared navigation state across all EventMarker instances (currently unused but kept for future features)
@@ -60,12 +62,14 @@ type MarkerWithSeverity = LeafletMarker & {
   options: MarkerOptions & { severidad?: EventSeverity };
 };
 
-export default function EventMarker({ position, evento, fechaCreacion, severidad, color, eventId, isSelected, showPopup, isDimmed = false, onSelect, onDeselect, vehicleName = 'XKHD-2390', vehicleId, address = 'Anillo Perif. Nte. Manuel Gómez Morín 7743...', etiqueta, responsable, startTime, endTime, startAddress, viewDate, forceStatus, useOperationalStatus = false, disableAutoPan = false }: EventMarkerProps) {
+export default function EventMarker({ position, evento, fechaCreacion, severidad, color, eventId, isSelected, showPopup, isDimmed = false, onSelect, onDeselect, vehicleName = 'XKHD-2390', vehicleId, address = 'Anillo Perif. Nte. Manuel Gómez Morín 7743...', etiqueta, responsable, startTime, endTime, startAddress, viewDate, forceStatus, useOperationalStatus = false, disableAutoPan = false, showLabel }: EventMarkerProps) {
   // Default showPopup to isSelected if not provided (backward compatibility)
   const shouldShowPopup = showPopup !== undefined ? showPopup : isSelected;
   const [L, setL] = useState<typeof import('leaflet') | null>(null);
   const severityStyle = getSeverityColor(severidad);
   const markerRef = useRef<LeafletMarker | null>(null);
+  const globalShowLabel = useGlobalMapStore((state) => state.showEventLabels);
+  const effectiveShowLabel = showLabel ?? globalShowLabel;
 
   // Calculate status based on viewDate and event times OR operational status
   const getStatus = (): 'Iniciado' | 'Finalizado' | 'En curso' | 'Abierto' | 'Cerrado' | 'En progreso' | 'Inicio/Fin' => {
@@ -166,7 +170,7 @@ export default function EventMarker({ position, evento, fechaCreacion, severidad
   let statusLabel = '';
 
   // Always show pill when selected
-  if (isSelected) {
+  if (isSelected && effectiveShowLabel) {
     // Determine label based on context
     if (forceStatus === 'Iniciado') {
       statusLabel = 'Inicio';
@@ -225,12 +229,14 @@ export default function EventMarker({ position, evento, fechaCreacion, severidad
     );
 
     // Create combined icon with octagon shape + status label
+    const gap = statusLabel ? 4 : 0;
+
     const iconHtml = `
     <div class="octagonal-event-marker-container" style="
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: ${gap}px;
       opacity: 1;
       transition: opacity 0.3s ease, transform 0.3s ease;
       transform: scale(1);

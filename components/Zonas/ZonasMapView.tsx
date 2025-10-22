@@ -93,7 +93,13 @@ export default function ZonasMapView({
     showZonasOnMap,
     setShowVehiclesOnMap,
     setShowEventsOnMap,
-    setShowZonasOnMap
+    setShowZonasOnMap,
+    showVehicleLabels,
+    setShowVehicleLabels,
+    showEventLabels,
+    setShowEventLabels,
+    showZonaLabels,
+    setShowZonaLabels
   } = useGlobalMapStore();
 
   const { applyFitBounds } = useMapFitBounds({ mapRef });
@@ -302,6 +308,30 @@ export default function ZonasMapView({
     },
   ];
 
+  const labelLayers = [
+    {
+      id: 'zona-labels',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: showZonaLabels,
+      onToggle: () => setShowZonaLabels(!showZonaLabels),
+    },
+    {
+      id: 'vehicle-labels',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehicleLabels,
+      onToggle: () => setShowVehicleLabels(!showVehicleLabels),
+    },
+    {
+      id: 'event-labels',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventLabels,
+      onToggle: () => setShowEventLabels(!showEventLabels),
+    },
+  ];
+
   return (
     <div className={`${isFullscreen ? 'fixed left-0 right-0 bottom-0 z-[9999] bg-transparent' : 'w-full h-full relative'}`} style={isFullscreen ? { top: '64px' } : {}}>
       <MapContainer
@@ -333,7 +363,7 @@ export default function ZonasMapView({
         ))}
 
         {/* Render zona labels */}
-        {visibleZonas.map((zona) => (
+        {showZonaLabels && visibleZonas.map((zona) => (
           <ZonaLabel
             key={`label-${zona.id}`}
             zona={zona}
@@ -351,6 +381,7 @@ export default function ZonasMapView({
             }))}
             opacity={0.7}
             size="small"
+            showLabels={showVehicleLabels}
           />
         )}
 
@@ -377,6 +408,7 @@ export default function ZonasMapView({
           onToggleFullscreen={handleToggleFullscreen}
           isFullscreen={isFullscreen}
           layers={layerOptions}
+          labelLayers={labelLayers}
         />
       )}
     </div>

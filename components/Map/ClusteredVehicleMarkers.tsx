@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.markercluster';
+import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 
 type MarkerWithVehicleStatus = L.Marker & {
   options: L.MarkerOptions & { estado?: VehicleMarkerData['estado'] };
@@ -25,6 +26,7 @@ interface ClusteredVehicleMarkersProps {
   disableClusteringAtZoom?: number;
   opacity?: number; // NEW: Opacity for context layers (0-1), default 1.0 for primary
   size?: 'normal' | 'small'; // NEW: Marker size, 'small' for context layers
+  showLabels?: boolean;
 }
 
 /**
@@ -36,10 +38,13 @@ export default function ClusteredVehicleMarkers({
   maxClusterRadius = 80,
   disableClusteringAtZoom = 16,
   opacity = 1.0,
-  size = 'normal'
+  size = 'normal',
+  showLabels
 }: ClusteredVehicleMarkersProps) {
   const map = useMap();
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
+  const globalShowLabels = useGlobalMapStore((state) => state.showVehicleLabels);
+  const effectiveShowLabels = showLabels ?? globalShowLabels;
 
   useEffect(() => {
     if (!map) return;
@@ -64,7 +69,7 @@ export default function ClusteredVehicleMarkers({
 
     // Create Leaflet markers imperatively and add to cluster group
     markers.forEach((markerData) => {
-      const icon = createVehicleMarkerIcon(markerData, opacity, size);
+      const icon = createVehicleMarkerIcon(markerData, opacity, size, effectiveShowLabels);
       // Set zIndexOffset to 1000 to ensure vehicle markers appear above event markers
       const marker = L.marker(markerData.position, {
         icon,
@@ -88,7 +93,7 @@ export default function ClusteredVehicleMarkers({
         clusterGroupRef.current = null;
       }
     };
-  }, [map, markers, maxClusterRadius, disableClusteringAtZoom, opacity, size]);
+  }, [map, markers, maxClusterRadius, disableClusteringAtZoom, opacity, size, effectiveShowLabels]);
 
   return null;
 }
@@ -102,7 +107,8 @@ export default function ClusteredVehicleMarkers({
 function createVehicleMarkerIcon(
   markerData: VehicleMarkerData,
   opacity: number = 1.0,
-  size: 'normal' | 'small' = 'normal'
+  size: 'normal' | 'small' = 'normal',
+  showLabels = true
 ): L.DivIcon {
   // Adjust size for context layers
   const baseWidth = size === 'small' ? 32 : 36;
@@ -145,8 +151,24 @@ function createVehicleMarkerIcon(
   const isMoving = markerData.estado === 'En ruta';
   const rotation = isMoving ? heading : 0;
 
+  const labelHtml = showLabels
+    ? `<div style="
+        padding: 4px 10px;
+        background-color: #1867ff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        white-space: nowrap;
+        font-family: 'Source Sans 3', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+      ">
+        ${markerData.nombre}
+      </div>`
+    : '';
+
   const iconHtml = `
-    <div style="display: flex; align-items: center; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: ${showLabels ? 8 : 0}px;">
       <div style="
         width: ${width}px;
         height: ${height}px;
@@ -175,25 +197,13 @@ function createVehicleMarkerIcon(
           ${getMarkerIcon()}
         </svg>
       </div>
-      <div style="
-        padding: 4px 10px;
-        background-color: #1867ff;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        white-space: nowrap;
-        font-family: 'Source Sans 3', sans-serif;
-        font-size: 11px;
-        font-weight: 600;
-        color: white;
-      ">
-        ${markerData.nombre}
-      </div>
+      ${labelHtml}
     </div>
   `;
 
   // Calculate total width including label, but anchor at circle center
   const estimatedLabelWidth = markerData.nombre.length * 7; // Rough estimate
-  const totalWidth = width + 8 + Math.max(60, estimatedLabelWidth);
+  const totalWidth = showLabels ? width + 8 + Math.max(60, estimatedLabelWidth) : width;
 
   return L.divIcon({
     html: iconHtml,

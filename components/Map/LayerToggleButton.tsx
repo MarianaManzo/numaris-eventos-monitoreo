@@ -16,6 +16,9 @@ interface LayerDefinition {
 
 interface LayerToggleButtonProps {
   layers: LayerDefinition[];
+  buttonIcon?: (isActive: boolean) => ReactNode;
+  buttonTooltip?: string;
+  popoverTitle?: string;
 }
 
 const iconMap: Record<LayerIcon, ReactNode> = {
@@ -24,7 +27,12 @@ const iconMap: Record<LayerIcon, ReactNode> = {
   zones: <MapTrifold size={16} weight="fill" color="#16a34a" />
 };
 
-export default function LayerToggleButton({ layers }: LayerToggleButtonProps) {
+export default function LayerToggleButton({
+  layers,
+  buttonIcon,
+  buttonTooltip,
+  popoverTitle
+}: LayerToggleButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hasActiveLayer = layers.some((layer) => layer.isVisible);
@@ -59,13 +67,20 @@ export default function LayerToggleButton({ layers }: LayerToggleButtonProps) {
     layer.onToggle();
   };
 
+  const renderButtonIcon =
+    buttonIcon ||
+    ((active: boolean) => <StackSimple size={20} weight="regular" color={active ? 'white' : '#1867ff'} />);
+
+  const tooltip = buttonTooltip ?? 'Capas del mapa';
+  const title = popoverTitle ?? 'Capas del mapa';
+
   return (
     <div ref={containerRef} className="relative pointer-events-auto">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="w-10 h-10 rounded-lg shadow-lg border flex items-center justify-center transition-colors"
-        title="Capas del mapa"
+        title={tooltip}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         style={{
@@ -73,14 +88,12 @@ export default function LayerToggleButton({ layers }: LayerToggleButtonProps) {
           borderColor: hasActiveLayer ? '#1867ff' : '#e5e7eb'
         }}
       >
-        <StackSimple size={20} weight="regular" color={hasActiveLayer ? 'white' : '#1867ff'} />
+        {renderButtonIcon(hasActiveLayer)}
       </button>
 
       {isOpen && (
         <div className="absolute right-full mr-2 top-0 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-3 space-y-3 z-[11000]">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Capas del mapa
-          </div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</div>
 
           <div className="flex flex-col gap-2">
             {layers.map((layer) => (

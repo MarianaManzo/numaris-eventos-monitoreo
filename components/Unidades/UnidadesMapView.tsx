@@ -141,7 +141,11 @@ export default function UnidadesMapView({
     showVehiclesOnMap: storeShowVehiclesOnMap,
     setShowEventsOnMap,
     setShowZonasOnMap,
-    setShowVehiclesOnMap
+    setShowVehiclesOnMap,
+    showVehicleLabels,
+    setShowVehicleLabels,
+    showEventLabels,
+    setShowEventLabels
   } = useGlobalMapStore();
 
   const vehiclesContextVisible = showVehiclesOnMapProp ?? storeShowVehiclesOnMap;
@@ -197,6 +201,23 @@ export default function UnidadesMapView({
       icon: 'zones' as const,
       isVisible: zonasVisible,
       onToggle: handleToggleZonasVisibility
+    }
+  ];
+
+  const labelLayers = [
+    {
+      id: 'vehicle-labels',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehicleLabels,
+      onToggle: () => setShowVehicleLabels(!showVehicleLabels)
+    },
+    {
+      id: 'event-labels',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventLabels,
+      onToggle: () => setShowEventLabels(!showEventLabels)
     }
   ];
 
@@ -359,6 +380,7 @@ export default function UnidadesMapView({
             onDeselect={handleUnidadDeselect}
             heading={unidad.heading}
             lastReportMinutes={unidad.lastReportMinutes}
+            showLabel={showVehicleLabels}
           />
         ))}
 
@@ -374,6 +396,7 @@ export default function UnidadesMapView({
             onSelect={() => onUnidadSelect(unidad.id)}
             heading={unidad.heading}
             lastReportMinutes={unidad.lastReportMinutes}
+            showLabel={showVehicleLabels}
           />
         ))}
 
@@ -390,6 +413,7 @@ export default function UnidadesMapView({
             onSelect={onEventSelect || (() => {})}
             etiqueta={event.etiqueta}
             responsable={event.responsable}
+            showLabel={showEventLabels}
           />
         ))}
 
@@ -419,6 +443,7 @@ export default function UnidadesMapView({
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
         layers={layerOptions}
+        labelLayers={labelLayers}
       />
       )}
     </div>

@@ -7,6 +7,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
 import type { EventSeverity } from '@/lib/events/types';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
+import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 
 interface OctagonalEventMarkerProps {
   position: LatLngExpression;
@@ -32,6 +33,7 @@ interface OctagonalEventMarkerProps {
   forceStatus?: 'Inicio' | 'Fin' | 'Inicio/Fin';
   useOperationalStatus?: boolean;
   disableAutoPan?: boolean;
+  showLabel?: boolean;
 }
 
 export default function OctagonalEventMarker({
@@ -56,8 +58,11 @@ export default function OctagonalEventMarker({
   viewDate,
   forceStatus,
   useOperationalStatus = false,
-  disableAutoPan = false
+  disableAutoPan = false,
+  showLabel
 }: OctagonalEventMarkerProps) {
+  const globalShowLabel = useGlobalMapStore((state) => state.showEventLabels);
+  const effectiveShowLabel = showLabel ?? globalShowLabel;
   // Log to verify octagonal markers are being used
   if (typeof window !== 'undefined' && eventId === 'event-0') {
     console.log('🔷 Octagonal Event Marker Loaded:', eventId);
@@ -103,9 +108,9 @@ export default function OctagonalEventMarker({
 
   // Status label logic
   let statusLabel = '';
-  if (isSelected && forceStatus) {
+  if (effectiveShowLabel && isSelected && forceStatus) {
     statusLabel = forceStatus; // "Inicio", "Fin", or "Inicio/Fin"
-  } else if (isSelected && !forceStatus) {
+  } else if (effectiveShowLabel && isSelected && !forceStatus) {
     const operationalStatus = status as 'Abierto' | 'Cerrado' | 'En progreso';
     if (operationalStatus === 'Abierto' || operationalStatus === 'En progreso') {
       statusLabel = 'Inicio';
@@ -150,12 +155,14 @@ export default function OctagonalEventMarker({
       'M17.5625 0C18.0923 0.00226949 18.5995 0.213763 18.9746 0.587891L25.4121 7.02539C25.7862 7.40054 25.9977 7.90769 26 8.4375V17.5625C25.9977 18.0923 25.7862 18.5995 25.4121 18.9746L18.9746 25.4121C18.5995 25.7862 18.0923 25.9977 17.5625 26H8.4375C7.90769 25.9977 7.40054 25.7862 7.02539 25.4121L0.587891 18.9746C0.213763 18.5995 0.00226949 18.0923 0 17.5625V8.4375C0.00226949 7.90769 0.213763 7.40054 0.587891 7.02539L7.02539 0.587891C7.40054 0.213763 7.90769 0.00226949 8.4375 0H17.5625Z'
     );
 
+    const gap = statusLabel ? 4 : 0;
+
     const iconHtml = `
       <div class="octagonal-event-marker-container" style="
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
+        gap: ${gap}px;
         opacity: ${isDimmed ? '0.5' : '1'};
         transition: opacity 0.3s ease, transform 0.3s ease;
         transform: scale(1);
@@ -226,7 +233,7 @@ export default function OctagonalEventMarker({
     `;
 
     // Calculate total height: octagon + gap + label (if present)
-    const totalHeight = statusLabel ? svgSize + 4 + 24 : svgSize;
+  const totalHeight = statusLabel ? svgSize + 4 + 24 : svgSize;
 
     return L.divIcon({
       html: iconHtml,

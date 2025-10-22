@@ -36,6 +36,21 @@ interface GlobalMapStore {
    */
   showZonasOnMap: boolean;
 
+  /**
+   * Show/hide vehicle labels across all views
+   */
+  showVehicleLabels: boolean;
+
+  /**
+   * Show/hide event labels across all views
+   */
+  showEventLabels: boolean;
+
+  /**
+   * Show/hide zona labels across all views
+   */
+  showZonaLabels: boolean;
+
   // ===== Actions =====
 
   /**
@@ -55,6 +70,21 @@ interface GlobalMapStore {
    * @param show - true to show zonas, false to hide
    */
   setShowZonasOnMap: (show: boolean) => void;
+
+  /**
+   * Toggle vehicle labels visibility
+   */
+  setShowVehicleLabels: (show: boolean) => void;
+
+  /**
+   * Toggle event labels visibility
+   */
+  setShowEventLabels: (show: boolean) => void;
+
+  /**
+   * Toggle zona labels visibility
+   */
+  setShowZonaLabels: (show: boolean) => void;
 
   /**
    * Convenience method to show all layers
@@ -90,22 +120,34 @@ export const useGlobalMapStore = create<GlobalMapStore>((set) => ({
   showVehiclesOnMap: true,
   showEventsOnMap: true,
   showZonasOnMap: true,
+  showVehicleLabels: true,
+  showEventLabels: true,
+  showZonaLabels: true,
 
   // Actions
   setShowVehiclesOnMap: (show) => set({ showVehiclesOnMap: show }),
   setShowEventsOnMap: (show) => set({ showEventsOnMap: show }),
   setShowZonasOnMap: (show) => set({ showZonasOnMap: show }),
+  setShowVehicleLabels: (show) => set({ showVehicleLabels: show }),
+  setShowEventLabels: (show) => set({ showEventLabels: show }),
+  setShowZonaLabels: (show) => set({ showZonaLabels: show }),
 
   // Convenience methods
   showAllLayers: () => set({
     showVehiclesOnMap: true,
     showEventsOnMap: true,
-    showZonasOnMap: true
+    showZonasOnMap: true,
+    showVehicleLabels: true,
+    showEventLabels: true,
+    showZonaLabels: true
   }),
 
   hideAllLayers: () => set({
     showVehiclesOnMap: false,
     showEventsOnMap: false,
-    showZonasOnMap: false
+    showZonasOnMap: false,
+    showVehicleLabels: false,
+    showEventLabels: false,
+    showZonaLabels: false
   })
 }));
