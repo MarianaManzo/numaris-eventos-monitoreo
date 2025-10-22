@@ -116,6 +116,7 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
                     const accent = domainAccent[filter.domain];
                     const pillLabel = `${filter.label}: ${filter.value}`;
                     const duplicateNote = filter.count && filter.count > 1 ? ` (+${filter.count - 1})` : '';
+                    const isRemovable = filter.removable !== false;
 
                     return (
                       <Tooltip key={filter.id} title={pillLabel}>
@@ -123,9 +124,10 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
                           type="button"
                           className="applied-filter-pill"
                           data-domain={filter.domain}
-                          onClick={() => removeFilter(filter.id)}
-                          onKeyDown={handleKeyDown(filter.id)}
-                          aria-label={`Remove filter: ${filter.label} ${filter.value}`}
+                          onClick={isRemovable ? () => removeFilter(filter.id) : undefined}
+                          onKeyDown={isRemovable ? handleKeyDown(filter.id) : undefined}
+                          aria-label={isRemovable ? `Remove filter: ${filter.label} ${filter.value}` : `${filter.label}: ${filter.value}`}
+                          disabled={!isRemovable}
                           style={{
                             borderLeftColor: accent,
                             height: pillHeight
@@ -143,9 +145,11 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
                               </span>
                             )}
                           </span>
-                          <span className="applied-filter-pill__close" aria-hidden="true">
-                            <X size={14} weight="bold" />
-                          </span>
+                          {isRemovable && (
+                            <span className="applied-filter-pill__close" aria-hidden="true">
+                              <X size={14} weight="bold" />
+                            </span>
+                          )}
                         </button>
                       </Tooltip>
                     );
