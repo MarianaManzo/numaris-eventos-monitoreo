@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, MouseEvent } from 'react';
-import { Button, Dropdown, Space, Tag } from 'antd';
+import { useMemo, MouseEvent, useState, useCallback } from 'react';
+import { Button, Dropdown, Space, Tag, Input, Checkbox, Empty } from 'antd';
 import type { MenuProps } from 'antd';
-import { FunnelSimple, Truck, MapPin } from 'phosphor-react';
+import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 
@@ -33,6 +33,9 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const removeFilter = useFilterStore((state) => state.removeFilter);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+  const unitsFilters = useFilterStore((state) => state.units);
+  const selectedZones = unitsFilters.zones;
+  const selectedZoneTags = unitsFilters.zoneTags;
 
   const grouped = useMemo(() => {
     return appliedFilters.reduce<Record<'events' | 'units', typeof appliedFilters>>(
@@ -59,6 +62,12 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     });
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [zonas]);
+
+  const [isZoneDropdownOpen, setZoneDropdownOpen] = useState(false);
+  const [zoneSearch, setZoneSearch] = useState('');
+  const [tagSearch, setTagSearch] = useState('');
+  const [zonesCollapsed, setZonesCollapsed] = useState(false);
+  const [tagsCollapsed, setTagsCollapsed] = useState(false);
 
   const handleRemove =
     (filterId: string) =>
@@ -108,101 +117,69 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     }
   ];
 
-  const zoneMenuItems = useMemo<MenuProps['items']>(() => {
-    const items: MenuProps['items'] = [
-      {
-        key: 'zone:all',
-        label: 'Todas las zonas'
-      }
-    ];
-
-    if (zonas.length > 0) {
-      items.push({ type: 'divider' } as MenuProps['items'][number]);
-      items.push({
-        type: 'group',
-        key: 'zones-group',
-        label: 'Zonas',
-        children: zonas.map((zona) => ({
-          key: `zone:${zona.id}`,
-          label: zona.nombre
-        }))
-      });
+  const filteredZonas = useMemo(() => {
+    const query = zoneSearch.trim().toLowerCase();
+    if (!query) {
+      return zonas;
     }
+    return zonas.filter((zona) =>
+      zona.nombre.toLowerCase().includes(query)
+    );
+  }, [zonas, zoneSearch]);
 
-    if (zonaTags.length > 0) {
-      items.push({
-        type: 'group',
-        key: 'zone-tags-group',
-        label: 'Etiquetas',
-        children: zonaTags.map((tag) => ({
-          key: `zoneTag:${tag}`,
-          label: tag
-        }))
-      });
+  const filteredZonaTags = useMemo(() => {
+    const query = tagSearch.trim().toLowerCase();
+    if (!query) {
+      return zonaTags;
     }
+    return zonaTags.filter((tag) => tag.toLowerCase().includes(query));
+  }, [zonaTags, tagSearch]);
 
-    return items;
-  }, [zonas, zonaTags]);
+  const toggleZoneSelection = useCallback((zoneName: string) => {
+    const exists = selectedZones.includes(zoneName);
+    const next = exists
+      ? selectedZones.filter((name) => name !== zoneName)
+      : [...selectedZones, zoneName];
+    setUnitsFilters({ zones: next });
+  }, [selectedZones, setUnitsFilters]);
 
-  const handleZoneMenuClick: MenuProps['onClick'] = ({ key }) => {
-    if (key === 'zone:all') {
-      setUnitsFilters({
-        zones: [],
-        zoneTags: []
-      });
-      return;
-    }
+  const toggleZoneTagSelection = useCallback((tag: string) => {
+    const exists = selectedZoneTags.includes(tag);
+    const nextTags = exists
+      ? selectedZoneTags.filter((value) => value !== tag)
+      : [...selectedZoneTags, tag];
+    setUnitsFilters({ zoneTags: nextTags });
+  }, [selectedZoneTags, setUnitsFilters]);
 
-    if (key.startsWith('zone:')) {
-      const zonaId = key.slice('zone:'.length);
-      const zona = zonas.find((item) => item.id === zonaId);
-      if (!zona) {
-        return;
-      }
-
-      setUnitsFilters({
-        zones: [zona.nombre],
-        zoneTags: []
-      });
-      return;
-    }
-
-    if (key.startsWith('zoneTag:')) {
-      const tag = key.slice('zoneTag:'.length);
-      const matchingZones = zonas
-        .filter((zona) => zona.etiquetas.includes(tag))
-        .map((zona) => zona.nombre);
-
-      setUnitsFilters({
-        zones: matchingZones,
-        zoneTags: [tag]
-      });
-    }
-  };
+  const handleClearZones = useCallback(() => {
+    setUnitsFilters({ zones: [], zoneTags: [] });
+    setZoneSearch('');
+    setTagSearch('');
+  }, [setUnitsFilters]);
 
   if (unidadId) {
     const unitFilter = grouped.units.find((filter) => filter.key === 'unidadContext');
-    const zoneFilters = grouped.units.filter((filter) => filter.key === 'zones');
-    const zoneTagFilters = grouped.units.filter((filter) => filter.key === 'zoneTags');
-    const defaultZoneFilter = grouped.units.find((filter) => filter.key === 'zonesDefault');
     const eventFilters = grouped.events.filter((filter) => filter.key !== 'unidades');
 
     const unitLabel = unitFilter?.value ?? unidadId;
+    const zoneSelectionCount = selectedZones.length + selectedZoneTags.length;
     const zonaLabel = (() => {
-      if (zoneTagFilters.length > 0) {
-        if (zoneTagFilters.length === 1) {
-          return `Etiqueta: ${zoneTagFilters[0].value}`;
+      if (zoneSelectionCount === 0) {
+        return 'Todas las zonas';
+      }
+
+      if (zoneSelectionCount === 1) {
+        if (selectedZoneTags.length === 1) {
+          return selectedZoneTags[0];
         }
-        return `Etiquetas (${zoneTagFilters.length})`;
+        if (selectedZones.length === 1) {
+          return selectedZones[0];
+        }
       }
-      if (zoneFilters.length === 0) {
-        return defaultZoneFilter?.value ?? 'Todas las zonas';
-      }
-      if (zoneFilters.length === 1) {
-        return zoneFilters[0].value;
-      }
-      return `${zoneFilters.length} zonas`;
+
+      return '';
     })();
+    const showZonaLabel = zonaLabel.length > 0;
 
     const eventItems = eventFilters.length > 0
       ? buildDropdownItems('events', eventFilters)
@@ -213,12 +190,13 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
       <div className="floating-filter-controls">
         <Space className="floating-filter-button-group">
           <Button
-            className="floating-filter-button"
-            icon={<Truck size={16} />}
-            disabled
+            className="floating-filter-button floating-filter-button--static"
+            icon={<Truck size={16} color="#1f2937" />}
+            aria-disabled="true"
+            tabIndex={-1}
           >
             Unidad
-            <span style={{ marginLeft: 8, fontWeight: 600, color: '#1f2937' }}>{unitLabel}</span>
+            <span style={{ marginLeft: 8, fontWeight: 600, color: '#475569' }}>{unitLabel}</span>
           </Button>
 
           <Dropdown menu={{ items: eventItems }} trigger={['click']} placement="bottomLeft">
@@ -239,13 +217,194 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
           </Dropdown>
 
           <Dropdown
-            menu={{ items: zoneMenuItems, onClick: handleZoneMenuClick }}
+            open={isZoneDropdownOpen}
+            onOpenChange={setZoneDropdownOpen}
             trigger={['click']}
             placement="bottomLeft"
+            popupRender={() => (
+              <div
+                style={{
+                  width: 280,
+                  padding: '12px',
+                  background: '#fff',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setZonesCollapsed((value) => !value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>Zonas ({selectedZones.length})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      style={{
+                        transition: 'transform 0.2s ease',
+                        transform: zonesCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                      }}
+                    />
+                  </button>
+                  {!zonesCollapsed && (
+                    <>
+                      <Input
+                        allowClear
+                        size="small"
+                        placeholder="Buscar zona"
+                        value={zoneSearch}
+                        onChange={(event) => setZoneSearch(event.target.value)}
+                      />
+                      <div
+                        style={{
+                          maxHeight: 160,
+                          overflowY: 'auto',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        {filteredZonas.length === 0 ? (
+                          <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        ) : (
+                          filteredZonas.map((zona) => (
+                            <label
+                              key={zona.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: 13,
+                                color: '#334155',
+                                cursor: 'pointer',
+                                userSelect: 'none'
+                              }}
+                            >
+                              <Checkbox
+                                checked={selectedZones.includes(zona.nombre)}
+                                onChange={() => toggleZoneSelection(zona.nombre)}
+                              />
+                              <span>{zona.nombre}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTagsCollapsed((value) => !value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>Etiquetas ({selectedZoneTags.length})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      style={{
+                        transition: 'transform 0.2s ease',
+                        transform: tagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                      }}
+                    />
+                  </button>
+                  {!tagsCollapsed && (
+                    <>
+                      <Input
+                        allowClear
+                        size="small"
+                        placeholder="Buscar etiqueta"
+                        value={tagSearch}
+                        onChange={(event) => setTagSearch(event.target.value)}
+                      />
+                      <div
+                        style={{
+                          maxHeight: 160,
+                          overflowY: 'auto',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        {filteredZonaTags.length === 0 ? (
+                          <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        ) : (
+                          filteredZonaTags.map((tag) => (
+                            <label
+                              key={tag}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: 13,
+                                color: '#334155',
+                                cursor: 'pointer',
+                                userSelect: 'none'
+                              }}
+                            >
+                              <Checkbox
+                                checked={selectedZoneTags.includes(tag)}
+                                onChange={() => toggleZoneTagSelection(tag)}
+                              />
+                              <span>{tag}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button size="small" type="link" onClick={handleClearZones}>
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+            )}
           >
             <Button className="floating-filter-button" icon={<MapPin size={16} />}>
               Zonas
-              <span style={{ marginLeft: 8, fontWeight: 600, color: '#1f2937' }}>{zonaLabel}</span>
+              {zoneSelectionCount > 0 && (
+                <Tag className="floating-filter-button__tag">{zoneSelectionCount}</Tag>
+              )}
+              {showZonaLabel && (
+                <span style={{ marginLeft: 8, fontWeight: 600, color: '#1f2937' }}>{zonaLabel}</span>
+              )}
               <svg
                 className="floating-filter-button__caret"
                 width={18}
@@ -325,8 +484,8 @@ const renderFilterValue = (
   if ((domain === 'units' || domain === 'events') && (filter.key === 'unidades' || filter.key === 'unidadContext')) {
     return (
       <>
-        Unidad:{' '}
         <span className="floating-filter-unit">
+          <span style={{ color: '#1f2937' }}>Unidad:</span>{' '}
           <span className="floating-filter-unit__icon" aria-hidden="true">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -340,7 +499,7 @@ const renderFilterValue = (
               <path d="M248,119.9v-.2a1.7,1.7,0,0,0-.1-.7v-.3c0-.2-.1-.4-.1-.6v-.2l-.2-.8h-.1l-14-34.8A15.7,15.7,0,0,0,218.6,72H184V64a8,8,0,0,0-8-8H24A16,16,0,0,0,8,72V184a16,16,0,0,0,16,16H37a32,32,0,0,0,62,0h58a32,32,0,0,0,62,0h13a16,16,0,0,0,16-16V120ZM184,88h34.6l9.6,24H184ZM24,72H168v64H24ZM68,208a16,16,0,1,1,16-16A16,16,0,0,1,68,208Zm120,0a16,16,0,1,1,16-16A16,16,0,0,1,188,208Z" />
             </svg>
           </span>
-          <span className="floating-filter-unit__label">{filter.value}</span>
+          <span className="floating-filter-unit__label" style={{ color: '#475569', fontWeight: 600 }}>{filter.value}</span>
         </span>
       </>
     );

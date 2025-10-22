@@ -286,6 +286,17 @@ body {
   color: #1f2937;
 }
 
+.floating-filter-button--static {
+  pointer-events: none;
+  color: #1f2937 !important;
+  cursor: default;
+}
+
+.floating-filter-button--static .floating-filter-button__tag {
+  pointer-events: none;
+}
+
+
 .floating-filter-unit__icon {
   display: inline-flex;
   align-items: center;
