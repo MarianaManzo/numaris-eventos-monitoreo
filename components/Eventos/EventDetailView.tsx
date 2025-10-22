@@ -12,6 +12,7 @@ import type { EventContext } from '@/lib/events/types';
 import type { EventLocation } from '@/lib/events/generateEvent';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
+import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
 
@@ -214,6 +215,9 @@ export default function EventDetailView({
             </Sider>
 
             <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
+              <div className="floating-filters-overlay">
+                <FloatingFilterControls />
+              </div>
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
                   <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
@@ -328,6 +332,9 @@ export default function EventDetailView({
           </Sider>
 
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
+            <div className="floating-filters-overlay">
+              <FloatingFilterControls />
+            </div>
             <EventDetailMapView event={event} vehicleId={vehicleId} viewDate={viewDate} />
           </Content>
         </Layout>

@@ -19,6 +19,7 @@ import EventListView from '@/components/Events/EventListView';
 import type { EventNavigationContext } from '@/lib/events/types';
 import { generateVehicleName } from '@/lib/events/addressGenerator';
 import { getVehicleCurrentPosition } from '@/lib/unidades/generateUnidades';
+import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
@@ -1803,6 +1804,9 @@ export default function DayView() {
             width: '100%',
             height: '100%'
           }}>
+            <div className="floating-filters-overlay">
+              <FloatingFilterControls />
+            </div>
             <SingleRouteMapView
               route={generateRouteForDate ? {
                 ...generateRouteForDate,

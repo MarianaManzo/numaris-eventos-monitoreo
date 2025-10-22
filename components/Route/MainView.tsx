@@ -12,6 +12,7 @@ import { getVehicleCurrentPosition } from '@/lib/unidades/generateUnidades';
 import { generateVehicleName } from '@/lib/events/addressGenerator';
 import dynamic from 'next/dynamic';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
+import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 
 const { Content, Sider } = Layout;
 
@@ -298,6 +299,9 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
           </Sider>
 
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
+            <div className="floating-filters-overlay">
+              <FloatingFilterControls />
+            </div>
             {/* Show TelematicaMapView for Telemática and Unidad tabs */}
             {(activeTab === 'telematica' || activeTab === 'unidad') ? (
               <TelematicaMapView unidadId={unidadId} />
