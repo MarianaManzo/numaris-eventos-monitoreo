@@ -1,9 +1,11 @@
 'use client';
 
 import { Select, Button, Switch } from 'antd';
-import { TrafficSignal } from 'phosphor-react';
+import type { MouseEvent } from 'react';
+import { Car, TrafficSignal } from 'phosphor-react';
 import { getSeverityColor } from '@/lib/events/eventStyles';
 import type { EventSeverity } from '@/lib/events/types';
+import type { CustomTagProps } from 'rc-select/lib/BaseSelect';
 
 interface EventFilterModalProps {
   // Filter state
@@ -28,6 +30,45 @@ interface EventFilterModalProps {
 }
 
 const SEVERITY_OPTIONS: EventSeverity[] = ['Alta', 'Media', 'Baja', 'Informativa'];
+
+const UnidadTag = ({ label, closable, onClose }: CustomTagProps) => {
+  const handleMouseDown = (event: MouseEvent<HTMLSpanElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleClose = (event: MouseEvent<HTMLSpanElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClose?.(event);
+  };
+
+  return (
+    <span
+      onMouseDown={handleMouseDown}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        background: '#e5f0ff',
+        borderRadius: '999px',
+        padding: '4px 10px',
+        fontSize: '12px',
+        fontWeight: 600,
+        color: '#1d4ed8'
+      }}
+    >
+      <span style={{ color: '#1d4ed8' }}>Unidad:</span>
+      <Car size={14} weight="fill" color="#1d4ed8" />
+      <span style={{ color: '#0f172a' }}>{typeof label === 'string' ? label : String(label)}</span>
+      {closable && (
+        <span style={{ cursor: 'pointer', color: '#1d4ed8', fontWeight: 700 }} onClick={handleClose}>
+          ×
+        </span>
+      )}
+    </span>
+  );
+};
 
 /**
  * EventFilterModal - Renders the filter content for event filtering
@@ -191,10 +232,8 @@ export default function EventFilterModal({
       {showUnidadesFilter && onUnidadesChange && (
         <div>
           <div style={{ marginBottom: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-              <path d="M240,112H229.2L201.42,49.5A16,16,0,0,0,186.8,40H69.2a16,16,0,0,0-14.62,9.5L26.8,112H16a8,8,0,0,0,0,16h8v80a16,16,0,0,0,16,16H64a16,16,0,0,0,16-16V192h96v16a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16V128h8a8,8,0,0,0,0-16ZM69.2,56H186.8l24.89,56H44.31ZM64,208H40V192H64Zm128,0V192h24v16Zm24-32H40V128H216ZM56,152a8,8,0,0,1,8-8H80a8,8,0,0,1,0,16H64A8,8,0,0,1,56,152Zm112,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H176A8,8,0,0,1,168,152Z"/>
-            </svg>
-            Unidades
+            <Car size={16} weight="fill" />
+            Unidad
           </div>
           <Select
             mode="multiple"
@@ -202,9 +241,10 @@ export default function EventFilterModal({
             value={selectedUnidades}
             onChange={onUnidadesChange}
             style={{ width: '100%' }}
-            options={availableUnidades.map(u => ({
-              label: u,
-              value: u
+            tagRender={(tagProps) => <UnidadTag {...tagProps} />}
+            options={availableUnidades.map((unidad) => ({
+              label: unidad,
+              value: unidad
             }))}
             maxTagCount="responsive"
           />

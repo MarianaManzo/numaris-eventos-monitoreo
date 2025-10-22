@@ -72,9 +72,7 @@ export default function MapToolbar({
             <FrameCorners size={20} weight="regular" color={isFullscreen ? 'white' : '#1867ff'} />
           </button>
         )}
-        {layers && layers.length > 0 && (
-          <LayerToggleButton layers={layers} />
-        )}
+        {layers && layers.length > 0 && <LayerToggleButton layers={layers} />}
         {/* Fit Event + Vehicle Button - Only shows when event is selected */}
         {hasEventAndVehicle && onFitEventAndVehicle && (
           <button

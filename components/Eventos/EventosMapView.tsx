@@ -139,11 +139,60 @@ export default function EventosMapView({
   const {
     showVehiclesOnMap,
     showEventsOnMap: globalShowEventsOnMap,
-    showZonasOnMap: globalShowZonasOnMap
+    showZonasOnMap: globalShowZonasOnMap,
+    setShowVehiclesOnMap,
+    setShowEventsOnMap,
+    setShowZonasOnMap
   } = useGlobalMapStore();
 
   const eventsVisible = showEventsOnMapProp ?? globalShowEventsOnMap;
   const zonasVisible = showZonasOnMapProp ?? globalShowZonasOnMap;
+
+  const handleToggleVehiclesVisibility = () => {
+    setShowVehiclesOnMap(!showVehiclesOnMap);
+  };
+
+  const handleToggleEventsVisibility = () => {
+    const next = !eventsVisible;
+    if (onToggleEventsVisibility) {
+      onToggleEventsVisibility(next);
+    } else {
+      setShowEventsOnMap(next);
+    }
+  };
+
+  const handleToggleZonasVisibility = () => {
+    const next = !zonasVisible;
+    if (onToggleZonasVisibility) {
+      onToggleZonasVisibility(next);
+    } else {
+      setShowZonasOnMap(next);
+    }
+  };
+
+  const layerOptions = [
+    {
+      id: 'events',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: eventsVisible,
+      onToggle: handleToggleEventsVisibility
+    },
+    {
+      id: 'vehicles',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehiclesOnMap,
+      onToggle: handleToggleVehiclesVisibility
+    },
+    {
+      id: 'zones',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: zonasVisible,
+      onToggle: handleToggleZonasVisibility
+    }
+  ];
 
   useEffect(() => {
     setIsClient(true);
@@ -815,6 +864,7 @@ export default function EventosMapView({
         onRecenterRoute={handleRecenterEvents}
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
+        layers={layerOptions}
       />
     </div>
   );

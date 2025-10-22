@@ -411,15 +411,15 @@ export default function UnidadesMapView({
       </MapContainer>
 
       {map && (
-        <MapToolbar
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onResetView={handleResetView}
-          onRecenterRoute={handleRecenterUnidades}
-          onToggleFullscreen={handleToggleFullscreen}
-          isFullscreen={isFullscreen}
-          layers={layerOptions}
-        />
+      <MapToolbar
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetView={handleResetView}
+        onRecenterRoute={handleRecenterUnidades}
+        onToggleFullscreen={handleToggleFullscreen}
+        isFullscreen={isFullscreen}
+        layers={layerOptions}
+      />
       )}
     </div>
   );

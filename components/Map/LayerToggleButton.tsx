@@ -18,15 +18,16 @@ interface LayerToggleButtonProps {
   layers: LayerDefinition[];
 }
 
-const iconMap: Record<LayerIcon, (color: string) => ReactNode> = {
-  vehicles: (color) => <Car size={18} weight="fill" color={color} />,
-  events: (color) => <Warning size={18} weight="fill" color={color} />,
-  zones: (color) => <MapTrifold size={18} weight="fill" color={color} />
+const iconMap: Record<LayerIcon, ReactNode> = {
+  vehicles: <Car size={16} weight="fill" color="#2563eb" />,
+  events: <Warning size={16} weight="fill" color="#de3b3b" />,
+  zones: <MapTrifold size={16} weight="fill" color="#16a34a" />
 };
 
 export default function LayerToggleButton({ layers }: LayerToggleButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const hasActiveLayer = layers.some((layer) => layer.isVisible);
 
   useEffect(() => {
     if (!isOpen) {
@@ -63,56 +64,44 @@ export default function LayerToggleButton({ layers }: LayerToggleButtonProps) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-10 h-10 rounded-lg shadow-lg border border-gray-200 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
+        className="w-10 h-10 rounded-lg shadow-lg border flex items-center justify-center transition-colors"
         title="Capas del mapa"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
+        style={{
+          backgroundColor: hasActiveLayer ? '#1867ff' : '#ffffff',
+          borderColor: hasActiveLayer ? '#1867ff' : '#e5e7eb'
+        }}
       >
-        <StackSimple size={20} weight="regular" color="#1867ff" />
+        <StackSimple size={20} weight="regular" color={hasActiveLayer ? 'white' : '#1867ff'} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-full mr-3 top-0 w-52 bg-white border border-gray-200 rounded-lg shadow-xl p-3 space-y-2 z-[11000]">
-          <div className="text-sm font-semibold text-gray-700">Capas visibles</div>
+        <div className="absolute right-full mr-2 top-0 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-3 space-y-3 z-[11000]">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Capas del mapa
+          </div>
 
           <div className="flex flex-col gap-2">
-            {layers.map((layer) => {
-              const isVisible = layer.isVisible;
-              const backgroundColor = isVisible ? '#1867ff' : '#f9fafb';
-              const borderColor = isVisible ? '#1867ff' : '#e5e7eb';
-              const textColor = isVisible ? 'white' : '#374151';
-              const iconColor = isVisible ? 'white' : '#1867ff';
-
-              return (
-                <button
-                  key={layer.id}
-                  type="button"
-                  onClick={() => handleToggleLayer(layer)}
-                  className="flex items-center justify-between w-full px-3 py-2 rounded-md border transition-colors"
-                  style={{
-                    backgroundColor,
-                    borderColor,
-                    color: textColor
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20">
-                      {iconMap[layer.icon](iconColor)}
-                    </span>
-                    <span className="text-sm font-medium">{layer.label}</span>
-                  </div>
-                  <span
-                    className="text-xs font-semibold px-2 py-1 rounded-full"
-                    style={{
-                      backgroundColor: isVisible ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
-                      color: isVisible ? 'white' : '#4b5563'
-                    }}
-                  >
-                    {isVisible ? 'ON' : 'OFF'}
+            {layers.map((layer) => (
+              <label
+                key={layer.id}
+                className="flex items-center justify-between gap-3 text-sm text-slate-600 cursor-pointer select-none"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100">
+                    {iconMap[layer.icon]}
                   </span>
-                </button>
-              );
-            })}
+                  <span>{layer.label}</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={layer.isVisible}
+                  onChange={() => handleToggleLayer(layer)}
+                  className="h-4 w-4 accent-sky-500"
+                />
+              </label>
+            ))}
           </div>
         </div>
       )}
