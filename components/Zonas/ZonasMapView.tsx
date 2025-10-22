@@ -87,7 +87,14 @@ export default function ZonasMapView({
   const zoom = 12;
 
   // Global map store for cross-view layer visibility
-  const { showVehiclesOnMap, showEventsOnMap } = useGlobalMapStore();
+  const {
+    showVehiclesOnMap,
+    showEventsOnMap,
+    showZonasOnMap,
+    setShowVehiclesOnMap,
+    setShowEventsOnMap,
+    setShowZonasOnMap
+  } = useGlobalMapStore();
 
   const { applyFitBounds } = useMapFitBounds({ mapRef });
 
@@ -112,8 +119,11 @@ export default function ZonasMapView({
 
   // Filter only visible zonas
   const visibleZonas = useMemo(() => {
+    if (!showZonasOnMap) {
+      return [];
+    }
     return zonasWithRelations.filter((zona) => zona.visible);
-  }, [zonasWithRelations]);
+  }, [zonasWithRelations, showZonasOnMap]);
 
   // Handle map initialization - fit all visible zonas
   useEffect(() => {
@@ -256,6 +266,42 @@ export default function ZonasMapView({
     // TODO: Navigate to event detail view or show event details
   };
 
+  const handleToggleZonasVisibility = () => {
+    setShowZonasOnMap(!showZonasOnMap);
+  };
+
+  const handleToggleVehiclesVisibility = () => {
+    setShowVehiclesOnMap(!showVehiclesOnMap);
+  };
+
+  const handleToggleEventsVisibility = () => {
+    setShowEventsOnMap(!showEventsOnMap);
+  };
+
+  const layerOptions = [
+    {
+      id: 'zones',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: showZonasOnMap,
+      onToggle: handleToggleZonasVisibility,
+    },
+    {
+      id: 'vehicles',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehiclesOnMap,
+      onToggle: handleToggleVehiclesVisibility,
+    },
+    {
+      id: 'events',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventsOnMap,
+      onToggle: handleToggleEventsVisibility,
+    },
+  ];
+
   return (
     <div className={`${isFullscreen ? 'fixed left-0 right-0 bottom-0 z-[9999] bg-transparent' : 'w-full h-full relative'}`} style={isFullscreen ? { top: '64px' } : {}}>
       <MapContainer
@@ -330,6 +376,7 @@ export default function ZonasMapView({
           onRecenterRoute={handleRecenterZonas}
           onToggleFullscreen={handleToggleFullscreen}
           isFullscreen={isFullscreen}
+          layers={layerOptions}
         />
       )}
     </div>
