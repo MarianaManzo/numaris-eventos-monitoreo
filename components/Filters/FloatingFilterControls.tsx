@@ -26,6 +26,7 @@ interface VisualizationOption {
 
 interface FloatingFilterControlsProps {
   unidadId?: string;
+  showUnitButton?: boolean;
   showEventsDropdown?: boolean;
   visualizationOptions?: VisualizationOption[];
   onToggleVisualizationOption?: (key: VisualizationOptionKey) => void;
@@ -33,6 +34,7 @@ interface FloatingFilterControlsProps {
 
 export default function FloatingFilterControls({
   unidadId,
+  showUnitButton = true,
   showEventsDropdown = true,
   visualizationOptions,
   onToggleVisualizationOption
@@ -272,10 +274,14 @@ export default function FloatingFilterControls({
     []
   );
 
-  const renderControlsContent = (showUnitButton: boolean, unitLabel?: string) => (
+  const renderControlsContent = (
+    showDynamicUnitButton: boolean,
+    unitLabel?: string,
+    displayUnitButton = true
+  ) => (
     <div className="floating-filter-controls">
       <Space className="floating-filter-button-group">
-        {showUnitButton && (
+        {displayUnitButton && showDynamicUnitButton && (
           <Button
             className="floating-filter-button floating-filter-button--static"
             icon={<Truck size={16} color="#1f2937" />}
@@ -284,6 +290,16 @@ export default function FloatingFilterControls({
           >
             Unidad
             <span style={{ marginLeft: 8, fontWeight: 600, color: '#475569' }}>{unitLabel}</span>
+          </Button>
+        )}
+        {displayUnitButton && !showDynamicUnitButton && (
+          <Button
+            className="floating-filter-button floating-filter-button--static"
+            icon={<Truck size={16} color="#1f2937" />}
+            aria-disabled="true"
+            tabIndex={-1}
+          >
+            Unidades
           </Button>
         )}
 
@@ -648,10 +664,10 @@ export default function FloatingFilterControls({
   if (unidadId) {
     const unitFilter = grouped.units.find((filterItem) => filterItem.key === 'unidadContext');
     const unitLabel = unitFilter?.value ?? unidadId;
-    return renderControlsContent(true, unitLabel);
+    return renderControlsContent(showUnitButton, unitLabel, showUnitButton);
   }
 
-  return renderControlsContent(false);
+  return renderControlsContent(false, undefined, showUnitButton);
 }
 
 const renderFilterValue = (

@@ -300,7 +300,7 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
 
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
             <div className="floating-filters-overlay">
-              <FloatingFilterControls unidadId={unidadId} />
+              <FloatingFilterControls unidadId={unidadId} showUnitButton={false} />
             </div>
             {/* Show TelematicaMapView for Telemática and Unidad tabs */}
             {(activeTab === 'telematica' || activeTab === 'unidad') ? (
