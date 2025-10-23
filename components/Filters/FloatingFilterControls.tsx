@@ -277,8 +277,9 @@ export default function FloatingFilterControls({
 
   const renderControlsContent = (
     showDynamicUnitButton: boolean,
-    unitLabel?: string,
-    displayUnitButton = true
+    unitLabel: string | undefined,
+    displayUnitButton: boolean,
+    unitBadgeCount: number
   ) => (
     <div className="floating-filter-controls">
       <Space className="floating-filter-button-group">
@@ -301,6 +302,9 @@ export default function FloatingFilterControls({
             tabIndex={-1}
           >
             Unidades
+            {unitBadgeCount > 0 && (
+              <Tag className="floating-filter-button__tag">{unitBadgeCount}</Tag>
+            )}
           </Button>
         )}
 
@@ -665,10 +669,19 @@ export default function FloatingFilterControls({
   if (unidadId) {
     const unitFilter = grouped.units.find((filterItem) => filterItem.key === 'unidadContext');
     const unitLabel = unitFilter?.value ?? unidadId;
-    return renderControlsContent(showUnitButton, unitLabel, showUnitTag);
+    const unitBadgeCount = 0;
+    return renderControlsContent(showUnitButton, unitLabel, showUnitTag && showUnitButton, unitBadgeCount);
   }
 
-  return renderControlsContent(false, undefined, showUnitTag);
+  const unitBadgeCount =
+    unitsFilters.tags.length +
+    unitsFilters.zones.length +
+    unitsFilters.zoneTags.length +
+    unitsFilters.brandModels.length +
+    unitsFilters.status.length +
+    unitsFilters.responsables.length;
+
+  return renderControlsContent(false, undefined, showUnitTag && unitBadgeCount > 0, unitBadgeCount);
 }
 
 const renderFilterValue = (
