@@ -13,6 +13,7 @@ import type { EventLocation } from '@/lib/events/generateEvent';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
 import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 
 const { Content, Sider } = Layout;
 
@@ -69,7 +70,8 @@ const [visualizationSettings, setVisualizationSettings] = useState<Record<Visual
   vehicle: !!vehicleId,
   route: false
 });
-  const hasDualMarkers = event?.status === 'finalizado' && !!event?.locationData?.endLocation;
+  const operationalStatus = event ? getOperationalStatusFromId(event.id) : null;
+  const hasDualMarkers = operationalStatus === 'cerrado' && !!event?.locationData?.endLocation;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
