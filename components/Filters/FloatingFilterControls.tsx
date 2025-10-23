@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, MouseEvent, useState, useCallback } from 'react';
+import { useMemo, MouseEvent, useState, useCallback, useEffect } from 'react';
 import { Button, Dropdown, Space, Tag, Input, Checkbox, Empty } from 'antd';
 import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
@@ -259,7 +259,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
         )}
 
         <Dropdown
-          destroyPopupOnHide
+          destroyOnHidden
           open={eventDropdownOpen}
           onOpenChange={(open) => {
             setEventDropdownOpen(open);
@@ -530,7 +530,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
         </Dropdown>
 
         <Dropdown
-          destroyPopupOnHide
+          destroyOnHidden
           open={zoneDropdownOpen}
           onOpenChange={(open) => {
             setZoneDropdownOpen(open);
