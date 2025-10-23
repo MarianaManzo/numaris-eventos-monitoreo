@@ -304,7 +304,7 @@ const handleBack = () => {
 
             <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
               <div className="floating-filters-overlay">
-                <FloatingFilterControls showUnitButton={false} showUnitTag={false} showEventsDropdown={false} />
+                <FloatingFilterControls showEventsDropdown={false} showUnitTag={false} />
               </div>
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
@@ -422,7 +422,6 @@ const handleBack = () => {
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
             <div className="floating-filters-overlay">
               <FloatingFilterControls
-                showUnitButton={false}
                 showUnitTag={false}
                 showEventsDropdown={false}
                 visualizationOptions={visualizationOptions}
