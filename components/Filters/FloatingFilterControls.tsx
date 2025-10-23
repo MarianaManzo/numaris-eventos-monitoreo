@@ -114,6 +114,18 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     return eventTagOptions.filter((tag) => tag.toLowerCase().includes(query));
   }, [eventTagOptions, eventTagSearch]);
 
+  useEffect(() => {
+    if (isZoneDropdownOpen) {
+      setEventDropdownOpen(false);
+    }
+  }, [isZoneDropdownOpen]);
+
+  useEffect(() => {
+    if (isEventDropdownOpen) {
+      setZoneDropdownOpen(false);
+    }
+  }, [isEventDropdownOpen]);
+
   const toggleZoneSelection = useCallback((zoneName: string) => {
     const exists = selectedZones.includes(zoneName);
     const next = exists
@@ -247,6 +259,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
         )}
 
         <Dropdown
+          destroyPopupOnHide
           open={eventDropdownOpen}
           onOpenChange={(open) => {
             setEventDropdownOpen(open);
@@ -517,6 +530,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
         </Dropdown>
 
         <Dropdown
+          destroyPopupOnHide
           open={zoneDropdownOpen}
           onOpenChange={(open) => {
             setZoneDropdownOpen(open);
