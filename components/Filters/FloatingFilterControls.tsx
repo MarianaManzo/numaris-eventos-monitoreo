@@ -1,12 +1,19 @@
 'use client';
 
 import { useMemo, MouseEvent, useState, useCallback, useEffect } from 'react';
-import { Button, Dropdown, Space, Tag, Input, Checkbox, Empty } from 'antd';
+import { Button, Dropdown, Space, Tag, Input, Empty, Checkbox } from 'antd';
 import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { EVENT_TAGS } from '@/lib/events/generateEvent';
 import type { EventSeverity } from '@/lib/events/types';
+
+const severityStyleMap: Record<EventSeverity, { background: string; color: string; border: string }> = {
+  Alta: { background: '#fde8e8', color: '#b91c1c', border: '#fecaca' },
+  Media: { background: '#fee2d5', color: '#c2410c', border: '#fed7aa' },
+  Baja: { background: '#dbeafe', color: '#2563eb', border: '#bfdbfe' },
+  Informativa: { background: '#ccfbf1', color: '#0f766e', border: '#a5f3fc' }
+};
 
 interface FloatingFilterControlsProps {
   unidadId?: string;
@@ -61,7 +68,6 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const [eventStateCollapsed, setEventStateCollapsed] = useState(false);
   const [eventSeverityCollapsed, setEventSeverityCollapsed] = useState(false);
   const [eventTagsCollapsed, setEventTagsCollapsed] = useState(false);
-  const [severitySearch, setSeveritySearch] = useState('');
   const [eventTagSearch, setEventTagSearch] = useState('');
 
   const handleRemove =
@@ -96,15 +102,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [selectedEventTags]);
 
-  const filteredSeverities = useMemo(() => {
-    const query = severitySearch.trim().toLowerCase();
-    if (!query) {
-      return DEFAULT_EVENT_SEVERITIES;
-    }
-    return DEFAULT_EVENT_SEVERITIES.filter((severity) =>
-      severity.toLowerCase().includes(query)
-    );
-  }, [severitySearch]);
+  const filteredSeverities = DEFAULT_EVENT_SEVERITIES;
 
   const filteredEventTags = useMemo(() => {
     const query = eventTagSearch.trim().toLowerCase();
@@ -190,7 +188,6 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
       severidades: [...DEFAULT_EVENT_SEVERITIES],
       etiquetas: []
     });
-    setSeveritySearch('');
     setEventTagSearch('');
   }, [setEventsFilters]);
 
@@ -232,6 +229,24 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const eventDropdownOpen = isEventDropdownOpen && !isZoneDropdownOpen;
   const zoneDropdownOpen = isZoneDropdownOpen && !isEventDropdownOpen;
 
+  const getTagPillStyle = useCallback((value: string) => {
+    const hue = Math.abs(hashString(value)) % 360;
+    return {
+      backgroundColor: `hsla(${hue}, 78%, 88%, 1)`,
+      border: `1px solid hsla(${hue}, 72%, 80%, 1)`,
+      color: `hsla(${hue}, 65%, 30%, 1)`
+    };
+  }, []);
+
+  const neutralPillStyle = useMemo(
+    () => ({
+      backgroundColor: '#eff4fb',
+      border: '1px solid #dbe4f3',
+      color: '#1f2937'
+    }),
+    []
+  );
+
   const renderControlsContent = (showUnitButton: boolean, unitLabel?: string) => (
     <div className="floating-filter-controls">
       <Space className="floating-filter-button-group">
@@ -270,240 +285,140 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
           trigger={['click']}
           placement="bottomLeft"
           popupRender={() => (
-            <div
-              style={{
-                width: 280,
-                padding: '12px',
-                background: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
+              <div className="filter-section">
                 <button
                   type="button"
-                  onClick={() => setEventStateCollapsed((value) => !value)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    color: '#0f172a',
-                    fontWeight: 600
-                  }}
-                >
-                  <span>Estado ({selectedEstadoSet.size})</span>
-                  <CaretDown
-                    size={14}
-                    weight="bold"
-                    style={{
-                      transition: 'transform 0.2s ease',
-                      transform: eventStateCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-                    }}
-                  />
-                </button>
-                {!eventStateCollapsed && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '8px'
-                    }}
-                  >
-                    {(['abiertos', 'cerrados'] as const).map((value) => {
-                      const label = value === 'abiertos' ? 'Abiertos' : 'Cerrados';
-                      return (
-                        <label
-                          key={value}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: 13,
-                            color: '#334155',
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                          }}
-                        >
-                          <Checkbox
-                            checked={selectedEstadoSet.has(value)}
-                            onChange={() => handleEstadoToggle(value)}
-                          />
-                          <span>{label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button
-                  type="button"
+                  className="filter-section__toggle"
                   onClick={() => setEventSeverityCollapsed((value) => !value)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    color: '#0f172a',
-                    fontWeight: 600
-                  }}
                 >
                   <span>Severidad ({selectedSeveridades.length})</span>
                   <CaretDown
                     size={14}
                     weight="bold"
-                    style={{
-                      transition: 'transform 0.2s ease',
-                      transform: eventSeverityCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-                    }}
+                    className={`filter-section__caret${eventSeverityCollapsed ? ' filter-section__caret--collapsed' : ''}`}
                   />
                 </button>
                 {!eventSeverityCollapsed && (
-                  <>
-                    <Input
-                      allowClear
-                      size="small"
-                      placeholder="Buscar severidad"
-                      value={severitySearch}
-                      onChange={(event) => setSeveritySearch(event.target.value)}
-                    />
-                    <div
-                      style={{
-                        maxHeight: 160,
-                        overflowY: 'auto',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        padding: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px'
-                      }}
-                    >
-                      {filteredSeverities.length === 0 ? (
-                        <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                      ) : (
-                        filteredSeverities.map((severity) => (
-                          <label
-                            key={severity}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              fontSize: 13,
-                              color: '#334155',
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                          >
+                  <div className="filter-section__content">
+                    {filteredSeverities.length === 0 ? (
+                      <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    ) : (
+                      <div className="filter-options">
+                        {filteredSeverities.map((severity) => {
+                          const typedSeverity = severity as EventSeverity;
+                          const selected = selectedSeveridades.includes(typedSeverity);
+                          const pillStyle = severityStyleMap[typedSeverity] ?? severityStyleMap.Informativa;
+                          return (
                             <Checkbox
-                              checked={selectedSeveridades.includes(severity)}
-                              onChange={() => toggleSeverity(severity as EventSeverity)}
-                            />
-                            <span>{severity}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  </>
+                              key={severity}
+                              className="filter-checkbox"
+                              checked={selected}
+                              onChange={() => toggleSeverity(typedSeverity)}
+                            >
+                              <span className="filter-pill" style={pillStyle}>
+                                {severity}
+                              </span>
+                            </Checkbox>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="filter-section">
                 <button
                   type="button"
+                  className="filter-section__toggle"
+                  onClick={() => setEventStateCollapsed((value) => !value)}
+                >
+                  <span>Estado ({selectedEstadoSet.size})</span>
+                  <CaretDown
+                    size={14}
+                    weight="bold"
+                    className={`filter-section__caret${eventStateCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                  />
+                </button>
+                {!eventStateCollapsed && (
+                  <div className="filter-section__content">
+                    <div className="filter-options">
+                      {(['abiertos', 'cerrados'] as const).map((value) => {
+                        const label = value === 'abiertos' ? 'Abierto' : 'Cerrado';
+                        const selected = selectedEstadoSet.has(value);
+                        return (
+                          <Checkbox
+                            key={value}
+                            className="filter-checkbox filter-checkbox--state"
+                            checked={selected}
+                            onChange={() => handleEstadoToggle(value)}
+                          >
+                            <span className="filter-option__content filter-option__content--estado">
+                              <span
+                                className={`filter-state-dot${value === 'abiertos' ? ' filter-state-dot--open' : ' filter-state-dot--closed'}`}
+                                aria-hidden="true"
+                              />
+                              <span>{label}</span>
+                            </span>
+                          </Checkbox>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="filter-section">
+                <button
+                  type="button"
+                  className="filter-section__toggle"
                   onClick={() => setEventTagsCollapsed((value) => !value)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    color: '#0f172a',
-                    fontWeight: 600
-                  }}
                 >
                   <span>Etiquetas ({selectedEventTags.length})</span>
                   <CaretDown
                     size={14}
                     weight="bold"
-                    style={{
-                      transition: 'transform 0.2s ease',
-                      transform: eventTagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-                    }}
+                    className={`filter-section__caret${eventTagsCollapsed ? ' filter-section__caret--collapsed' : ''}`}
                   />
                 </button>
                 {!eventTagsCollapsed && (
-                  <>
+                  <div className="filter-section__content">
                     <Input
                       allowClear
                       size="small"
                       placeholder="Buscar etiqueta"
                       value={eventTagSearch}
                       onChange={(event) => setEventTagSearch(event.target.value)}
+                      className="filter-search-input"
                     />
-                    <div
-                      style={{
-                        maxHeight: 160,
-                        overflowY: 'auto',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        padding: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px'
-                      }}
-                    >
+                    <div className="filter-options filter-options--scrollable">
                       {filteredEventTags.length === 0 ? (
-                        <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       ) : (
-                        filteredEventTags.map((tag) => (
-                          <label
-                            key={tag}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              fontSize: 13,
-                              color: '#334155',
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                          >
+                        filteredEventTags.map((tag) => {
+                          const selected = selectedEventTags.includes(tag);
+                          const pillStyle = getTagPillStyle(tag);
+                          return (
                             <Checkbox
-                              checked={selectedEventTags.includes(tag)}
+                              key={tag}
+                              className="filter-checkbox"
+                              checked={selected}
                               onChange={() => toggleEventTagSelection(tag)}
-                            />
-                            <span>{tag}</span>
-                          </label>
-                        ))
+                            >
+                              <span className="filter-pill" style={pillStyle}>
+                                {tag}
+                              </span>
+                            </Checkbox>
+                          );
+                        })
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="filter-dropdown__footer">
                 <Button size="small" type="link" onClick={handleClearEvents}>
                   Limpiar
                 </Button>
@@ -540,175 +455,105 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
           trigger={['click']}
           placement="bottomLeft"
           popupRender={() => (
-            <div
-              style={{
-                width: 280,
-                padding: '12px',
-                background: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
+              <div className="filter-section">
                 <button
                   type="button"
+                  className="filter-section__toggle"
                   onClick={() => setZonesCollapsed((value) => !value)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    color: '#0f172a',
-                    fontWeight: 600
-                  }}
                 >
                   <span>Zonas ({selectedZones.length})</span>
                   <CaretDown
                     size={14}
                     weight="bold"
-                    style={{
-                      transition: 'transform 0.2s ease',
-                      transform: zonesCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-                    }}
+                    className={`filter-section__caret${zonesCollapsed ? ' filter-section__caret--collapsed' : ''}`}
                   />
                 </button>
                 {!zonesCollapsed && (
-                  <>
+                  <div className="filter-section__content">
                     <Input
                       allowClear
                       size="small"
                       placeholder="Buscar zona"
                       value={zoneSearch}
                       onChange={(event) => setZoneSearch(event.target.value)}
+                      className="filter-search-input"
                     />
-                    <div
-                      style={{
-                        maxHeight: 160,
-                        overflowY: 'auto',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        padding: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px'
-                      }}
-                    >
+                    <div className="filter-options filter-options--scrollable">
                       {filteredZonas.length === 0 ? (
-                        <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       ) : (
-                        filteredZonas.map((zona) => (
-                          <label
-                            key={zona.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              fontSize: 13,
-                              color: '#334155',
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                          >
+                        filteredZonas.map((zona) => {
+                          const selected = selectedZones.includes(zona.nombre);
+                          return (
                             <Checkbox
-                              checked={selectedZones.includes(zona.nombre)}
+                              key={zona.id}
+                              className="filter-checkbox"
+                              checked={selected}
                               onChange={() => toggleZoneSelection(zona.nombre)}
-                            />
-                            <span>{zona.nombre}</span>
-                          </label>
-                        ))
+                            >
+                              <span className="filter-pill" style={neutralPillStyle}>
+                                {zona.nombre}
+                              </span>
+                            </Checkbox>
+                          );
+                        })
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="filter-section">
                 <button
                   type="button"
+                  className="filter-section__toggle"
                   onClick={() => setZoneTagsCollapsed((value) => !value)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    color: '#0f172a',
-                    fontWeight: 600
-                  }}
                 >
                   <span>Etiquetas ({selectedZoneTags.length})</span>
                   <CaretDown
                     size={14}
                     weight="bold"
-                    style={{
-                      transition: 'transform 0.2s ease',
-                      transform: zoneTagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-                    }}
+                    className={`filter-section__caret${zoneTagsCollapsed ? ' filter-section__caret--collapsed' : ''}`}
                   />
                 </button>
                 {!zoneTagsCollapsed && (
-                  <>
+                  <div className="filter-section__content">
                     <Input
                       allowClear
                       size="small"
                       placeholder="Buscar etiqueta"
                       value={zoneTagSearch}
                       onChange={(event) => setZoneTagSearch(event.target.value)}
+                      className="filter-search-input"
                     />
-                    <div
-                      style={{
-                        maxHeight: 160,
-                        overflowY: 'auto',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        padding: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px'
-                      }}
-                    >
+                    <div className="filter-options filter-options--scrollable">
                       {filteredZonaTags.length === 0 ? (
-                        <Empty description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       ) : (
-                        filteredZonaTags.map((tag) => (
-                          <label
-                            key={tag}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              fontSize: 13,
-                              color: '#334155',
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                          >
+                        filteredZonaTags.map((tag) => {
+                          const selected = selectedZoneTags.includes(tag);
+                          const pillStyle = getTagPillStyle(tag);
+                          return (
                             <Checkbox
-                              checked={selectedZoneTags.includes(tag)}
+                              key={tag}
+                              className="filter-checkbox"
+                              checked={selected}
                               onChange={() => toggleZoneTagSelection(tag)}
-                            />
-                            <span>{tag}</span>
-                          </label>
-                        ))
+                            >
+                              <span className="filter-pill" style={pillStyle}>
+                                {tag}
+                              </span>
+                            </Checkbox>
+                          );
+                        })
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="filter-dropdown__footer">
                 <Button size="small" type="link" onClick={handleClearZones}>
                   Limpiar
                 </Button>
