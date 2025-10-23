@@ -28,6 +28,7 @@ interface FloatingFilterControlsProps {
   unidadId?: string;
   showUnitButton?: boolean;
   showEventsDropdown?: boolean;
+  showUnitTag?: boolean;
   visualizationOptions?: VisualizationOption[];
   onToggleVisualizationOption?: (key: VisualizationOptionKey) => void;
 }
@@ -36,6 +37,7 @@ export default function FloatingFilterControls({
   unidadId,
   showUnitButton = true,
   showEventsDropdown = true,
+  showUnitTag = true,
   visualizationOptions,
   onToggleVisualizationOption
 }: FloatingFilterControlsProps) {
@@ -52,7 +54,6 @@ export default function FloatingFilterControls({
   const selectedEventTags = eventsFilters.etiquetas;
   const selectedSeveridades = eventsFilters.severidades;
   const selectedEstado = eventsFilters.estado;
-
 
   const grouped = useMemo(() => {
     return appliedFilters.reduce<Record<'events' | 'units', typeof appliedFilters>>(
@@ -664,10 +665,10 @@ export default function FloatingFilterControls({
   if (unidadId) {
     const unitFilter = grouped.units.find((filterItem) => filterItem.key === 'unidadContext');
     const unitLabel = unitFilter?.value ?? unidadId;
-    return renderControlsContent(showUnitButton, unitLabel, showUnitButton);
+    return renderControlsContent(showUnitButton, unitLabel, showUnitTag);
   }
 
-  return renderControlsContent(false, undefined, showUnitButton);
+  return renderControlsContent(false, undefined, showUnitTag);
 }
 
 const renderFilterValue = (
@@ -800,7 +801,6 @@ const renderFilterValue = (
       </>
     );
   }
-
   return (
     <>
       {filter.label}: {filter.value}
