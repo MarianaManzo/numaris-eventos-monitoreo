@@ -250,7 +250,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
   const renderControlsContent = (showUnitButton: boolean, unitLabel?: string) => (
     <div className="floating-filter-controls">
       <Space className="floating-filter-button-group">
-        {showUnitButton && (
+        {showUnitButton ? (
           <Button
             className="floating-filter-button floating-filter-button--static"
             icon={<Truck size={16} color="#1f2937" />}
@@ -260,9 +260,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
             Unidad
             <span style={{ marginLeft: 8, fontWeight: 600, color: '#475569' }}>{unitLabel}</span>
           </Button>
-        )}
-
-        {!showUnitButton && (
+        ) : (
           <Button
             className="floating-filter-button floating-filter-button--static"
             icon={<Truck size={16} color="#1f2937" />}
@@ -593,12 +591,6 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     </div>
   );
 
-  if (unidadId) {
-    const unitFilter = grouped.units.find((filter) => filter.key === 'unidadContext');
-    const unitLabel = unitFilter?.value ?? unidadId;
-    return renderControlsContent(true, unitLabel);
-  }
-
   return renderControlsContent(false);
 }
 
@@ -607,27 +599,7 @@ const renderFilterValue = (
   filter: { key: string; value: string; label: string }
 ) => {
   if ((domain === 'units' || domain === 'events') && (filter.key === 'unidades' || filter.key === 'unidadContext')) {
-    return (
-      <>
-        <span className="floating-filter-unit">
-          <span style={{ color: '#1f2937' }}>Unidad:</span>{' '}
-          <span className="floating-filter-unit__icon" aria-hidden="true">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              fill="#6b7280"
-              viewBox="0 0 256 256"
-              style={{ flexShrink: 0 }}
-            >
-              <rect width="256" height="256" fill="none" />
-              <path d="M248,119.9v-.2a1.7,1.7,0,0,0-.1-.7v-.3c0-.2-.1-.4-.1-.6v-.2l-.2-.8h-.1l-14-34.8A15.7,15.7,0,0,0,218.6,72H184V64a8,8,0,0,0-8-8H24A16,16,0,0,0,8,72V184a16,16,0,0,0,16,16H37a32,32,0,0,0,62,0h58a32,32,0,0,0,62,0h13a16,16,0,0,0,16-16V120ZM184,88h34.6l9.6,24H184ZM24,72H168v64H24ZM68,208a16,16,0,1,1,16-16A16,16,0,0,1,68,208Zm120,0a16,16,0,1,1,16-16A16,16,0,0,1,188,208Z" />
-            </svg>
-          </span>
-          <span className="floating-filter-unit__label" style={{ color: '#475569', fontWeight: 600 }}>{filter.value}</span>
-        </span>
-      </>
-    );
+    return null;
   }
 
   if (domain === 'events' && filter.key === 'estado') {
