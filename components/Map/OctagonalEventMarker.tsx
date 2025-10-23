@@ -30,7 +30,7 @@ interface OctagonalEventMarkerProps {
   endTime?: Dayjs;
   startAddress?: string;
   viewDate?: Dayjs;
-  forceStatus?: 'Inicio' | 'Fin' | 'Inicio/Fin';
+  forceStatus?: 'Inicio' | 'Fin' | 'Inicio/Fin' | 'Cierre';
   useOperationalStatus?: boolean;
   disableAutoPan?: boolean;
   showLabel?: boolean;
@@ -76,7 +76,7 @@ export default function OctagonalEventMarker({
   const getStatus = (): 'Iniciado' | 'Finalizado' | 'En curso' | 'Abierto' | 'Cerrado' | 'En progreso' => {
     if (forceStatus) {
       if (forceStatus === 'Inicio') return 'Iniciado';
-      if (forceStatus === 'Fin') return 'Finalizado';
+      if (forceStatus === 'Fin' || forceStatus === 'Cierre') return 'Finalizado';
       if (forceStatus === 'Inicio/Fin') return 'Abierto'; // Treat combined as open
     }
 
@@ -109,7 +109,7 @@ export default function OctagonalEventMarker({
   // Status label logic
   let statusLabel = '';
   if (effectiveShowLabel && isSelected && forceStatus) {
-    statusLabel = forceStatus; // "Inicio", "Fin", or "Inicio/Fin"
+    statusLabel = forceStatus; // "Inicio", "Cierre", etc.
   } else if (effectiveShowLabel && isSelected && !forceStatus) {
     const operationalStatus = status as 'Abierto' | 'Cerrado' | 'En progreso';
     if (operationalStatus === 'Abierto' || operationalStatus === 'En progreso') {

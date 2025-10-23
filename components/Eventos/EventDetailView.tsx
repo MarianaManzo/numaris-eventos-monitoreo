@@ -61,14 +61,15 @@ export default function EventDetailView({
     }
     return 450;
   });
-  const [event, setEvent] = useState<Event | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [visualizationSettings, setVisualizationSettings] = useState<Record<VisualizationOptionKey, boolean>>({
-    start: true,
-    end: false,
-    vehicle: !!vehicleId,
-    route: false
-  });
+const [event, setEvent] = useState<Event | null>(null);
+const [isLoading, setIsLoading] = useState(true);
+const [visualizationSettings, setVisualizationSettings] = useState<Record<VisualizationOptionKey, boolean>>({
+  start: true,
+  end: false,
+  vehicle: !!vehicleId,
+  route: false
+});
+  const hasDualMarkers = event?.status === 'finalizado' && !!event?.locationData?.endLocation;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -146,21 +147,21 @@ export default function EventDetailView({
 
   useEffect(() => {
     if (!event) {
-      setVisualizationSettings({
-        start: true,
-        end: false,
-        vehicle: !!vehicleId,
-        route: false
-      });
-      return;
-    }
-
     setVisualizationSettings({
+      start: true,
+      end: false,
+      vehicle: !!vehicleId,
+      route: false
+    });
+    return;
+  }
+
+    setVisualizationSettings((prev) => ({
       start: true,
       end: hasDualMarkers,
       vehicle: !!vehicleId,
-      route: hasDualMarkers
-    });
+      route: hasDualMarkers ? prev.route : false
+    }));
   }, [event, vehicleId, hasDualMarkers]);
 
   const handleSidebarResize = (e: React.MouseEvent) => {
@@ -193,8 +194,6 @@ const handleBack = () => {
     router.push('/eventos');
   }
 };
-
-  const hasDualMarkers = event?.status === 'finalizado' && !!event?.locationData?.endLocation;
 
   const visualizationOptions = useMemo(() => {
     if (!event) {

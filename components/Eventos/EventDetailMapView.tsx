@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
 import type L from 'leaflet';
@@ -120,6 +120,18 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
     event.position[1] + 0.002
   ] : event.position;
 
+  const endMarkerPosition = useMemo((): [number, number] | null => {
+    if (!hasDualMarkers || !locationData) {
+      return null;
+    }
+    const [startLat, startLng] = locationData.startLocation.position;
+    const [endLat, endLng] = locationData.endLocation.position;
+    if (Math.abs(startLat - endLat) < 0.0001 && Math.abs(startLng - endLng) < 0.0001) {
+      return [endLat + 0.0015, endLng + 0.0015];
+    }
+    return locationData.endLocation.position;
+  }, [hasDualMarkers, locationData]);
+
   const getVisibleEventPositions = useCallback((): LatLngExpression[] => {
     const positions: LatLngExpression[] = [];
 
@@ -128,14 +140,14 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
         positions.push(locationData.startLocation.position);
       }
       if (showEndMarker) {
-        positions.push(locationData.endLocation.position);
+        positions.push(endMarkerPosition ?? locationData.endLocation.position);
       }
     } else if (showStartMarker) {
       positions.push(event.position);
     }
 
     return positions.length > 0 ? positions : [event.position];
-  }, [event.position, hasDualMarkers, locationData, showEndMarker, showStartMarker]);
+  }, [event.position, hasDualMarkers, locationData, showEndMarker, showStartMarker, endMarkerPosition]);
 
   const buildBoundsPositions = useCallback((includeVehicle: boolean) => {
     const positions = [...getVisibleEventPositions()];
@@ -355,7 +367,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
             {showEndMarker && (
               <OctagonalEventMarker
                 key={`${event.id}-fin`}
-                position={locationData.endLocation.position}
+                position={(endMarkerPosition ?? locationData.endLocation.position) as [number, number]}
                 evento={event.evento}
                 fechaCreacion={endTime?.toISOString() || event.fechaCreacion}
                 severidad={event.severidad}
@@ -378,7 +390,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
                 endTime={endTime}
                 startAddress={endAddress}
                 viewDate={viewDateDayjs}
-                forceStatus="Fin"
+                forceStatus="Cierre"
                 disableAutoPan={true}
               />
             )}
@@ -409,7 +421,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
           )
         )}
 
-        {showRouteLine && hasDualMarkers && locationData && (
+        {showRouteLine && hasDualMarkers && locationData && mapReady && (
           <Polyline
             positions={[locationData.startLocation.position, locationData.endLocation.position]}
             pathOptions={{ color: getSeverityColor(event.severidad), weight: 4, opacity: 0.6 }}
