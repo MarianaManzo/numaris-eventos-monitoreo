@@ -668,7 +668,8 @@ const renderFilterValue = (
         return null;
       }
     }
-***
+  }
+
   }
 
   if (domain === 'events' && filter.key === 'estado') {
