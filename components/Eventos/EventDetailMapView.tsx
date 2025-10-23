@@ -13,10 +13,15 @@ import dayjs from 'dayjs';
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
+)
 );
 
 const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+
+const OctagonalEventMarker = dynamicer),
   { ssr: false }
 );
 
