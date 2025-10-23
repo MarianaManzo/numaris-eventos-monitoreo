@@ -259,7 +259,7 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
         )}
 
         <Dropdown
-          destroyPopupOnHide
+          destroyOnHidden
           open={eventDropdownOpen}
           onOpenChange={(open) => {
             setEventDropdownOpen(open);
