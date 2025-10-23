@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Layout, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
@@ -32,6 +32,7 @@ interface Event {
   responsable?: string;
   instructions?: string;
   locationData?: EventLocation; // For elapsed time calculations
+  status?: string;
 }
 
 interface EventDetailViewProps {
@@ -40,6 +41,8 @@ interface EventDetailViewProps {
   vehicleId?: string;
   viewDate?: string; // ISO date string
 }
+
+type VisualizationOptionKey = 'start' | 'end' | 'vehicle' | 'route';
 
 export default function EventDetailView({
   eventId,
@@ -60,6 +63,12 @@ export default function EventDetailView({
   });
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [visualizationSettings, setVisualizationSettings] = useState<Record<VisualizationOptionKey, boolean>>({
+    start: true,
+    end: false,
+    vehicle: !!vehicleId,
+    route: false
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -135,6 +144,25 @@ export default function EventDetailView({
     loadEvent();
   }, [eventId, viewDate, selectedRoute]);
 
+  useEffect(() => {
+    if (!event) {
+      setVisualizationSettings({
+        start: true,
+        end: false,
+        vehicle: !!vehicleId,
+        route: false
+      });
+      return;
+    }
+
+    setVisualizationSettings({
+      start: true,
+      end: hasDualMarkers,
+      vehicle: !!vehicleId,
+      route: hasDualMarkers
+    });
+  }, [event, vehicleId, hasDualMarkers]);
+
   const handleSidebarResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -154,16 +182,75 @@ export default function EventDetailView({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleBack = () => {
-    // Context-aware back navigation
-    if (context === 'historical' && vehicleId && viewDate) {
-      router.push(`/unidades/${vehicleId}?tab=historial&view=day&date=${viewDate}`);
-    } else if (context === 'vehicle' && vehicleId) {
-      router.push(`/unidades/${vehicleId}?tab=eventos`);
-    } else {
-      // Fleet context or fallback
-      router.push('/eventos');
+const handleBack = () => {
+  // Context-aware back navigation
+  if (context === 'historical' && vehicleId && viewDate) {
+    router.push(`/unidades/${vehicleId}?tab=historial&view=day&date=${viewDate}`);
+  } else if (context === 'vehicle' && vehicleId) {
+    router.push(`/unidades/${vehicleId}?tab=eventos`);
+  } else {
+    // Fleet context or fallback
+    router.push('/eventos');
+  }
+};
+
+  const hasDualMarkers = event?.status === 'finalizado' && !!event?.locationData?.endLocation;
+
+  const visualizationOptions = useMemo(() => {
+    if (!event) {
+      return [];
     }
+
+    const options: { key: VisualizationOptionKey; label: string; checked: boolean; disabled?: boolean }[] = [
+      {
+        key: 'start',
+        label: 'Inicio del evento',
+        checked: visualizationSettings.start,
+        disabled: true
+      },
+      {
+        key: 'end',
+        label: 'Cierre del evento',
+        checked: visualizationSettings.end,
+        disabled: !hasDualMarkers
+      },
+      {
+        key: 'vehicle',
+        label: 'Unidad del evento',
+        checked: visualizationSettings.vehicle,
+        disabled: !vehicleId
+      },
+      {
+        key: 'route',
+        label: 'Trayecto del evento',
+        checked: visualizationSettings.route,
+        disabled: !hasDualMarkers
+      }
+    ];
+
+    return options;
+  }, [event, visualizationSettings, hasDualMarkers, vehicleId]);
+
+  const handleVisualizationToggle = (key: VisualizationOptionKey) => {
+    setVisualizationSettings((prev) => {
+      if (key === 'start') {
+        return prev;
+      }
+      if (key === 'end' && !hasDualMarkers) {
+        return prev;
+      }
+      if (key === 'vehicle' && !vehicleId) {
+        return prev;
+      }
+      if (key === 'route' && !hasDualMarkers) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [key]: !prev[key]
+      };
+    });
   };
 
   if (isLoading || !event) {
@@ -216,7 +303,7 @@ export default function EventDetailView({
 
             <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
               <div className="floating-filters-overlay">
-                <FloatingFilterControls />
+                <FloatingFilterControls showEventsDropdown={false} />
               </div>
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
@@ -333,9 +420,18 @@ export default function EventDetailView({
 
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
             <div className="floating-filters-overlay">
-              <FloatingFilterControls />
+              <FloatingFilterControls
+                showEventsDropdown={false}
+                visualizationOptions={visualizationOptions}
+                onToggleVisualizationOption={handleVisualizationToggle}
+              />
             </div>
-            <EventDetailMapView event={event} vehicleId={vehicleId} viewDate={viewDate} />
+            <EventDetailMapView
+              event={event}
+              vehicleId={vehicleId}
+              viewDate={viewDate}
+              visualization={visualizationSettings}
+            />
           </Content>
         </Layout>
       </Layout>

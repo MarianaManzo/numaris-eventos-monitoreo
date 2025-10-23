@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, MouseEvent, useState, useCallback, useEffect } from 'react';
+import { useMemo, MouseEvent, useState, useCallback } from 'react';
 import { Button, Dropdown, Space, Tag, Input, Empty, Checkbox } from 'antd';
 import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
@@ -15,11 +15,28 @@ const severityStyleMap: Record<EventSeverity, { background: string; color: strin
   Informativa: { background: '#ccfbf1', color: '#0f766e', border: '#a5f3fc' }
 };
 
-interface FloatingFilterControlsProps {
-  unidadId?: string;
+type VisualizationOptionKey = 'start' | 'end' | 'vehicle' | 'route';
+
+interface VisualizationOption {
+  key: VisualizationOptionKey;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
 }
 
-export default function FloatingFilterControls({ unidadId }: FloatingFilterControlsProps) {
+interface FloatingFilterControlsProps {
+  unidadId?: string;
+  showEventsDropdown?: boolean;
+  visualizationOptions?: VisualizationOption[];
+  onToggleVisualizationOption?: (key: VisualizationOptionKey) => void;
+}
+
+export default function FloatingFilterControls({
+  unidadId,
+  showEventsDropdown = true,
+  visualizationOptions,
+  onToggleVisualizationOption
+}: FloatingFilterControlsProps) {
   const appliedFilters = useFilterStore((state) => state.appliedFilters);
   const removeFilter = useFilterStore((state) => state.removeFilter);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
@@ -59,12 +76,11 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [zonas]);
 
-  const [isZoneDropdownOpen, setZoneDropdownOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<'events' | 'zones' | 'visualization' | null>(null);
   const [zoneSearch, setZoneSearch] = useState('');
   const [zoneTagSearch, setZoneTagSearch] = useState('');
   const [zonesCollapsed, setZonesCollapsed] = useState(false);
   const [zoneTagsCollapsed, setZoneTagsCollapsed] = useState(false);
-  const [isEventDropdownOpen, setEventDropdownOpen] = useState(false);
   const [eventStateCollapsed, setEventStateCollapsed] = useState(false);
   const [eventSeverityCollapsed, setEventSeverityCollapsed] = useState(false);
   const [eventTagsCollapsed, setEventTagsCollapsed] = useState(false);
@@ -111,18 +127,6 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     }
     return eventTagOptions.filter((tag) => tag.toLowerCase().includes(query));
   }, [eventTagOptions, eventTagSearch]);
-
-  useEffect(() => {
-    if (isZoneDropdownOpen) {
-      setEventDropdownOpen(false);
-    }
-  }, [isZoneDropdownOpen]);
-
-  useEffect(() => {
-    if (isEventDropdownOpen) {
-      setZoneDropdownOpen(false);
-    }
-  }, [isEventDropdownOpen]);
 
   const toggleZoneSelection = useCallback((zoneName: string) => {
     const exists = selectedZones.includes(zoneName);
@@ -226,8 +230,29 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
     (isAllSeveritiesSelected ? 0 : selectedSeveridades.length) +
     selectedEventTags.length;
 
-  const eventDropdownOpen = isEventDropdownOpen && !isZoneDropdownOpen;
-  const zoneDropdownOpen = isZoneDropdownOpen && !isEventDropdownOpen;
+  const showVisualizationDropdown =
+    Array.isArray(visualizationOptions) &&
+    visualizationOptions.length > 0 &&
+    typeof onToggleVisualizationOption === 'function';
+
+  const eventDropdownOpen = showEventsDropdown && activeDropdown === 'events';
+  const zoneDropdownOpen = activeDropdown === 'zones';
+  const visualizationDropdownOpen = showVisualizationDropdown && activeDropdown === 'visualization';
+  const visualizationSelectionCount = showVisualizationDropdown
+    ? visualizationOptions!.reduce((count, option) => count + (option.checked ? 1 : 0), 0)
+    : 0;
+
+  const handleDropdownToggle = useCallback(
+    (name: 'events' | 'zones' | 'visualization') => (open: boolean) => {
+      setActiveDropdown((current) => {
+        if (open) {
+          return name;
+        }
+        return current === name ? null : current;
+      });
+    },
+    []
+  );
 
   const getTagPillStyle = useCallback((value: string) => {
     const hue = Math.abs(hashString(value)) % 360;
@@ -262,185 +287,223 @@ export default function FloatingFilterControls({ unidadId }: FloatingFilterContr
           </Button>
         )}
 
-        <Dropdown
-          destroyOnHidden
-          open={eventDropdownOpen}
-          onOpenChange={(open) => {
-            setEventDropdownOpen(open);
-            if (open) {
-              setZoneDropdownOpen(false);
-            }
-          }}
-          trigger={['click']}
-          placement="bottomLeft"
-          popupRender={() => (
-            <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
-              <div className="filter-section">
-                <button
-                  type="button"
-                  className="filter-section__toggle"
-                  onClick={() => setEventSeverityCollapsed((value) => !value)}
-                >
-                  <span>Severidad ({selectedSeveridades.length})</span>
-                  <CaretDown
-                    size={14}
-                    weight="bold"
-                    className={`filter-section__caret${eventSeverityCollapsed ? ' filter-section__caret--collapsed' : ''}`}
-                  />
-                </button>
-                {!eventSeverityCollapsed && (
-                  <div className="filter-section__content">
-                    {filteredSeverities.length === 0 ? (
-                      <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    ) : (
+        {showEventsDropdown && (
+          <Dropdown
+            destroyOnHidden
+            open={eventDropdownOpen}
+            onOpenChange={handleDropdownToggle('events')}
+            trigger={['click']}
+            placement="bottomLeft"
+            popupRender={() => (
+              <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
+                <div className="filter-section">
+                  <button
+                    type="button"
+                    className="filter-section__toggle"
+                    onClick={() => setEventSeverityCollapsed((value) => !value)}
+                  >
+                    <span>Severidad ({selectedSeveridades.length})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      className={`filter-section__caret${eventSeverityCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                    />
+                  </button>
+                  {!eventSeverityCollapsed && (
+                    <div className="filter-section__content">
+                      {filteredSeverities.length === 0 ? (
+                        <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      ) : (
+                        <div className="filter-options">
+                          {filteredSeverities.map((severity) => {
+                            const typedSeverity = severity as EventSeverity;
+                            const selected = selectedSeveridades.includes(typedSeverity);
+                            const pillStyle = severityStyleMap[typedSeverity] ?? severityStyleMap.Informativa;
+                            return (
+                              <Checkbox
+                                key={severity}
+                                className="filter-checkbox"
+                                checked={selected}
+                                onChange={() => toggleSeverity(typedSeverity)}
+                              >
+                                <span className="filter-pill" style={pillStyle}>
+                                  {severity}
+                                </span>
+                              </Checkbox>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="filter-section">
+                  <button
+                    type="button"
+                    className="filter-section__toggle"
+                    onClick={() => setEventStateCollapsed((value) => !value)}
+                  >
+                    <span>Estado ({selectedEstadoSet.size})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      className={`filter-section__caret${eventStateCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                    />
+                  </button>
+                  {!eventStateCollapsed && (
+                    <div className="filter-section__content">
                       <div className="filter-options">
-                        {filteredSeverities.map((severity) => {
-                          const typedSeverity = severity as EventSeverity;
-                          const selected = selectedSeveridades.includes(typedSeverity);
-                          const pillStyle = severityStyleMap[typedSeverity] ?? severityStyleMap.Informativa;
+                        {(['abiertos', 'cerrados'] as const).map((value) => {
+                          const label = value === 'abiertos' ? 'Abierto' : 'Cerrado';
+                          const selected = selectedEstadoSet.has(value);
                           return (
                             <Checkbox
-                              key={severity}
-                              className="filter-checkbox"
+                              key={value}
+                              className="filter-checkbox filter-checkbox--state"
                               checked={selected}
-                              onChange={() => toggleSeverity(typedSeverity)}
+                              onChange={() => handleEstadoToggle(value)}
                             >
-                              <span className="filter-pill" style={pillStyle}>
-                                {severity}
+                              <span className="filter-option__content filter-option__content--estado">
+                                <span
+                                  className={`filter-state-dot${value === 'abiertos' ? ' filter-state-dot--open' : ' filter-state-dot--closed'}`}
+                                  aria-hidden="true"
+                                />
+                                <span>{label}</span>
                               </span>
                             </Checkbox>
                           );
                         })}
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="filter-section">
-                <button
-                  type="button"
-                  className="filter-section__toggle"
-                  onClick={() => setEventStateCollapsed((value) => !value)}
-                >
-                  <span>Estado ({selectedEstadoSet.size})</span>
-                  <CaretDown
-                    size={14}
-                    weight="bold"
-                    className={`filter-section__caret${eventStateCollapsed ? ' filter-section__caret--collapsed' : ''}`}
-                  />
-                </button>
-                {!eventStateCollapsed && (
-                  <div className="filter-section__content">
-                    <div className="filter-options">
-                      {(['abiertos', 'cerrados'] as const).map((value) => {
-                        const label = value === 'abiertos' ? 'Abierto' : 'Cerrado';
-                        const selected = selectedEstadoSet.has(value);
-                        return (
-                          <Checkbox
-                            key={value}
-                            className="filter-checkbox filter-checkbox--state"
-                            checked={selected}
-                            onChange={() => handleEstadoToggle(value)}
-                          >
-                            <span className="filter-option__content filter-option__content--estado">
-                              <span
-                                className={`filter-state-dot${value === 'abiertos' ? ' filter-state-dot--open' : ' filter-state-dot--closed'}`}
-                                aria-hidden="true"
-                              />
-                              <span>{label}</span>
-                            </span>
-                          </Checkbox>
-                        );
-                      })}
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div className="filter-section">
-                <button
-                  type="button"
-                  className="filter-section__toggle"
-                  onClick={() => setEventTagsCollapsed((value) => !value)}
-                >
-                  <span>Etiquetas ({selectedEventTags.length})</span>
-                  <CaretDown
-                    size={14}
-                    weight="bold"
-                    className={`filter-section__caret${eventTagsCollapsed ? ' filter-section__caret--collapsed' : ''}`}
-                  />
-                </button>
-                {!eventTagsCollapsed && (
-                  <div className="filter-section__content">
-                    <Input
-                      allowClear
-                      size="small"
-                      placeholder="Buscar etiqueta"
-                      value={eventTagSearch}
-                      onChange={(event) => setEventTagSearch(event.target.value)}
-                      className="filter-search-input"
+                <div className="filter-section">
+                  <button
+                    type="button"
+                    className="filter-section__toggle"
+                    onClick={() => setEventTagsCollapsed((value) => !value)}
+                  >
+                    <span>Etiquetas ({selectedEventTags.length})</span>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      className={`filter-section__caret${eventTagsCollapsed ? ' filter-section__caret--collapsed' : ''}`}
                     />
+                  </button>
+                  {!eventTagsCollapsed && (
+                    <div className="filter-section__content">
+                      <Input
+                        allowClear
+                        size="small"
+                        placeholder="Buscar etiqueta"
+                        value={eventTagSearch}
+                        onChange={(event) => setEventTagSearch(event.target.value)}
+                        className="filter-search-input"
+                      />
+                      <div className="filter-options filter-options--scrollable">
+                        {filteredEventTags.length === 0 ? (
+                          <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        ) : (
+                          filteredEventTags.map((tag) => {
+                            const selected = selectedEventTags.includes(tag);
+                            const pillStyle = getTagPillStyle(tag);
+                            return (
+                              <Checkbox
+                                key={tag}
+                                className="filter-checkbox"
+                                checked={selected}
+                                onChange={() => toggleEventTagSelection(tag)}
+                              >
+                                <span className="filter-pill" style={pillStyle}>
+                                  {tag}
+                                </span>
+                              </Checkbox>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="filter-dropdown__footer">
+                  <Button size="small" type="link" onClick={handleClearEvents}>
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+            )}
+          >
+            <Button className="floating-filter-button" icon={<FunnelSimple size={16} />}>
+              Eventos
+              {eventSelectionCount > 0 && (
+                <Tag className="floating-filter-button__tag">{eventSelectionCount}</Tag>
+              )}
+              <svg
+                className="floating-filter-button__caret"
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
+              </svg>
+            </Button>
+          </Dropdown>
+        )}
+
+        {showVisualizationDropdown && (
+          <Dropdown
+            destroyOnHidden
+            open={visualizationDropdownOpen}
+            onOpenChange={handleDropdownToggle('visualization')}
+            trigger={['click']}
+            placement="bottomLeft"
+            popupRender={() => (
+              <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
+                <div className="filter-section">
+                  <div className="filter-section__content">
                     <div className="filter-options filter-options--scrollable">
-                      {filteredEventTags.length === 0 ? (
-                        <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                      ) : (
-                        filteredEventTags.map((tag) => {
-                          const selected = selectedEventTags.includes(tag);
-                          const pillStyle = getTagPillStyle(tag);
-                          return (
-                            <Checkbox
-                              key={tag}
-                              className="filter-checkbox"
-                              checked={selected}
-                              onChange={() => toggleEventTagSelection(tag)}
-                            >
-                              <span className="filter-pill" style={pillStyle}>
-                                {tag}
-                              </span>
-                            </Checkbox>
-                          );
-                        })
-                      )}
+                      {visualizationOptions!.map((option) => (
+                        <Checkbox
+                          key={option.key}
+                          className="filter-checkbox"
+                          checked={option.checked}
+                          disabled={option.disabled}
+                          onChange={() => onToggleVisualizationOption?.(option.key)}
+                        >
+                          <span>{option.label}</span>
+                        </Checkbox>
+                      ))}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-
-              <div className="filter-dropdown__footer">
-                <Button size="small" type="link" onClick={handleClearEvents}>
-                  Limpiar
-                </Button>
-              </div>
-            </div>
-          )}
-        >
-          <Button className="floating-filter-button" icon={<FunnelSimple size={16} />}>
-            Eventos
-            {eventSelectionCount > 0 && (
-              <Tag className="floating-filter-button__tag">{eventSelectionCount}</Tag>
             )}
-            <svg
-              className="floating-filter-button__caret"
-              width={18}
-              height={18}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
-            </svg>
-          </Button>
-        </Dropdown>
+          >
+            <Button className="floating-filter-button">
+              Visualización
+              <Tag className="floating-filter-button__tag">{visualizationSelectionCount}</Tag>
+              <svg
+                className="floating-filter-button__caret"
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
+              </svg>
+            </Button>
+          </Dropdown>
+        )}
         <Dropdown
           destroyOnHidden
           open={zoneDropdownOpen}
-          onOpenChange={(open) => {
-            setZoneDropdownOpen(open);
-            if (open) {
-              setEventDropdownOpen(false);
-            }
-          }}
+          onOpenChange={handleDropdownToggle('zones')}
           trigger={['click']}
           placement="bottomLeft"
           popupRender={() => (

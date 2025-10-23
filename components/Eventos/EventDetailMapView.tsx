@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
 import type L from 'leaflet';
@@ -30,6 +30,11 @@ const UnidadMarker = dynamic(
   { ssr: false }
 );
 
+const Polyline = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polyline),
+  { ssr: false }
+);
+
 interface Event {
   id: string;
   evento: string;
@@ -46,6 +51,7 @@ interface EventDetailMapViewProps {
   event: Event;
   vehicleId?: string;
   viewDate?: string; // ISO date string for historical context
+  visualization?: Record<'start' | 'end' | 'vehicle' | 'route', boolean>;
 }
 
 const getSeverityColor = (severidad: string) => {
@@ -63,7 +69,7 @@ const getSeverityColor = (severidad: string) => {
   }
 };
 
-export default function EventDetailMapView({ event, vehicleId, viewDate }: EventDetailMapViewProps) {
+export default function EventDetailMapView({ event, vehicleId, viewDate, visualization }: EventDetailMapViewProps) {
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -72,6 +78,16 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
   const [markersReady, setMarkersReady] = useState(false);
   const hasPerformedInitialFit = useRef(false);
   const [showEventAndVehicleFitBounds, setShowEventAndVehicleFitBounds] = useState(false);
+  const visualizationSettings = visualization ?? {
+    start: true,
+    end: true,
+    vehicle: true,
+    route: true
+  };
+  const showStartMarker = visualizationSettings.start;
+  const showEndMarker = visualizationSettings.end;
+  const showVehicleMarker = visualizationSettings.vehicle;
+  const showRouteLine = visualizationSettings.route;
 
   // Generate locations from event ID for consistency (geofence or address)
   const seed = generateSeedFromEventId(event.id);
@@ -104,46 +120,63 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
     event.position[1] + 0.002
   ] : event.position;
 
+  const getVisibleEventPositions = useCallback((): LatLngExpression[] => {
+    const positions: LatLngExpression[] = [];
+
+    if (hasDualMarkers && locationData) {
+      if (showStartMarker) {
+        positions.push(locationData.startLocation.position);
+      }
+      if (showEndMarker) {
+        positions.push(locationData.endLocation.position);
+      }
+    } else if (showStartMarker) {
+      positions.push(event.position);
+    }
+
+    return positions.length > 0 ? positions : [event.position];
+  }, [event.position, hasDualMarkers, locationData, showEndMarker, showStartMarker]);
+
+  const buildBoundsPositions = useCallback((includeVehicle: boolean) => {
+    const positions = [...getVisibleEventPositions()];
+    if (includeVehicle && vehicleId && showVehicleMarker) {
+      positions.push(vehiclePosition);
+    }
+    return positions;
+  }, [getVisibleEventPositions, vehicleId, showVehicleMarker, vehiclePosition]);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   // FitBounds to show both markers when event loads
   useEffect(() => {
-    // Only perform fitBounds once, and only when all conditions are met
-    if (mapRef.current && mapReady && isClient && hasDualMarkers && locationData && !hasPerformedInitialFit.current) {
-      const map = mapRef.current;
-      hasPerformedInitialFit.current = true;
+    if (!mapRef.current || !mapReady || !isClient || hasPerformedInitialFit.current) {
+      return;
+    }
 
-      // Wait for map to be fully ready
-      setTimeout(() => {
-        const bounds = [
-          locationData.startLocation.position,
-          locationData.endLocation.position
-        ];
+    const map = mapRef.current;
+    const positions = getVisibleEventPositions();
+    hasPerformedInitialFit.current = true;
 
-        map.fitBounds(bounds as L.LatLngBoundsExpression, {
+    setTimeout(() => {
+      if (positions.length > 1) {
+        map.fitBounds(positions as L.LatLngBoundsExpression, {
           padding: [80, 80],
           animate: true,
           duration: 0.8,
           maxZoom: 15
         });
-
-        setTimeout(() => setMarkersReady(true), 1000);
-      }, 800);
-    } else if (mapRef.current && mapReady && isClient && event && !hasDualMarkers && !hasPerformedInitialFit.current) {
-      // For single marker events, center on position
-      const map = mapRef.current;
-      hasPerformedInitialFit.current = true;
-      setTimeout(() => {
-        map.setView(event.position, 16, {
+      } else {
+        map.setView(positions[0], 16, {
           animate: true,
           duration: 0.8
         });
-        setTimeout(() => setMarkersReady(true), 1000);
-      }, 800);
-    }
-  }, [event, hasDualMarkers, locationData, isClient, mapReady]);
+      }
+
+      setTimeout(() => setMarkersReady(true), 1000);
+    }, 800);
+  }, [getVisibleEventPositions, isClient, mapReady]);
 
   // Add map click handler to reset focus mode when clicking on map background
   useEffect(() => {
@@ -189,28 +222,25 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
   };
 
   const handleResetView = () => {
-    if (mapRef.current && event) {
-      const map = mapRef.current;
+    if (!mapRef.current) {
+      return;
+    }
 
-      if (hasDualMarkers && locationData) {
-        // For dual markers (closed events), fit bounds to show both Inicio and Fin
-        const bounds = [
-          locationData.startLocation.position,
-          locationData.endLocation.position
-        ];
-        map.fitBounds(bounds as L.LatLngBoundsExpression, {
-          padding: [80, 80],
-          animate: true,
-          duration: 0.8,
-          maxZoom: 15
-        });
-      } else {
-        // For single marker, center on event position
-        map.setView(event.position, 16, {
-          animate: true,
-          duration: 0.8
-        });
-      }
+    const map = mapRef.current;
+    const positions = buildBoundsPositions(false);
+
+    if (positions.length > 1) {
+      map.fitBounds(positions as L.LatLngBoundsExpression, {
+        padding: [80, 80],
+        animate: true,
+        duration: 0.8,
+        maxZoom: 15
+      });
+    } else {
+      map.setView(positions[0], 16, {
+        animate: true,
+        duration: 0.8
+      });
     }
   };
 
@@ -220,27 +250,17 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
 
   // Fit bounds to show both event and vehicle
   const handleFitEventAndVehicle = () => {
-    if (!mapRef.current || !vehicleId) return;
+    if (!mapRef.current || !vehicleId || !showVehicleMarker) return;
 
     setShowEventAndVehicleFitBounds(true);
 
     import('leaflet').then(L => {
       const map = mapRef.current!;
-      const allCoordinates: LatLngExpression[] = [];
-
-      // Add event position(s)
-      if (hasDualMarkers && locationData) {
-        allCoordinates.push(locationData.startLocation.position);
-        allCoordinates.push(locationData.endLocation.position);
-      } else {
-        allCoordinates.push(event.position);
+      const positions = buildBoundsPositions(true);
+      if (positions.length === 1) {
+        positions.push(positions[0]);
       }
-
-      // Add vehicle position
-      allCoordinates.push(vehiclePosition);
-
-      // Fit bounds to show both event and vehicle
-      const bounds = L.latLngBounds(allCoordinates);
+      const bounds = L.latLngBounds(positions);
       map.flyToBounds(bounds, {
         padding: [80, 80],
         maxZoom: 16,
@@ -301,24 +321,80 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
         {/* Render dual markers (Inicio/Fin) if event has location data */}
         {hasDualMarkers && locationData ? (
           <>
-            {/* Inicio marker - at start location */}
+            {showStartMarker && (
+              <OctagonalEventMarker
+                key={`${event.id}-inicio`}
+                position={locationData.startLocation.position}
+                evento={event.evento}
+                fechaCreacion={event.fechaCreacion}
+                severidad={event.severidad}
+                color={getSeverityColor(event.severidad)}
+                eventId={`${event.id}-inicio`}
+                isSelected={true}
+                onSelect={(id) => {
+                  if (id.includes('-inicio')) {
+                    setSelectedMarker('inicio');
+                  } else if (id.includes('-fin')) {
+                    setSelectedMarker('fin');
+                  }
+                }}
+                etiqueta={event.etiqueta}
+                responsable={event.responsable}
+                vehicleName={vehicleId ? generateVehicleName(vehicleId) : undefined}
+                vehicleId={vehicleId}
+                address={startAddress}
+                startTime={startTime}
+                endTime={endTime}
+                startAddress={startAddress}
+                viewDate={viewDateDayjs}
+                forceStatus="Inicio"
+                disableAutoPan={true}
+              />
+            )}
+
+            {showEndMarker && (
+              <OctagonalEventMarker
+                key={`${event.id}-fin`}
+                position={locationData.endLocation.position}
+                evento={event.evento}
+                fechaCreacion={endTime?.toISOString() || event.fechaCreacion}
+                severidad={event.severidad}
+                color={getSeverityColor(event.severidad)}
+                eventId={`${event.id}-fin`}
+                isSelected={true}
+                onSelect={(id) => {
+                  if (id.includes('-inicio')) {
+                    setSelectedMarker('inicio');
+                  } else if (id.includes('-fin')) {
+                    setSelectedMarker('fin');
+                  }
+                }}
+                etiqueta={event.etiqueta}
+                responsable={event.responsable}
+                vehicleName={vehicleId ? generateVehicleName(vehicleId) : undefined}
+                vehicleId={vehicleId}
+                address={endAddress}
+                startTime={endTime}
+                endTime={endTime}
+                startAddress={endAddress}
+                viewDate={viewDateDayjs}
+                forceStatus="Fin"
+                disableAutoPan={true}
+              />
+            )}
+          </>
+        ) : (
+          showStartMarker && (
             <OctagonalEventMarker
-              key={`${event.id}-inicio`}
-              position={locationData.startLocation.position}
+              key={event.id}
+              position={event.position}
               evento={event.evento}
               fechaCreacion={event.fechaCreacion}
               severidad={event.severidad}
               color={getSeverityColor(event.severidad)}
-              eventId={`${event.id}-inicio`}
-              isSelected={true} // Always show label for dual markers
-              onSelect={(id) => {
-                // Extract marker type from eventId
-                if (id.includes('-inicio')) {
-                  setSelectedMarker('inicio');
-                } else if (id.includes('-fin')) {
-                  setSelectedMarker('fin');
-                }
-              }}
+              eventId={event.id}
+              isSelected={true}
+              onSelect={() => {}}
               etiqueta={event.etiqueta}
               responsable={event.responsable}
               vehicleName={vehicleId ? generateVehicleName(vehicleId) : undefined}
@@ -329,67 +405,19 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
               startAddress={startAddress}
               viewDate={viewDateDayjs}
               forceStatus="Inicio"
-              disableAutoPan={true}
             />
+          )
+        )}
 
-            {/* Fin marker - at end location */}
-            <OctagonalEventMarker
-              key={`${event.id}-fin`}
-              position={locationData.endLocation.position}
-              evento={event.evento}
-              fechaCreacion={endTime?.toISOString() || event.fechaCreacion}
-              severidad={event.severidad}
-              color={getSeverityColor(event.severidad)}
-              eventId={`${event.id}-fin`}
-              isSelected={true} // Always show label for dual markers
-              onSelect={(id) => {
-                // Extract marker type from eventId
-                if (id.includes('-inicio')) {
-                  setSelectedMarker('inicio');
-                } else if (id.includes('-fin')) {
-                  setSelectedMarker('fin');
-                }
-              }}
-              etiqueta={event.etiqueta}
-              responsable={event.responsable}
-              vehicleName={vehicleId ? generateVehicleName(vehicleId) : undefined}
-              vehicleId={vehicleId}
-              address={endAddress}
-              startTime={endTime}
-              endTime={endTime}
-              startAddress={endAddress}
-              viewDate={viewDateDayjs}
-              forceStatus="Fin"
-              disableAutoPan={true}
-            />
-          </>
-        ) : (
-          /* Single marker for events without location data */
-          <OctagonalEventMarker
-            key={event.id}
-            position={event.position}
-            evento={event.evento}
-            fechaCreacion={event.fechaCreacion}
-            severidad={event.severidad}
-            color={getSeverityColor(event.severidad)}
-            eventId={event.id}
-            isSelected={true}
-            onSelect={() => {}}
-            etiqueta={event.etiqueta}
-            responsable={event.responsable}
-            vehicleName={vehicleId ? generateVehicleName(vehicleId) : undefined}
-            vehicleId={vehicleId}
-            address={startAddress}
-            startTime={startTime}
-            endTime={endTime}
-            startAddress={startAddress}
-            viewDate={viewDateDayjs}
-            forceStatus="Inicio"
+        {showRouteLine && hasDualMarkers && locationData && (
+          <Polyline
+            positions={[locationData.startLocation.position, locationData.endLocation.position]}
+            pathOptions={{ color: getSeverityColor(event.severidad), weight: 4, opacity: 0.6 }}
           />
         )}
 
         {/* Render vehicle marker if vehicleId is provided */}
-        {vehicleId && (
+        {vehicleId && showVehicleMarker && (
           <UnidadMarker
             key={`vehicle-${vehicleId}`}
             position={vehiclePosition}
@@ -409,13 +437,13 @@ export default function EventDetailMapView({ event, vehicleId, viewDate }: Event
       <MapToolbar
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
-        onRecenterRoute={handleRecenterEvents}
-        onFitEventAndVehicle={vehicleId ? handleFitEventAndVehicle : undefined}
-        hasEventAndVehicle={!!vehicleId}
-        onToggleFullscreen={handleToggleFullscreen}
-        isFullscreen={isFullscreen}
-      />
-    </div>
+      onResetView={handleResetView}
+      onRecenterRoute={handleRecenterEvents}
+      onFitEventAndVehicle={vehicleId && showVehicleMarker ? handleFitEventAndVehicle : undefined}
+      hasEventAndVehicle={!!vehicleId && showVehicleMarker}
+      onToggleFullscreen={handleToggleFullscreen}
+      isFullscreen={isFullscreen}
+    />
+  </div>
   );
 }
