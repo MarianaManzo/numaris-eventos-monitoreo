@@ -278,6 +278,14 @@ body {
   gap: 6px;
 }
 
+.floating-filter-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
 
 .floating-filter-button--static {
   pointer-events: none;
@@ -287,6 +295,25 @@ body {
 
 .floating-filter-button--static .floating-filter-button__tag {
   pointer-events: none;
+}
+
+.floating-filter-unit__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.floating-filter-unit__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.floating-filter-unit__label {
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 
