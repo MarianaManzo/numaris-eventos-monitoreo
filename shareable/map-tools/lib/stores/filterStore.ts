@@ -135,7 +135,7 @@ const UNIT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
 
 const createDefaultEventsFilters = (): EventsFilters => ({
   estado: 'todos',
-  severidades: [...DEFAULT_EVENT_SEVERITIES],
+  severidades: [],
   etiquetas: [],
   unidades: [],
   dateRange: null,
@@ -152,7 +152,7 @@ const createDefaultUnitsFilters = (): UnitsFilters => ({
   zones: [],
   zoneTags: [],
   brandModels: [],
-  status: [...DEFAULT_UNIT_STATUS],
+  status: [],
   lastSeenRange: null,
   responsables: [],
   searchText: ''
@@ -225,7 +225,7 @@ const buildAppliedFilters = (
     });
   }
 
-  if (!arraysHaveSameMembers(events.severidades, DEFAULT_EVENT_SEVERITIES)) {
+  if (events.severidades.length > 0) {
     events.severidades.forEach((severity) => {
       pills.push({
         id: buildFilterId('events', 'severidades', severity),
@@ -312,7 +312,7 @@ const buildAppliedFilters = (
     });
   });
 
-  if (!arraysHaveSameMembers(units.status, DEFAULT_UNIT_STATUS)) {
+  if (units.status.length > 0) {
     units.status.forEach((status) => {
       pills.push({
         id: buildFilterId('units', 'status', status),
@@ -397,17 +397,6 @@ const buildAppliedFilters = (
       icon: 'units'
     });
 
-    if (units.zones.length === 0 && units.zoneTags.length === 0) {
-      pills.push({
-        id: buildFilterId('units', 'zonesDefault', 'Todas las zonas'),
-        domain: 'units',
-        key: 'zonesDefault',
-        label: 'Zona',
-        value: 'Todas las zonas',
-        removable: false,
-        icon: 'units'
-      });
-    }
   }
 
   // Aggregate duplicates to support +N indicator
@@ -435,7 +424,7 @@ const buildQueryFromFilters = (events: EventsFilters, units: UnitsFilters) => {
     params.set(EVENT_QUERY_KEY_MAP.estado, events.estado);
   }
 
-  if (!arraysHaveSameMembers(events.severidades, DEFAULT_EVENT_SEVERITIES) && events.severidades.length > 0) {
+  if (events.severidades.length > 0) {
     params.set(EVENT_QUERY_KEY_MAP.severidades, events.severidades.join(','));
   }
 
@@ -463,7 +452,7 @@ const buildQueryFromFilters = (events: EventsFilters, units: UnitsFilters) => {
     params.set(UNIT_QUERY_KEY_MAP.tags, units.tags.join(','));
   }
 
-  if (!arraysHaveSameMembers(units.status, DEFAULT_UNIT_STATUS) && units.status.length > 0) {
+  if (units.status.length > 0) {
     params.set(UNIT_QUERY_KEY_MAP.status, units.status.join(','));
   }
 
@@ -591,7 +580,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
           case 'severidades':
             if (value) {
               const next = removeEventMultiValue(events, 'severidades', value as EventSeverity);
-              events.severidades = next.length > 0 ? next : [...DEFAULT_EVENT_SEVERITIES];
+              events.severidades = next;
             }
             break;
           case 'etiquetas':
@@ -647,7 +636,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
           case 'status':
             if (value) {
               const next = removeUnitMultiValue(units, 'status', value as UnitMultiValueMap['status']);
-              units.status = next.length > 0 ? next : [...DEFAULT_UNIT_STATUS];
+              units.status = next;
             }
             break;
           case 'searchText':

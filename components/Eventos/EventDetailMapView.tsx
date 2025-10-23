@@ -13,15 +13,10 @@ import dayjs from 'dayjs';
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
-)
 );
 
 const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-
-const OctagonalEventMarker = dynamicer),
   { ssr: false }
 );
 
@@ -454,13 +449,13 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
       <MapToolbar
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-      onResetView={handleResetView}
-      onRecenterRoute={handleRecenterEvents}
-      onFitEventAndVehicle={vehicleId && showVehicleMarker ? handleFitEventAndVehicle : undefined}
-      hasEventAndVehicle={!!vehicleId && showVehicleMarker}
-      onToggleFullscreen={handleToggleFullscreen}
-      isFullscreen={isFullscreen}
-    />
-  </div>
+        onResetView={handleResetView}
+        onRecenterRoute={handleRecenterEvents}
+        onFitEventAndVehicle={vehicleId && showVehicleMarker ? handleFitEventAndVehicle : undefined}
+        hasEventAndVehicle={!!vehicleId && showVehicleMarker}
+        onToggleFullscreen={handleToggleFullscreen}
+        isFullscreen={isFullscreen}
+      />
+    </div>
   );
 }

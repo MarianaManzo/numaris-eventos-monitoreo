@@ -226,14 +226,25 @@ body {
 
 .floating-filter-controls {
   pointer-events: auto;
-  width: auto;
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
+  width: 100%;
+}
+
+.floating-filter-controls__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .floating-filter-button-group {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -260,22 +271,79 @@ body {
   display: inline-flex;
 }
 
-.floating-filter-item {
+.floating-filter-active {
   display: flex;
-  align-items: center;
-  line-height: 1;
-  gap: 16px;
-  min-width: 220px;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
 }
 
-.floating-filter-item__text {
-  flex: 1;
+.floating-filter-active__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.floating-filter-active__title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.floating-filter-active__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.floating-filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #dbe1ea;
+  background-color: #ffffffee;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
   font-size: 13px;
   color: #1f2937;
-  display: flex;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.floating-filter-item:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+  transform: translateY(-1px);
+}
+
+.floating-filter-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.floating-filter-item__text {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.floating-filter-item__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #64748b;
+}
+
+.floating-filter-item__close svg {
+  width: 14px;
+  height: 14px;
 }
 
 .floating-filter-unit {
