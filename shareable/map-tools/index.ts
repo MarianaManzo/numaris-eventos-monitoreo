@@ -27,13 +27,9 @@ export * from './lib/events/types';
 export { getOperationalStatusFromId, getEventStatus, getOperationalStatus } from './lib/events/eventStatus';
 export { getSeverityColor, getEventIconPath } from './lib/events/eventStyles';
 export {
-  generateEventDetails,
-  generateEventCollection,
-  generateEventTimeline,
-  generateEventInstructions,
-  type GeneratedEvent,
-  type EventWithLocation,
-  type EventTimelineEntry
+  generateEventById,
+  generateEventWithRouteContext,
+  type EventWithLocation
 } from './lib/events/generateEvent';
 export { generateLocationString, generateSeedFromEventId, generateGuadalajaraAddress, generateVehicleName } from './lib/events/addressGenerator';
 

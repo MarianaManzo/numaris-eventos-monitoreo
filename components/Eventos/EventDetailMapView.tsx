@@ -14,6 +14,7 @@ import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import ZonaPolygon from '../Map/ZonaPolygon';
 import ZonaLabel from '../Map/ZonaLabel';
+import type { ZonaWithRelations } from '@/lib/zonas/types';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -111,6 +112,14 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
     }
   }, [zonas.length, setZonas]);
   const visibleZonas = useMemo(() => getVisibleZonas(), [zonas, getVisibleZonas]);
+  const visibleZonaLabels = useMemo<ZonaWithRelations[]>(() => visibleZonas.map((zona) => {
+    const maybeWithCounts = zona as Partial<ZonaWithRelations>;
+    return {
+      ...zona,
+      vehicleCount: maybeWithCounts.vehicleCount ?? 0,
+      eventCount: maybeWithCounts.eventCount ?? 0
+    };
+  }), [visibleZonas]);
 
   const layerOptions = useMemo(() => ([
     {
@@ -533,7 +542,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
             opacity={0.7}
           />
         ))}
-        {showZonaLabels && visibleZonas.map((zona) => (
+        {showZonaLabels && visibleZonaLabels.map((zona) => (
           <ZonaLabel
             key={`${zona.id}-label`}
             zona={zona}
