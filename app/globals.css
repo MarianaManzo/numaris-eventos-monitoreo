@@ -482,7 +482,7 @@ body {
 
 .filter-dropdown {
   width: 320px;
-  padding: 18px 18px 12px;
+  padding: 18px;
   background: #ffffff;
   border-radius: 20px;
   border: 1px solid #dce4f3;
@@ -490,6 +490,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.filter-dropdown--units {
+  width: 280px;
+  padding: 16px;
 }
 
 .filter-section {
@@ -515,6 +520,26 @@ body {
   font-weight: 600;
   color: #0f172a;
   cursor: pointer;
+}
+
+.filter-section__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.filter-section__heading {
+  flex: 1;
+}
+
+.filter-section__count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .filter-section__caret {
@@ -714,6 +739,38 @@ body {
   border-color: #2563eb !important;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16) !important;
   background: #ffffff !important;
+}
+
+.filter-combobox {
+  width: 100%;
+}
+
+.filter-combobox .ant-select-selector {
+  border-radius: 14px !important;
+  padding: 6px 12px !important;
+  min-height: 44px !important;
+  border-color: #dbe4f3 !important;
+  background: #f9fbff !important;
+}
+
+.filter-combobox .ant-select-selection-placeholder {
+  color: #94a3b8 !important;
+}
+
+.filter-combobox .ant-select-selection-item {
+  border-radius: 999px !important;
+  background: #e0e7ff !important;
+  color: #1d4ed8 !important;
+  padding: 0 10px !important;
+  font-weight: 600;
+}
+
+.filter-combobox .ant-select-selection-item-remove {
+  color: #1d4ed8 !important;
+}
+
+.filter-combobox .ant-select-arrow {
+  color: #64748b !important;
 }
 
 .filter-dropdown__footer {

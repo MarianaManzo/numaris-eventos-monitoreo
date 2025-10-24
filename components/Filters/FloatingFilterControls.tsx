@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Button, Dropdown, Tag, Input, Empty, Checkbox } from 'antd';
-import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
+import { Button, Dropdown, Tag, Input, Empty, Checkbox, Select } from 'antd';
+import { FunnelSimple, Truck, MapPin, CaretDown, Car, TagSimple } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
@@ -48,7 +48,6 @@ export default function FloatingFilterControls({
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
   const unitsFilters = useFilterStore((state) => state.units);
-  const toggleUnitFilterValue = useFilterStore((state) => state.toggleUnitFilterValue);
   const selectedZones = unitsFilters.zones;
   const selectedZoneTags = unitsFilters.zoneTags;
   const selectedUnitNames = unitsFilters.unidades;
@@ -118,10 +117,6 @@ export default function FloatingFilterControls({
   const [zoneTagSearch, setZoneTagSearch] = useState('');
   const [zonesCollapsed, setZonesCollapsed] = useState(false);
   const [zoneTagsCollapsed, setZoneTagsCollapsed] = useState(false);
-  const [unitSearch, setUnitSearch] = useState('');
-  const [unitTagSearch, setUnitTagSearch] = useState('');
-  const [unitNamesCollapsed, setUnitNamesCollapsed] = useState(false);
-  const [unitTagsCollapsed, setUnitTagsCollapsed] = useState(false);
   const [eventStateCollapsed, setEventStateCollapsed] = useState(false);
   const [eventSeverityCollapsed, setEventSeverityCollapsed] = useState(false);
   const [eventTagsCollapsed, setEventTagsCollapsed] = useState(false);
@@ -181,22 +176,6 @@ export default function FloatingFilterControls({
     return eventTagOptions.filter((tag) => tag.toLowerCase().includes(query));
   }, [eventTagOptions, eventTagSearch]);
 
-  const filteredUnitNames = useMemo(() => {
-    const query = unitSearch.trim().toLowerCase();
-    if (!query) {
-      return unitNameOptions;
-    }
-    return unitNameOptions.filter((name) => name.toLowerCase().includes(query));
-  }, [unitNameOptions, unitSearch]);
-
-  const filteredUnitTags = useMemo(() => {
-    const query = unitTagSearch.trim().toLowerCase();
-    if (!query) {
-      return unitTagOptions;
-    }
-    return unitTagOptions.filter((tag) => tag.toLowerCase().includes(query));
-  }, [unitTagOptions, unitTagSearch]);
-
   const toggleZoneSelection = useCallback((zoneName: string) => {
     const exists = selectedZones.includes(zoneName);
     const next = exists
@@ -213,25 +192,24 @@ export default function FloatingFilterControls({
     setUnitsFilters({ zoneTags: nextTags });
   }, [selectedZoneTags, setUnitsFilters]);
 
-  const toggleUnitNameSelection = useCallback((unitName: string) => {
-    toggleUnitFilterValue('unidades', unitName);
-  }, [toggleUnitFilterValue]);
-
-  const toggleUnitTagSelection = useCallback((tag: string) => {
-    toggleUnitFilterValue('tags', tag);
-  }, [toggleUnitFilterValue]);
-
   const handleClearZones = useCallback(() => {
     setUnitsFilters({ zones: [], zoneTags: [] });
     setZoneSearch('');
     setZoneTagSearch('');
   }, [setUnitsFilters]);
 
+  const handleUnitNamesChange = useCallback((values: string[]) => {
+    setUnitsFilters({ unidades: values });
+  }, [setUnitsFilters]);
+
+  const handleUnitTagsChange = useCallback((values: string[]) => {
+    setUnitsFilters({ tags: values });
+  }, [setUnitsFilters]);
+
   const handleClearUnits = useCallback(() => {
     setUnitsFilters({ unidades: [], tags: [] });
-    setUnitSearch('');
-    setUnitTagSearch('');
-  }, [setUnitsFilters]);
+    setActiveDropdown((current) => (current === 'units' ? null : current));
+  }, [setUnitsFilters, setActiveDropdown]);
 
   const toggleSeverity = useCallback((severity: EventSeverity) => {
     toggleEventFilterValue('severidades', severity);
@@ -325,6 +303,8 @@ export default function FloatingFilterControls({
     unitBadgeCount: number
   ) => {
     const unitDropdownOpen = activeDropdown === 'units';
+    const unitTotalSelections = unitSelectionCount + unitTagSelectionCount;
+    const badgeValue = Math.max(unitBadgeCount, unitTotalSelections);
 
     return (
       <div className="floating-filter-controls">
@@ -349,102 +329,53 @@ export default function FloatingFilterControls({
                 trigger={['click']}
                 placement="bottomLeft"
                 popupRender={() => (
-                  <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
+                  <div className="filter-dropdown filter-dropdown--units" onClick={(event) => event.stopPropagation()}>
                     <div className="filter-section">
-                      <button
-                        type="button"
-                        className="filter-section__toggle"
-                        onClick={() => setUnitNamesCollapsed((value) => !value)}
-                      >
-                        <span>Unidades ({unitSelectionCount})</span>
-                        <CaretDown
-                          size={14}
-                          weight="bold"
-                          className={`filter-section__caret${unitNamesCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                      <div className="filter-section__title">
+                        <Car size={16} weight="bold" color="#1f2937" />
+                        <span className="filter-section__heading">Unidades</span>
+                        <span className="filter-section__count">{unitSelectionCount}</span>
+                      </div>
+                      <div className="filter-section__content">
+                        <Select
+                          mode="multiple"
+                          allowClear
+                          placeholder="Seleccionar unidades"
+                          value={selectedUnitNames}
+                          onChange={handleUnitNamesChange}
+                          className="filter-combobox"
+                          options={unitNameOptions.map((name) => ({
+                            label: name,
+                            value: name
+                          }))}
+                          showSearch
+                          optionFilterProp="label"
                         />
-                      </button>
-                      {!unitNamesCollapsed && (
-                        <div className="filter-section__content">
-                          <Input
-                            allowClear
-                            size="small"
-                            placeholder="Buscar unidad"
-                            value={unitSearch}
-                            onChange={(event) => setUnitSearch(event.target.value)}
-                            className="filter-search-input"
-                          />
-                          <div className="filter-options filter-options--scrollable">
-                            {filteredUnitNames.length === 0 ? (
-                              <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                            ) : (
-                              filteredUnitNames.map((nombre) => {
-                                const selected = selectedUnitNames.includes(nombre);
-                                return (
-                                  <Checkbox
-                                    key={nombre}
-                                    className="filter-checkbox"
-                                    checked={selected}
-                                    onChange={() => toggleUnitNameSelection(nombre)}
-                                  >
-                                    <span className="filter-pill" style={neutralPillStyle}>
-                                      {nombre}
-                                    </span>
-                                  </Checkbox>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
 
                     <div className="filter-section">
-                      <button
-                        type="button"
-                        className="filter-section__toggle"
-                        onClick={() => setUnitTagsCollapsed((value) => !value)}
-                      >
-                        <span>Etiquetas ({unitTagSelectionCount})</span>
-                        <CaretDown
-                          size={14}
-                          weight="bold"
-                          className={`filter-section__caret${unitTagsCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                      <div className="filter-section__title">
+                        <TagSimple size={16} weight="bold" color="#1f2937" />
+                        <span className="filter-section__heading">Etiquetas</span>
+                        <span className="filter-section__count">{unitTagSelectionCount}</span>
+                      </div>
+                      <div className="filter-section__content">
+                        <Select
+                          mode="multiple"
+                          allowClear
+                          placeholder="Seleccionar etiquetas"
+                          value={selectedUnitTags}
+                          onChange={handleUnitTagsChange}
+                          className="filter-combobox"
+                          options={unitTagOptions.map((tag) => ({
+                            label: tag,
+                            value: tag
+                          }))}
+                          showSearch
+                          optionFilterProp="label"
                         />
-                      </button>
-                      {!unitTagsCollapsed && (
-                        <div className="filter-section__content">
-                          <Input
-                            allowClear
-                            size="small"
-                            placeholder="Buscar etiqueta"
-                            value={unitTagSearch}
-                            onChange={(event) => setUnitTagSearch(event.target.value)}
-                            className="filter-search-input"
-                          />
-                          <div className="filter-options filter-options--scrollable">
-                            {filteredUnitTags.length === 0 ? (
-                              <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                            ) : (
-                              filteredUnitTags.map((tag) => {
-                                const selected = selectedUnitTags.includes(tag);
-                                const pillStyle = getTagPillStyle(tag);
-                                return (
-                                  <Checkbox
-                                    key={tag}
-                                    className="filter-checkbox"
-                                    checked={selected}
-                                    onChange={() => toggleUnitTagSelection(tag)}
-                                  >
-                                    <span className="filter-pill" style={pillStyle}>
-                                      {tag}
-                                    </span>
-                                  </Checkbox>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
 
                     <div className="filter-dropdown__footer">
@@ -457,8 +388,8 @@ export default function FloatingFilterControls({
               >
                 <Button className="floating-filter-button">
                   Unidades
-                  {unitBadgeCount > 0 && (
-                    <Tag className="floating-filter-button__tag">{unitBadgeCount}</Tag>
+                  {badgeValue > 0 && (
+                    <Tag className="floating-filter-button__tag">{badgeValue}</Tag>
                   )}
                   <svg
                     className="floating-filter-button__caret"
@@ -846,7 +777,7 @@ export default function FloatingFilterControls({
     return null;
   }
 
-  return renderControlsContent(false, undefined, showUnitTag && unitBadgeCount > 0, unitBadgeCount);
+  return renderControlsContent(false, undefined, showUnitTag, unitBadgeCount);
 }
 
 const hashString = (value: string) => {

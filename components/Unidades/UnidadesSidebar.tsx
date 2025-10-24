@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Button, Typography, Popover, Input, Select } from 'antd';
-import { Funnel, MagnifyingGlass } from 'phosphor-react';
+import { Funnel, MagnifyingGlass, Car, TagSimple } from 'phosphor-react';
 import Link from 'next/link';
 import { type Unidad, generateUnidades } from '@/lib/unidades/generateUnidades';
 import { useFilterStore } from '@/lib/stores/filterStore';
@@ -65,17 +65,9 @@ export default function UnidadesSidebar({
     setUnitsFilters({ tags: values });
   }, [setUnitsFilters]);
 
-  const handleResponsablesChange = useCallback((values: string[]) => {
-    setUnitsFilters({ responsables: values });
+  const handleUnidadesChange = useCallback((values: string[]) => {
+    setUnitsFilters({ unidades: values });
   }, [setUnitsFilters]);
-
-  const handleEstadoToggle = useCallback((estado: string) => {
-    const isSelected = selectedEstados.includes(estado);
-    const next = isSelected
-      ? selectedEstados.filter((item) => item !== estado)
-      : [...selectedEstados, estado];
-    setUnitsFilters({ status: next.length > 0 ? next : [...DEFAULT_UNIT_STATUSES] });
-  }, [selectedEstados, setUnitsFilters]);
 
   const handleSearchChange = useCallback((value: string) => {
     setUnitsFilters({ searchText: value });
@@ -87,8 +79,8 @@ export default function UnidadesSidebar({
     return unique.sort();
   }, [unidades]);
 
-  const availableResponsables = useMemo(() => {
-    const unique = Array.from(new Set(unidades.map(u => u.responsable).filter(Boolean)));
+  const availableUnidadesNombres = useMemo(() => {
+    const unique = Array.from(new Set(unidades.map(u => u.nombre)));
     return unique.sort();
   }, [unidades]);
 
@@ -165,131 +157,53 @@ export default function UnidadesSidebar({
 
   // Define filter content for Popover
   const filterContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '4px' }}>
-      {/* Etiquetas Filter */}
+    <div style={{ width: 320, display: 'flex', flexDirection: 'column', gap: '20px', padding: '8px 8px' }}>
+
       <div>
-        <div style={{ marginBottom: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-            <path d="M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63Zm-96,96L48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z"/>
-          </svg>
-          Etiquetas
-          <span style={{ marginLeft: 'auto', fontSize: '14px', fontWeight: 600, color: '#3b82f6' }}>
-            {selectedEtiquetas.length}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <Car size={18} weight="bold" color="#1f2937" />
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>Unidades</span>
+          <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>{selectedUnidades.length}</span>
         </div>
         <Select
           mode="multiple"
+          allowClear
+          placeholder="Seleccionar unidades"
+          value={selectedUnidades}
+          onChange={handleUnidadesChange}
+          style={{ width: '100%' }}
+          options={availableUnidadesNombres.map(nombre => ({ label: nombre, value: nombre }))}
+          maxTagCount="responsive"
+        />
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <TagSimple size={18} weight="bold" color="#1f2937" />
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>Etiquetas</span>
+          <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>{selectedEtiquetas.length}</span>
+        </div>
+        <Select
+          mode="multiple"
+          allowClear
           placeholder="Seleccionar etiquetas"
           value={selectedEtiquetas}
           onChange={handleEtiquetasChange}
           style={{ width: '100%' }}
-          options={(availableEtiquetas || []).map(tag => ({ label: tag, value: tag }))}
+          options={availableEtiquetas.map(tag => ({ label: tag, value: tag }))}
           maxTagCount="responsive"
         />
       </div>
 
-      {/* Estado Filter */}
-      <div>
-        <div style={{ marginBottom: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-            <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z"/>
-          </svg>
-          Estado
-          <span style={{ marginLeft: 'auto', fontSize: '14px', fontWeight: 600, color: '#3b82f6' }}>
-            {selectedEstados.length}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {(['Activo', 'Inactivo', 'En ruta', 'Detenido'] as const).map((estado) => {
-            const style = getEstadoColor(estado);
-            const count = unidades.filter(u => u.estado === estado).length;
-            const isSelected = selectedEstados.includes(estado);
-            return (
-              <div
-                key={estado}
-                onClick={() => handleEstadoToggle(estado)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '20px',
-                  backgroundColor: isSelected ? style.bg : '#f3f4f6',
-                  color: isSelected ? style.text : '#6b7280',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  border: isSelected ? `2px solid ${style.text}` : '2px solid transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  height: '32px'
-                }}
-              >
-                {estado}
-                <span style={{
-                  backgroundColor: isSelected ? style.text : '#9ca3af',
-                  color: '#fff',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  {count}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Responsable Filter */}
-      <div>
-        <div style={{ marginBottom: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-            <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
-          </svg>
-          Responsable
-          <span style={{ marginLeft: 'auto', fontSize: '14px', fontWeight: 600, color: '#3b82f6' }}>
-            {selectedResponsables.length}
-          </span>
-        </div>
-        <Select
-          mode="multiple"
-          placeholder="Seleccionar responsables"
-          value={selectedResponsables}
-          onChange={handleResponsablesChange}
-          style={{ width: '100%' }}
-          options={(availableResponsables || []).map(email => ({ label: email, value: email }))}
-          maxTagCount="responsive"
-        />
-      </div>
-
-      {/* Clear Button */}
-      <div style={{ paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-        <Button
-          block
-          onClick={() => {
-            setUnitsFilters({
-              tags: [],
-              unidades: [],
-              status: [...DEFAULT_UNIT_STATUSES],
-              responsables: []
-            });
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+        <Button type="link" onClick={() => {
+          setUnitsFilters({
+            tags: [],
+            unidades: [],
+            status: [...DEFAULT_UNIT_STATUSES],
+            responsables: []
+          });
+        }}>
           Limpiar
         </Button>
       </div>
