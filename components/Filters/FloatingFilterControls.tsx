@@ -197,10 +197,16 @@ export default function FloatingFilterControls({
     setZoneSearch('');
     setZoneTagSearch('');
   }, [setUnitsFilters]);
+  const handleSelectAllZones = useCallback(() => {
+    setUnitsFilters({ zones: zonas.map((zona) => zona.nombre) });
+  }, [setUnitsFilters, zonas]);
 
   const handleUnitNamesChange = useCallback((values: string[]) => {
     setUnitsFilters({ unidades: values });
   }, [setUnitsFilters]);
+  const handleSelectAllUnitNames = useCallback(() => {
+    setUnitsFilters({ unidades: unitNameOptions });
+  }, [setUnitsFilters, unitNameOptions]);
 
   const handleUnitTagsChange = useCallback((values: string[]) => {
     setUnitsFilters({ tags: values });
@@ -351,6 +357,15 @@ export default function FloatingFilterControls({
                           showSearch
                           optionFilterProp="label"
                         />
+                        <div className="filter-select-actions">
+                          <button
+                            type="button"
+                            className="filter-select-link"
+                            onClick={handleSelectAllUnitNames}
+                          >
+                            Todas las unidades
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -645,6 +660,15 @@ export default function FloatingFilterControls({
                           onChange={(event) => setZoneSearch(event.target.value)}
                           className="filter-search-input"
                         />
+                        <div className="filter-select-actions">
+                          <button
+                            type="button"
+                            className="filter-select-link"
+                            onClick={handleSelectAllZones}
+                          >
+                            Todas las zonas
+                          </button>
+                        </div>
                         <div className="filter-options filter-options--scrollable">
                           {filteredZonas.length === 0 ? (
                             <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />

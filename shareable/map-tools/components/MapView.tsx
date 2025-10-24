@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
 import type L from 'leaflet';
 import MapToolbar from './MapToolbar';
 import { useRouteStore } from '../lib/stores/routeStore';
+import { useGlobalMapStore } from '../lib/stores/globalMapStore';
+import { generateGuadalajaraZonas } from '../lib/zonas/generateZonas';
+import type { ZonaWithRelations } from '../lib/zonas/types';
+import ZonaPolygon from './ZonaPolygon';
+import ZonaLabel from './ZonaLabel';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -41,6 +46,75 @@ export default function MapView() {
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const { routes, isFullscreen, toggleFullscreen, focusedRouteId, setFocusedRoute } = useRouteStore();
+  const {
+    showVehiclesOnMap,
+    setShowVehiclesOnMap,
+    showEventsOnMap,
+    setShowEventsOnMap,
+    showZonasOnMap,
+    setShowZonasOnMap,
+    showVehicleLabels,
+    setShowVehicleLabels,
+    showEventLabels,
+    setShowEventLabels,
+    showZonaLabels,
+    setShowZonaLabels
+  } = useGlobalMapStore();
+
+  const zonasBase = useMemo(() => generateGuadalajaraZonas(), []);
+  const zonasWithRelations = useMemo<ZonaWithRelations[]>(() => zonasBase.map((zona) => ({
+    ...zona,
+    vehicleCount: 0,
+    eventCount: 0
+  })), [zonasBase]);
+
+  const layerOptions = useMemo(() => ([
+    {
+      id: 'vehicles',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehiclesOnMap,
+      onToggle: () => setShowVehiclesOnMap(!showVehiclesOnMap)
+    },
+    {
+      id: 'events',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventsOnMap,
+      onToggle: () => setShowEventsOnMap(!showEventsOnMap)
+    },
+    {
+      id: 'zones',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: showZonasOnMap,
+      onToggle: () => setShowZonasOnMap(!showZonasOnMap)
+    }
+  ]), [showVehiclesOnMap, showEventsOnMap, showZonasOnMap, setShowVehiclesOnMap, setShowEventsOnMap, setShowZonasOnMap]);
+
+  const labelLayers = useMemo(() => ([
+    {
+      id: 'vehicle-labels',
+      label: 'Etiquetas de unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehicleLabels,
+      onToggle: () => setShowVehicleLabels(!showVehicleLabels)
+    },
+    {
+      id: 'event-labels',
+      label: 'Etiquetas de eventos',
+      icon: 'events' as const,
+      isVisible: showEventLabels,
+      onToggle: () => setShowEventLabels(!showEventLabels)
+    },
+    {
+      id: 'zona-labels',
+      label: 'Etiquetas de zonas',
+      icon: 'zones' as const,
+      isVisible: showZonaLabels,
+      onToggle: () => setShowZonaLabels(!showZonaLabels)
+    }
+  ]), [showVehicleLabels, showEventLabels, showZonaLabels, setShowVehicleLabels, setShowEventLabels, setShowZonaLabels]);
 
   useEffect(() => {
     setIsClient(true);
@@ -225,6 +299,22 @@ export default function MapView() {
             ))}
           </div>
         ))}
+        {showZonasOnMap && zonasBase.map((zona) => (
+          <ZonaPolygon
+            key={zona.id}
+            zona={zona}
+            isSelected={false}
+            onSelect={handleZonaSelect}
+            opacity={0.7}
+          />
+        ))}
+        {showZonaLabels && zonasWithRelations.map((zona) => (
+          <ZonaLabel
+            key={`${zona.id}-label`}
+            zona={zona}
+            isSelected={false}
+          />
+        ))}
       </MapContainer>
 
       <MapToolbar
@@ -234,7 +324,12 @@ export default function MapView() {
         onRecenterRoute={handleRecenterRoute}
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
+        layers={layerOptions}
+        labelLayers={labelLayers}
       />
     </div>
   );
 }
+  const handleZonaSelect = useCallback((zonaId: string) => {
+    console.info('[MapView] Zona seleccionado', zonaId);
+  }, []);

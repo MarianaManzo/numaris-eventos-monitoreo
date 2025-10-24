@@ -778,6 +778,25 @@ body {
   justify-content: flex-end;
   margin-top: 4px;
 }
+.filter-select-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.filter-select-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.filter-select-link:hover {
+  color: #1d4ed8;
+}
 
 .filter-dropdown__footer .ant-btn-link {
   font-weight: 600;

@@ -9,6 +9,11 @@ import { generateVehicleName, generateLocationString, generateSeedFromEventId } 
 import type { EventLocation } from '@/lib/events/generateEvent';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import dayjs from 'dayjs';
+import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { useZonaStore } from '@/lib/stores/zonaStore';
+import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
+import ZonaPolygon from '../Map/ZonaPolygon';
+import ZonaLabel from '../Map/ZonaLabel';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -84,9 +89,80 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
     vehicle: true,
     route: true
   };
-  const showStartMarker = visualizationSettings.start;
-  const showEndMarker = visualizationSettings.end;
-  const showVehicleMarker = visualizationSettings.vehicle;
+  const {
+    showVehiclesOnMap,
+    setShowVehiclesOnMap,
+    showEventsOnMap,
+    setShowEventsOnMap,
+    showZonasOnMap,
+    setShowZonasOnMap,
+    showVehicleLabels,
+    setShowVehicleLabels,
+    showEventLabels,
+    setShowEventLabels,
+    showZonaLabels,
+    setShowZonaLabels
+  } = useGlobalMapStore();
+
+  const { zonas, setZonas, getVisibleZonas } = useZonaStore();
+  useEffect(() => {
+    if (zonas.length === 0) {
+      setZonas(generateGuadalajaraZonas());
+    }
+  }, [zonas.length, setZonas]);
+  const visibleZonas = useMemo(() => getVisibleZonas(), [zonas, getVisibleZonas]);
+
+  const layerOptions = useMemo(() => ([
+    {
+      id: 'vehicles',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehiclesOnMap,
+      onToggle: () => setShowVehiclesOnMap(!showVehiclesOnMap)
+    },
+    {
+      id: 'events',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventsOnMap,
+      onToggle: () => setShowEventsOnMap(!showEventsOnMap)
+    },
+    {
+      id: 'zones',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: showZonasOnMap,
+      onToggle: () => setShowZonasOnMap(!showZonasOnMap)
+    }
+  ]), [showVehiclesOnMap, showEventsOnMap, showZonasOnMap, setShowVehiclesOnMap, setShowEventsOnMap, setShowZonasOnMap]);
+
+  const labelLayers = useMemo(() => ([
+    {
+      id: 'vehicle-labels',
+      label: 'Etiquetas de unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehicleLabels,
+      onToggle: () => setShowVehicleLabels(!showVehicleLabels)
+    },
+    {
+      id: 'event-labels',
+      label: 'Etiquetas de eventos',
+      icon: 'events' as const,
+      isVisible: showEventLabels,
+      onToggle: () => setShowEventLabels(!showEventLabels)
+    },
+    {
+      id: 'zona-labels',
+      label: 'Etiquetas de zonas',
+      icon: 'zones' as const,
+      isVisible: showZonaLabels,
+      onToggle: () => setShowZonaLabels(!showZonaLabels)
+    }
+  ]), [showVehicleLabels, showEventLabels, showZonaLabels, setShowVehicleLabels, setShowEventLabels, setShowZonaLabels]);
+
+  const showStartMarker = visualizationSettings.start && showEventsOnMap;
+  const showEndMarker = visualizationSettings.end && showEventsOnMap;
+  const showVehicleLayerMarker = visualizationSettings.vehicle && showVehiclesOnMap;
   const showRouteLine = visualizationSettings.route;
 
   // Generate locations from event ID for consistency (geofence or address)
@@ -151,11 +227,15 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
 
   const buildBoundsPositions = useCallback((includeVehicle: boolean) => {
     const positions = [...getVisibleEventPositions()];
-    if (includeVehicle && vehicleId && showVehicleMarker) {
+    if (includeVehicle && vehicleId && showVehicleLayerMarker) {
       positions.push(vehiclePosition);
     }
     return positions;
-  }, [getVisibleEventPositions, vehicleId, showVehicleMarker, vehiclePosition]);
+  }, [getVisibleEventPositions, vehicleId, showVehicleLayerMarker, vehiclePosition]);
+
+  const handleZonaSelect = useCallback((zonaId: string) => {
+    console.info('[EventDetailMapView] Zona seleccionada', zonaId);
+  }, []);
 
   useEffect(() => {
     setIsClient(true);
@@ -262,7 +342,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
 
   // Fit bounds to show both event and vehicle
   const handleFitEventAndVehicle = () => {
-    if (!mapRef.current || !vehicleId || !showVehicleMarker) return;
+    if (!mapRef.current || !vehicleId || !showVehicleLayerMarker) return;
 
     setShowEventAndVehicleFitBounds(true);
 
@@ -429,7 +509,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
         )}
 
         {/* Render vehicle marker if vehicleId is provided */}
-        {vehicleId && showVehicleMarker && (
+        {vehicleId && showVehicleLayerMarker && (
           <UnidadMarker
             key={`vehicle-${vehicleId}`}
             position={vehiclePosition}
@@ -444,6 +524,22 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
             lastReportMinutes={5} // Recent report for green status
           />
         )}
+        {showZonasOnMap && visibleZonas.map((zona) => (
+          <ZonaPolygon
+            key={zona.id}
+            zona={zona}
+            isSelected={false}
+            onSelect={(zonaId) => console.info('[EventDetailMapView] Zona seleccionada', zonaId)}
+            opacity={0.7}
+          />
+        ))}
+        {showZonaLabels && visibleZonas.map((zona) => (
+          <ZonaLabel
+            key={`${zona.id}-label`}
+            zona={zona}
+            isSelected={false}
+          />
+        ))}
       </MapContainer>
 
       <MapToolbar
@@ -451,10 +547,12 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
         onRecenterRoute={handleRecenterEvents}
-        onFitEventAndVehicle={vehicleId && showVehicleMarker ? handleFitEventAndVehicle : undefined}
-        hasEventAndVehicle={!!vehicleId && showVehicleMarker}
+        onFitEventAndVehicle={vehicleId && showVehicleLayerMarker ? handleFitEventAndVehicle : undefined}
+        hasEventAndVehicle={!!vehicleId && showVehicleLayerMarker}
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
+        layers={layerOptions}
+        labelLayers={labelLayers}
       />
     </div>
   );
