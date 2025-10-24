@@ -5,6 +5,7 @@ import { Button, Dropdown, Tag, Input, Empty, Checkbox } from 'antd';
 import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
+import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { EVENT_TAGS } from '@/lib/events/generateEvent';
 import type { EventSeverity } from '@/lib/events/types';
 
@@ -47,8 +48,11 @@ export default function FloatingFilterControls({
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
   const unitsFilters = useFilterStore((state) => state.units);
+  const toggleUnitFilterValue = useFilterStore((state) => state.toggleUnitFilterValue);
   const selectedZones = unitsFilters.zones;
   const selectedZoneTags = unitsFilters.zoneTags;
+  const selectedUnitNames = unitsFilters.unidades;
+  const selectedUnitTags = unitsFilters.tags;
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const toggleEventFilterValue = useFilterStore((state) => state.toggleEventFilterValue);
   const eventsFilters = useFilterStore((state) => state.events);
@@ -109,11 +113,15 @@ export default function FloatingFilterControls({
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [zonas]);
 
-  const [activeDropdown, setActiveDropdown] = useState<'events' | 'zones' | 'visualization' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'events' | 'zones' | 'visualization' | 'units' | null>(null);
   const [zoneSearch, setZoneSearch] = useState('');
   const [zoneTagSearch, setZoneTagSearch] = useState('');
   const [zonesCollapsed, setZonesCollapsed] = useState(false);
   const [zoneTagsCollapsed, setZoneTagsCollapsed] = useState(false);
+  const [unitSearch, setUnitSearch] = useState('');
+  const [unitTagSearch, setUnitTagSearch] = useState('');
+  const [unitNamesCollapsed, setUnitNamesCollapsed] = useState(false);
+  const [unitTagsCollapsed, setUnitTagsCollapsed] = useState(false);
   const [eventStateCollapsed, setEventStateCollapsed] = useState(false);
   const [eventSeverityCollapsed, setEventSeverityCollapsed] = useState(false);
   const [eventTagsCollapsed, setEventTagsCollapsed] = useState(false);
@@ -143,6 +151,26 @@ export default function FloatingFilterControls({
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
   }, [selectedEventTags]);
 
+  const unidades = useMemo(() => generateUnidades(), []);
+
+  const unitNameOptions = useMemo(() => {
+    const nameSet = new Set<string>();
+    unidades.forEach((unidad) => nameSet.add(unidad.nombre));
+    selectedUnitNames.forEach((name) => nameSet.add(name));
+    return Array.from(nameSet).sort((a, b) => a.localeCompare(b));
+  }, [unidades, selectedUnitNames]);
+
+  const unitTagOptions = useMemo(() => {
+    const tagSet = new Set<string>();
+    unidades.forEach((unidad) => {
+      if (unidad.etiqueta) {
+        tagSet.add(unidad.etiqueta);
+      }
+    });
+    selectedUnitTags.forEach((tag) => tagSet.add(tag));
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+  }, [unidades, selectedUnitTags]);
+
   const filteredSeverities = DEFAULT_EVENT_SEVERITIES;
 
   const filteredEventTags = useMemo(() => {
@@ -152,6 +180,22 @@ export default function FloatingFilterControls({
     }
     return eventTagOptions.filter((tag) => tag.toLowerCase().includes(query));
   }, [eventTagOptions, eventTagSearch]);
+
+  const filteredUnitNames = useMemo(() => {
+    const query = unitSearch.trim().toLowerCase();
+    if (!query) {
+      return unitNameOptions;
+    }
+    return unitNameOptions.filter((name) => name.toLowerCase().includes(query));
+  }, [unitNameOptions, unitSearch]);
+
+  const filteredUnitTags = useMemo(() => {
+    const query = unitTagSearch.trim().toLowerCase();
+    if (!query) {
+      return unitTagOptions;
+    }
+    return unitTagOptions.filter((tag) => tag.toLowerCase().includes(query));
+  }, [unitTagOptions, unitTagSearch]);
 
   const toggleZoneSelection = useCallback((zoneName: string) => {
     const exists = selectedZones.includes(zoneName);
@@ -169,10 +213,24 @@ export default function FloatingFilterControls({
     setUnitsFilters({ zoneTags: nextTags });
   }, [selectedZoneTags, setUnitsFilters]);
 
+  const toggleUnitNameSelection = useCallback((unitName: string) => {
+    toggleUnitFilterValue('unidades', unitName);
+  }, [toggleUnitFilterValue]);
+
+  const toggleUnitTagSelection = useCallback((tag: string) => {
+    toggleUnitFilterValue('tags', tag);
+  }, [toggleUnitFilterValue]);
+
   const handleClearZones = useCallback(() => {
     setUnitsFilters({ zones: [], zoneTags: [] });
     setZoneSearch('');
     setZoneTagSearch('');
+  }, [setUnitsFilters]);
+
+  const handleClearUnits = useCallback(() => {
+    setUnitsFilters({ unidades: [], tags: [] });
+    setUnitSearch('');
+    setUnitTagSearch('');
   }, [setUnitsFilters]);
 
   const toggleSeverity = useCallback((severity: EventSeverity) => {
@@ -198,6 +256,9 @@ export default function FloatingFilterControls({
 
   const zoneSelectionCount = selectedZones.length + selectedZoneTags.length;
   const zoneFilterBadgeCount = forceShowZones ? zoneSelectionCount : activeZoneFilterCount;
+
+  const unitSelectionCount = selectedUnitNames.length;
+  const unitTagSelectionCount = selectedUnitTags.length;
 
   const estadoSelectionCount = selectedEstado === 'todos' ? 0 : 1;
   const estadoOptions = useMemo(
@@ -228,7 +289,7 @@ export default function FloatingFilterControls({
   const shouldShowZonesDropdown = forceShowZones || hasZoneFilters;
 
   const handleDropdownToggle = useCallback(
-    (name: 'events' | 'zones' | 'visualization') => (open: boolean) => {
+    (name: 'events' | 'zones' | 'visualization' | 'units') => (open: boolean) => {
       setActiveDropdown((current) => {
         if (open) {
           return name;
@@ -263,6 +324,8 @@ export default function FloatingFilterControls({
     displayUnitButton: boolean,
     unitBadgeCount: number
   ) => {
+    const unitDropdownOpen = activeDropdown === 'units';
+
     return (
       <div className="floating-filter-controls">
         <div className="floating-filter-controls__actions">
@@ -279,17 +342,136 @@ export default function FloatingFilterControls({
               </Button>
             )}
             {displayUnitButton && !showDynamicUnitButton && (
-              <Button
-                className="floating-filter-button floating-filter-button--static"
-                icon={<Truck size={16} color="#1f2937" />}
-                aria-disabled="true"
-                tabIndex={-1}
-              >
-                Unidades
-                {unitBadgeCount > 0 && (
-                  <Tag className="floating-filter-button__tag">{unitBadgeCount}</Tag>
+              <Dropdown
+                destroyOnHidden
+                open={unitDropdownOpen}
+                onOpenChange={handleDropdownToggle('units')}
+                trigger={['click']}
+                placement="bottomLeft"
+                popupRender={() => (
+                  <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
+                    <div className="filter-section">
+                      <button
+                        type="button"
+                        className="filter-section__toggle"
+                        onClick={() => setUnitNamesCollapsed((value) => !value)}
+                      >
+                        <span>Unidades ({unitSelectionCount})</span>
+                        <CaretDown
+                          size={14}
+                          weight="bold"
+                          className={`filter-section__caret${unitNamesCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                        />
+                      </button>
+                      {!unitNamesCollapsed && (
+                        <div className="filter-section__content">
+                          <Input
+                            allowClear
+                            size="small"
+                            placeholder="Buscar unidad"
+                            value={unitSearch}
+                            onChange={(event) => setUnitSearch(event.target.value)}
+                            className="filter-search-input"
+                          />
+                          <div className="filter-options filter-options--scrollable">
+                            {filteredUnitNames.length === 0 ? (
+                              <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                            ) : (
+                              filteredUnitNames.map((nombre) => {
+                                const selected = selectedUnitNames.includes(nombre);
+                                return (
+                                  <Checkbox
+                                    key={nombre}
+                                    className="filter-checkbox"
+                                    checked={selected}
+                                    onChange={() => toggleUnitNameSelection(nombre)}
+                                  >
+                                    <span className="filter-pill" style={neutralPillStyle}>
+                                      {nombre}
+                                    </span>
+                                  </Checkbox>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="filter-section">
+                      <button
+                        type="button"
+                        className="filter-section__toggle"
+                        onClick={() => setUnitTagsCollapsed((value) => !value)}
+                      >
+                        <span>Etiquetas ({unitTagSelectionCount})</span>
+                        <CaretDown
+                          size={14}
+                          weight="bold"
+                          className={`filter-section__caret${unitTagsCollapsed ? ' filter-section__caret--collapsed' : ''}`}
+                        />
+                      </button>
+                      {!unitTagsCollapsed && (
+                        <div className="filter-section__content">
+                          <Input
+                            allowClear
+                            size="small"
+                            placeholder="Buscar etiqueta"
+                            value={unitTagSearch}
+                            onChange={(event) => setUnitTagSearch(event.target.value)}
+                            className="filter-search-input"
+                          />
+                          <div className="filter-options filter-options--scrollable">
+                            {filteredUnitTags.length === 0 ? (
+                              <Empty className="filter-empty" description="Sin resultados" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                            ) : (
+                              filteredUnitTags.map((tag) => {
+                                const selected = selectedUnitTags.includes(tag);
+                                const pillStyle = getTagPillStyle(tag);
+                                return (
+                                  <Checkbox
+                                    key={tag}
+                                    className="filter-checkbox"
+                                    checked={selected}
+                                    onChange={() => toggleUnitTagSelection(tag)}
+                                  >
+                                    <span className="filter-pill" style={pillStyle}>
+                                      {tag}
+                                    </span>
+                                  </Checkbox>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="filter-dropdown__footer">
+                      <Button size="small" type="link" onClick={handleClearUnits}>
+                        Limpiar
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              </Button>
+              >
+                <Button className="floating-filter-button">
+                  Unidades
+                  {unitBadgeCount > 0 && (
+                    <Tag className="floating-filter-button__tag">{unitBadgeCount}</Tag>
+                  )}
+                  <svg
+                    className="floating-filter-button__caret"
+                    width={18}
+                    height={18}
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
+                  </svg>
+                </Button>
+              </Dropdown>
             )}
 
             {showEventsDropdown && hasEventFilters && (
@@ -630,18 +812,18 @@ export default function FloatingFilterControls({
               </Button>
               </Dropdown>
             )}
-          </div>
 
-          {hasRealFilters && (
-            <Button
-              type="default"
-              size="middle"
-              className="floating-filter-clear"
-              onClick={clearAllFilters}
-            >
-              Limpiar todo
-            </Button>
-          )}
+            {hasRealFilters && (
+              <Button
+                type="default"
+                size="middle"
+                className="floating-filter-clear"
+                onClick={clearAllFilters}
+              >
+                Limpiar todo
+              </Button>
+            )}
+          </div>
         </div>
 
       </div>

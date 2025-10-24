@@ -56,6 +56,7 @@ export default function UnidadesSidebar({
   const {
     searchText,
     tags: selectedEtiquetas,
+    unidades: selectedUnidades,
     status: selectedEstados,
     responsables: selectedResponsables
   } = unitsFilters;
@@ -108,6 +109,10 @@ export default function UnidadesSidebar({
       filtered = filtered.filter(u =>
         u.nombre.toLowerCase().includes(searchText.toLowerCase())
       );
+    }
+
+    if (selectedUnidades.length > 0) {
+      filtered = filtered.filter(u => selectedUnidades.includes(u.nombre));
     }
 
     // Filter by etiquetas
@@ -269,6 +274,7 @@ export default function UnidadesSidebar({
           onClick={() => {
             setUnitsFilters({
               tags: [],
+              unidades: [],
               status: [...DEFAULT_UNIT_STATUSES],
               responsables: []
             });

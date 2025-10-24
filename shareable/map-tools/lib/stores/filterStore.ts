@@ -39,6 +39,7 @@ type EventMultiValueKey = keyof EventMultiValueMap;
 
 type UnitMultiValueMap = {
   tags: string;
+  unidades: string;
   zones: string;
   zoneTags: string;
   brandModels: string;
@@ -64,6 +65,7 @@ export interface EventsFilters {
 
 export interface UnitsFilters {
   tags: string[];
+  unidades: string[];
   zones: string[];
   zoneTags: string[];
   brandModels: string[];
@@ -103,6 +105,7 @@ export const FILTER_QUERY_KEYS = [
   'events_focusMode',
   'events_q',
   'units_tags',
+  'units_unidades',
   'units_status',
   'units_responsables',
   'units_zones',
@@ -125,6 +128,7 @@ const EVENT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
 
 const UNIT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
   tags: 'units_tags',
+  unidades: 'units_unidades',
   status: 'units_status',
   responsables: 'units_responsables',
   zones: 'units_zones',
@@ -149,6 +153,7 @@ const createDefaultEventsFilters = (): EventsFilters => ({
 
 const createDefaultUnitsFilters = (): UnitsFilters => ({
   tags: [],
+  unidades: [],
   zones: [],
   zoneTags: [],
   brandModels: [],
@@ -300,6 +305,18 @@ const buildAppliedFilters = (
     });
   });
 
+  units.unidades.forEach((unidad) => {
+    pills.push({
+      id: buildFilterId('units', 'unidades', unidad),
+      domain: 'units',
+      key: 'unidades',
+      label: 'Unidad',
+      value: unidad,
+      removable: true,
+      icon: 'units'
+    });
+  });
+
   if (units.status.length > 0) {
     units.status.forEach((status) => {
       pills.push({
@@ -438,6 +455,10 @@ const buildQueryFromFilters = (events: EventsFilters, units: UnitsFilters) => {
 
   if (units.tags.length > 0) {
     params.set(UNIT_QUERY_KEY_MAP.tags, units.tags.join(','));
+  }
+
+  if (units.unidades.length > 0) {
+    params.set(UNIT_QUERY_KEY_MAP.unidades, units.unidades.join(','));
   }
 
   if (units.status.length > 0) {
@@ -609,6 +630,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
         const units = { ...state.units };
         switch (key) {
           case 'tags':
+          case 'unidades':
           case 'zones':
           case 'zoneTags':
           case 'brandModels':
@@ -728,6 +750,11 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     const tagsParam = params.get(UNIT_QUERY_KEY_MAP.tags);
     if (tagsParam) {
       units.tags = tagsParam.split(',').map((value) => value.trim()).filter(Boolean);
+    }
+
+    const unitsParam = params.get(UNIT_QUERY_KEY_MAP.unidades);
+    if (unitsParam) {
+      units.unidades = unitsParam.split(',').map((value) => value.trim()).filter(Boolean);
     }
 
     const statusParam = params.get(UNIT_QUERY_KEY_MAP.status);

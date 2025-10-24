@@ -79,6 +79,7 @@ export default function UnidadDetailClient({ unidadId }: UnidadDetailClientProps
 
       setUnitsFilters({
         tags: [],
+        unidades: [],
         zones: [],
         zoneTags: [],
         brandModels: [],

@@ -14,6 +14,7 @@ export const cloneEventsFilters = (filters: EventsFilters): EventsFilters => ({
 export const cloneUnitsFilters = (filters: UnitsFilters): UnitsFilters => ({
   ...filters,
   tags: [...filters.tags],
+  unidades: [...filters.unidades],
   zones: [...filters.zones],
   zoneTags: [...filters.zoneTags],
   brandModels: [...filters.brandModels],
