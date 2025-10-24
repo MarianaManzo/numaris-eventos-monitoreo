@@ -563,7 +563,9 @@ export default function EventosSidebar({
             alignItems: 'center',
             flexShrink: 0,
             borderTop: '1px solid #e5e7eb',
-            borderLeft: '1px solid #e5e7eb',
+            borderLeftWidth: 1,
+            borderLeftStyle: 'solid',
+            borderLeftColor: '#e5e7eb',
             borderRight: '1px solid #e5e7eb',
             minWidth: `${columnWidths.evento + columnWidths.fecha + columnWidths.severidad + columnWidths.etiquetas + columnWidths.responsable + columnWidths.unidad + 96}px`
           }}>
@@ -596,7 +598,9 @@ export default function EventosSidebar({
               overflowX: 'auto',
               scrollbarWidth: 'thin',
               scrollbarColor: '#cbd5e1 #f1f5f9',
-              borderLeft: '1px solid #e5e7eb',
+              borderLeftWidth: 1,
+              borderLeftStyle: 'solid',
+              borderLeftColor: '#e5e7eb',
               borderRight: '1px solid #e5e7eb',
               position: 'relative'
             } as React.CSSProperties}>
@@ -621,7 +625,9 @@ export default function EventosSidebar({
                 backgroundColor: isSelected ? '#eff6ff' : '#fff',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s',
-                borderLeft: isSelected ? '4px solid #3b82f6' : '4px solid transparent',
+                borderLeftWidth: 4,
+                borderLeftStyle: 'solid',
+                borderLeftColor: isSelected ? '#3b82f6' : 'transparent',
                 boxSizing: 'border-box'
               }}
               onMouseEnter={(e) => {
@@ -759,7 +765,9 @@ export default function EventosSidebar({
         minHeight: '80px',
         padding: '16px',
         borderTop: '1px solid #e5e7eb',
-        borderLeft: '1px solid #e5e7eb',
+        borderLeftWidth: 1,
+        borderLeftStyle: 'solid',
+        borderLeftColor: '#e5e7eb',
         borderRight: '1px solid #e5e7eb',
         borderBottom: '1px solid #e5e7eb',
         backgroundColor: '#ffffff',

@@ -95,7 +95,9 @@ export default function DaySidebar({ segments, onSegmentClick, selectedSegment }
                     backgroundColor: isSelected
                       ? `${routeColor}33`
                       : isHovered ? '#f3f4f6' : 'transparent',
-                    borderLeft: isSelected ? `4px solid ${routeColor}` : '4px solid transparent',
+                    borderLeftWidth: 4,
+                    borderLeftStyle: 'solid',
+                    borderLeftColor: isSelected ? routeColor : 'transparent',
                     position: 'relative',
                     minHeight: '80px',
                     display: 'flex',

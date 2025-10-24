@@ -212,7 +212,9 @@ export default function EventCard({
         style={{
           backgroundColor: '#ffffff',
           border: `1px solid #f0f0f0`,
-          borderLeft: `4px solid ${severityStyle.bg}`,
+          borderLeftWidth: 4,
+          borderLeftStyle: 'solid',
+          borderLeftColor: severityStyle.bg,
           borderRadius: '8px',
           padding: '16px',
           transition: 'all 0.2s',

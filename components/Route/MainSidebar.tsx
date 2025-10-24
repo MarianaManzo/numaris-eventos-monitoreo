@@ -90,7 +90,11 @@ export default function MainSidebar() {
               <List.Item
                 className="hover:bg-gray-50 cursor-pointer border-b px-4 py-2"
                 onClick={() => handleDayClick(route)}
-                style={{ borderLeft: `4px solid ${route.visible ? route.color : '#e5e7eb'}` }}
+                style={{
+                  borderLeftWidth: 4,
+                  borderLeftStyle: 'solid',
+                  borderLeftColor: route.visible ? route.color : '#e5e7eb'
+                }}
               >
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center space-x-3">

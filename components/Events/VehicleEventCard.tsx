@@ -183,7 +183,9 @@ export default function VehicleEventCard({
       style={{
         backgroundColor: '#ffffff',
         border: isSelected ? `2px solid #1867ff` : '1px solid #eeeeee',
-        borderLeft: isSelected ? `2px solid #1867ff` : `4px solid ${severityStyle.bg}`,
+        borderLeftWidth: isSelected ? 2 : 4,
+        borderLeftStyle: 'solid',
+        borderLeftColor: isSelected ? '#1867ff' : severityStyle.bg,
         borderRadius: '10px',
         padding: isSelected ? '15px' : '16px', // Adjust padding to account for thicker border
         cursor: 'pointer',

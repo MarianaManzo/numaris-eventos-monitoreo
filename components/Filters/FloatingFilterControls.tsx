@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, MouseEvent, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Button, Dropdown, Tag, Input, Empty, Checkbox } from 'antd';
-import { FunnelSimple, Truck, MapPin, CaretDown, X } from 'phosphor-react';
+import { FunnelSimple, Truck, MapPin, CaretDown } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { EVENT_TAGS } from '@/lib/events/generateEvent';
@@ -42,7 +42,6 @@ export default function FloatingFilterControls({
   onToggleVisualizationOption
 }: FloatingFilterControlsProps) {
   const appliedFilters = useFilterStore((state) => state.appliedFilters);
-  const removeFilter = useFilterStore((state) => state.removeFilter);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
   const unitsFilters = useFilterStore((state) => state.units);
@@ -115,14 +114,6 @@ export default function FloatingFilterControls({
   const [eventSeverityCollapsed, setEventSeverityCollapsed] = useState(false);
   const [eventTagsCollapsed, setEventTagsCollapsed] = useState(false);
   const [eventTagSearch, setEventTagSearch] = useState('');
-
-  const handleRemove =
-    (filterId: string) =>
-    (event: MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      removeFilter(filterId);
-    };
 
   const filteredZonas = useMemo(() => {
     const query = zoneSearch.trim().toLowerCase();
@@ -284,23 +275,6 @@ export default function FloatingFilterControls({
     displayUnitButton: boolean,
     unitBadgeCount: number
   ) => {
-    const renderFilterChip = (filter: (typeof appliedFilters)[number]) => (
-      <button
-        key={filter.id}
-        type="button"
-        className="floating-filter-item"
-        onClick={handleRemove(filter.id)}
-        aria-label={`Quitar filtro ${filter.label} ${filter.value}`}
-      >
-        <span className="floating-filter-item__text">
-          {renderFilterValue(filter.domain, filter)}
-        </span>
-        <span className="floating-filter-item__close" aria-hidden="true">
-          <X size={12} weight="bold" />
-        </span>
-      </button>
-    );
-
     return (
       <div className="floating-filter-controls">
         <div className="floating-filter-controls__actions">
@@ -687,36 +661,6 @@ export default function FloatingFilterControls({
           )}
         </div>
 
-        {hasActiveFilters && (
-          <div className="floating-filter-active">
-            {visibleEventFilters.length > 0 && (
-              <div className="floating-filter-active__group">
-                <span className="floating-filter-active__title">Eventos</span>
-                <div className="floating-filter-active__items">
-                  {visibleEventFilters.map(renderFilterChip)}
-                </div>
-              </div>
-            )}
-
-            {activeZoneFilters.length > 0 && (
-              <div className="floating-filter-active__group">
-                <span className="floating-filter-active__title">Zonas</span>
-                <div className="floating-filter-active__items">
-                  {activeZoneFilters.map(renderFilterChip)}
-                </div>
-              </div>
-            )}
-
-            {activeUnitNonZoneFilters.length > 0 && (
-              <div className="floating-filter-active__group">
-                <span className="floating-filter-active__title">Unidades</span>
-                <div className="floating-filter-active__items">
-                  {activeUnitNonZoneFilters.map(renderFilterChip)}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     );
   };
@@ -739,150 +683,6 @@ export default function FloatingFilterControls({
 
   return renderControlsContent(false, undefined, showUnitTag && unitBadgeCount > 0, unitBadgeCount);
 }
-
-const renderFilterValue = (
-  domain: 'events' | 'units',
-  filter: { key: string; value: string; label: string }
-) => {
-  if ((domain === 'units' || domain === 'events') && (filter.key === 'unidades' || filter.key === 'unidadContext')) {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      if (path.startsWith('/eventos/') || path.startsWith('/unidades/')) {
-        return null;
-      }
-    }
-
-    return (
-      <>
-        {filter.label}:{' '}
-        <span className="floating-filter-unit">
-          <span style={{ color: '#1f2937' }}>Unidad:</span>{' '}
-          <span className="floating-filter-unit__icon" aria-hidden="true">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              fill="#6b7280"
-              viewBox="0 0 256 256"
-              style={{ flexShrink: 0 }}
-            >
-              <rect width="256" height="256" fill="none" />
-              <path d="M248,119.9v-.2a1.7,1.7,0,0,0-.1-.7v-.3c0-.2-.1-.4-.1-.6v-.2l-.2-.8h-.1l-14-34.8A15.7,15.7,0,0,0,218.6,72H184V64a8,8,0,0,0-8-8H24A16,16,0,0,0,8,72V184a16,16,0,0,0,16,16H37a32,32,0,0,0,62,0h58a32,32,0,0,0,62,0h13a16,16,0,0,0,16-16V120ZM184,88h34.6l9.6,24H184ZM24,72H168v64H24ZM68,208a16,16,0,1,1,16-16A16,16,0,0,1,68,208Zm120,0a16,16,0,1,1,16-16A16,16,0,0,1,188,208Z" />
-            </svg>
-          </span>
-          <span className="floating-filter-unit__label" style={{ color: '#475569', fontWeight: 600 }}>{filter.value}</span>
-        </span>
-      </>
-    );
-  }
-
-  if (domain === 'events' && filter.key === 'estado') {
-    const normalized = filter.value.trim().toLowerCase();
-    if (normalized === 'todos') {
-      return null;
-    }
-    const isOpen = normalized === 'abiertos' || normalized === 'abierto';
-    const label = isOpen ? 'Abierto' : 'Cerrado';
-    return (
-      <>
-        {filter.label}:{' '}
-        <span
-          className={
-            isOpen
-              ? 'floating-filter-state floating-filter-state--open'
-              : 'floating-filter-state floating-filter-state--closed'
-          }
-        >
-          <span className="floating-filter-state__icon" aria-hidden="true">
-            {isOpen ? (
-              <svg viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" fill="#4ade80" />
-                <circle cx="8" cy="8" r="3" fill="#ffffff" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" stroke="#94a3b8" strokeWidth="2" fill="#ffffff" />
-                <path d="M5 8l2 2 4-4" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            )}
-          </span>
-          {label}
-        </span>
-      </>
-    );
-  }
-
-  if (domain === 'events' && filter.key === 'severidades') {
-    const trimmed = filter.value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const severityClass = `floating-filter-severity floating-filter-severity--${trimmed.toLowerCase()}`;
-    return (
-      <>
-        {filter.label}:{' '}
-        <span className={severityClass}>{trimmed}</span>
-      </>
-    );
-  }
-
-  if ((domain === 'events' && filter.key === 'etiquetas') || (domain === 'units' && filter.key === 'tags')) {
-    const hue = Math.abs(hashString(filter.value)) % 360;
-    const colorStyle: React.CSSProperties = {
-      backgroundColor: `hsla(${hue}, 80%, 90%, 1)`,
-      color: `hsla(${hue}, 70%, 35%, 1)`
-    };
-
-    return (
-      <>
-        {filter.label}:{' '}
-        <span className="floating-filter-chip" style={colorStyle}>
-          <span className="floating-filter-chip__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 5a2 2 0 0 1 2-2h7.172a2 2 0 0 1 1.414.586l7.828 7.828a2 2 0 0 1 0 2.828l-5.172 5.172a2 2 0 0 1-2.828 0L3.586 10.414A2 2 0 0 1 3 9V5Z"
-                fill="currentColor"
-              />
-              <circle cx="7.5" cy="7.5" r="1.5" fill="#ffffff" />
-            </svg>
-          </span>
-          <span>{filter.value}</span>
-        </span>
-      </>
-    );
-  }
-
-  if (domain === 'units' && filter.key === 'zoneTags') {
-    const hue = Math.abs(hashString(filter.value)) % 360;
-    const colorStyle: React.CSSProperties = {
-      backgroundColor: `hsla(${hue}, 78%, 92%, 1)`,
-      color: `hsla(${hue}, 65%, 35%, 1)`
-    };
-
-    return (
-      <>
-        {filter.label}:{' '}
-        <span className="floating-filter-chip" style={colorStyle}>
-          <span className="floating-filter-chip__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 5a2 2 0 0 1 2-2h7.172a2 2 0 0 1 1.414.586l7.828 7.828a2 2 0 0 1 0 2.828l-5.172 5.172a2 2 0 0 1-2.828 0L3.586 10.414A2 2 0 0 1 3 9V5Z"
-                fill="currentColor"
-              />
-              <path d="M9 7h0a2 2 0 1 1 2-2" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </span>
-          <span>{filter.value}</span>
-        </span>
-      </>
-    );
-  }
-  return (
-    <>
-      {filter.label}: {filter.value}
-    </>
-  );
-};
 
 const hashString = (value: string) => {
   let hash = 0;

@@ -129,7 +129,7 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
                           aria-label={isRemovable ? `Remove filter: ${filter.label} ${filter.value}` : `${filter.label}: ${filter.value}`}
                           disabled={!isRemovable}
                           style={{
-                            borderLeftColor: accent,
+                            borderLeft: `4px solid ${accent}`,
                             height: pillHeight
                           }}
                         >

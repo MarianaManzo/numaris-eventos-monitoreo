@@ -290,7 +290,9 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
                 backgroundColor: isSelected ? '#eff6ff' : '#fff',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s',
-                borderLeft: isSelected ? '4px solid #3b82f6' : '4px solid transparent',
+                borderLeftWidth: 4,
+                borderLeftStyle: 'solid',
+                borderLeftColor: isSelected ? '#3b82f6' : 'transparent',
                 boxSizing: 'border-box',
                 gap: '12px'
               }}
