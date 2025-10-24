@@ -31,6 +31,7 @@ interface FloatingFilterControlsProps {
   showUnitTag?: boolean;
   visualizationOptions?: VisualizationOption[];
   onToggleVisualizationOption?: (key: VisualizationOptionKey) => void;
+  forceShowZones?: boolean;
 }
 
 export default function FloatingFilterControls({
@@ -39,7 +40,8 @@ export default function FloatingFilterControls({
   showEventsDropdown = true,
   showUnitTag = true,
   visualizationOptions,
-  onToggleVisualizationOption
+  onToggleVisualizationOption,
+  forceShowZones = false
 }: FloatingFilterControlsProps) {
   const appliedFilters = useFilterStore((state) => state.appliedFilters);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
@@ -91,10 +93,12 @@ export default function FloatingFilterControls({
   const activeUnitFilterCount = activeUnitNonZoneFilters.length;
   const activeZoneFilterCount = activeZoneFilters.length;
 
-  const hasActiveFilters =
+  const hasRealFilters =
     visibleEventFilters.length > 0 ||
     activeZoneFilters.length > 0 ||
-    activeUnitNonZoneFilters.length > 0;
+    activeUnitNonZoneFilters.length > 0 ||
+    (Array.isArray(visualizationOptions) &&
+      visualizationOptions.some((option) => option.checked && !option.disabled));
 
   const zonas = useMemo(() => generateGuadalajaraZonas(), []);
   const zonaTags = useMemo(() => {
@@ -193,7 +197,7 @@ export default function FloatingFilterControls({
   }, [setEventsFilters]);
 
   const zoneSelectionCount = selectedZones.length + selectedZoneTags.length;
-  const zoneFilterBadgeCount = activeZoneFilterCount;
+  const zoneFilterBadgeCount = forceShowZones ? zoneSelectionCount : activeZoneFilterCount;
 
   const estadoSelectionCount = selectedEstado === 'todos' ? 0 : 1;
   const estadoOptions = useMemo(
@@ -219,8 +223,9 @@ export default function FloatingFilterControls({
     ? visualizationOptions!.reduce((count, option) => count + (option.checked ? 1 : 0), 0)
     : 0;
   const hasEventFilters = eventSelectionCount > 0;
-  const hasZoneFilters = zoneFilterBadgeCount > 0;
+  const hasZoneFilters = zoneSelectionCount > 0;
   const hasVisualizationFilters = visualizationSelectionCount > 0;
+  const shouldShowZonesDropdown = forceShowZones || hasZoneFilters;
 
   const handleDropdownToggle = useCallback(
     (name: 'events' | 'zones' | 'visualization') => (open: boolean) => {
@@ -495,7 +500,7 @@ export default function FloatingFilterControls({
               </Dropdown>
             )}
 
-            {hasZoneFilters && (
+            {shouldShowZonesDropdown && (
               <Dropdown
                 destroyOnHidden
                 open={zoneDropdownOpen}
@@ -611,9 +616,7 @@ export default function FloatingFilterControls({
             >
               <Button className="floating-filter-button" icon={<MapPin size={16} />}>
                 Zonas
-                {zoneFilterBadgeCount > 0 && (
-                  <Tag className="floating-filter-button__tag">{zoneFilterBadgeCount}</Tag>
-                )}
+                <Tag className="floating-filter-button__tag">{zoneFilterBadgeCount}</Tag>
                 <svg
                   className="floating-filter-button__caret"
                   width={18}
@@ -629,7 +632,7 @@ export default function FloatingFilterControls({
             )}
           </div>
 
-          {hasActiveFilters && (
+          {hasRealFilters && (
             <Button
               type="default"
               size="middle"
@@ -649,7 +652,7 @@ export default function FloatingFilterControls({
     const unitFilter = grouped.units.find((filterItem) => filterItem.key === 'unidadContext');
     const unitLabel = unitFilter?.value ?? unidadId;
     const unitBadgeCount = 0;
-    if (!hasActiveFilters) {
+    if (!hasRealFilters && !forceShowZones) {
       return null;
     }
     return renderControlsContent(showUnitButton, unitLabel, showUnitTag && showUnitButton, unitBadgeCount);
@@ -657,7 +660,7 @@ export default function FloatingFilterControls({
 
   const unitBadgeCount = activeUnitFilterCount;
 
-  if (!hasActiveFilters) {
+  if (!hasRealFilters && !forceShowZones) {
     return null;
   }
 
