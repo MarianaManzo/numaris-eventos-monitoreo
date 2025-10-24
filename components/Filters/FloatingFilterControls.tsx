@@ -92,6 +92,11 @@ export default function FloatingFilterControls({
   const activeUnitFilterCount = activeUnitNonZoneFilters.length;
   const activeZoneFilterCount = activeZoneFilters.length;
 
+  const hasActiveFilters =
+    visibleEventFilters.length > 0 ||
+    activeZoneFilters.length > 0 ||
+    activeUnitNonZoneFilters.length > 0;
+
   const zonas = useMemo(() => generateGuadalajaraZonas(), []);
   const zonaTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -239,6 +244,9 @@ export default function FloatingFilterControls({
   const visualizationSelectionCount = showVisualizationDropdown
     ? visualizationOptions!.reduce((count, option) => count + (option.checked ? 1 : 0), 0)
     : 0;
+  const hasEventFilters = eventSelectionCount > 0;
+  const hasZoneFilters = zoneFilterBadgeCount > 0;
+  const hasVisualizationFilters = visualizationSelectionCount > 0;
 
   const handleDropdownToggle = useCallback(
     (name: 'events' | 'zones' | 'visualization') => (open: boolean) => {
@@ -276,11 +284,6 @@ export default function FloatingFilterControls({
     displayUnitButton: boolean,
     unitBadgeCount: number
   ) => {
-    const hasActiveFilters =
-      visibleEventFilters.length > 0 ||
-      activeZoneFilters.length > 0 ||
-      activeUnitNonZoneFilters.length > 0;
-
     const renderFilterChip = (filter: (typeof appliedFilters)[number]) => (
       <button
         key={filter.id}
@@ -327,7 +330,7 @@ export default function FloatingFilterControls({
               </Button>
             )}
 
-            {showEventsDropdown && (
+            {showEventsDropdown && hasEventFilters && (
               <Dropdown
                 destroyOnHidden
                 open={eventDropdownOpen}
@@ -489,7 +492,7 @@ export default function FloatingFilterControls({
               </Dropdown>
             )}
 
-            {showVisualizationDropdown && (
+            {showVisualizationDropdown && hasVisualizationFilters && (
               <Dropdown
                 destroyOnHidden
                 open={visualizationDropdownOpen}
@@ -535,12 +538,13 @@ export default function FloatingFilterControls({
               </Dropdown>
             )}
 
-            <Dropdown
-              destroyOnHidden
-              open={zoneDropdownOpen}
-              onOpenChange={handleDropdownToggle('zones')}
-              trigger={['click']}
-              placement="bottomLeft"
+            {hasZoneFilters && (
+              <Dropdown
+                destroyOnHidden
+                open={zoneDropdownOpen}
+                onOpenChange={handleDropdownToggle('zones')}
+                trigger={['click']}
+                placement="bottomLeft"
               popupRender={() => (
                 <div className="filter-dropdown" onClick={(event) => event.stopPropagation()}>
                   <div className="filter-section">
@@ -667,17 +671,20 @@ export default function FloatingFilterControls({
                   <path d="M7 10c-.552 0-.834.633-.44 1.026l4.293 4.293a1 1 0 0 0 1.414 0L16.56 11.026C16.953 10.633 16.671 10 16.118 10H7z" />
                 </svg>
               </Button>
-            </Dropdown>
+              </Dropdown>
+            )}
           </div>
 
-          <Button
-            type="default"
-            size="middle"
-            className="floating-filter-clear"
-            onClick={clearAllFilters}
-          >
-            Limpiar todo
-          </Button>
+          {hasActiveFilters && (
+            <Button
+              type="default"
+              size="middle"
+              className="floating-filter-clear"
+              onClick={clearAllFilters}
+            >
+              Limpiar todo
+            </Button>
+          )}
         </div>
 
         {hasActiveFilters && (
@@ -718,10 +725,17 @@ export default function FloatingFilterControls({
     const unitFilter = grouped.units.find((filterItem) => filterItem.key === 'unidadContext');
     const unitLabel = unitFilter?.value ?? unidadId;
     const unitBadgeCount = 0;
+    if (!hasActiveFilters) {
+      return null;
+    }
     return renderControlsContent(showUnitButton, unitLabel, showUnitTag && showUnitButton, unitBadgeCount);
   }
 
   const unitBadgeCount = activeUnitFilterCount;
+
+  if (!hasActiveFilters) {
+    return null;
+  }
 
   return renderControlsContent(false, undefined, showUnitTag && unitBadgeCount > 0, unitBadgeCount);
 }
