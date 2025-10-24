@@ -28,7 +28,7 @@ export { default as SingleRouteMapView } from './SingleRouteMapView';
 export { default as StopIndicator } from './StopIndicator';
 export { default as StopMarker } from './StopMarker';
 export { default as UnidadMarker } from './UnidadMarker';
-export { default as UnifiedMapExample } from './UnifiedMapExample';
+export * from './UnifiedMapExample';
 export { default as UnifiedMapView } from './UnifiedMapView';
 export { default as UnifiedMarker } from './UnifiedMarker';
 export { default as ZonaLabel } from './ZonaLabel';

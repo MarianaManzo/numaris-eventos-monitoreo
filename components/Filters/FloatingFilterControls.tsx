@@ -78,7 +78,17 @@ export default function FloatingFilterControls({
   const activeZoneFilters = activeUnitFilters.filter(
     (filter) => filter.key === 'zones' || filter.key === 'zoneTags'
   );
-  const activeEventFilterCount = activeEventFilters.length;
+  const visibleEventFilters = activeEventFilters.filter((filter) => {
+    if (filter.key === 'estado') {
+      const normalizedValue = filter.value?.toString().trim().toLowerCase();
+      return normalizedValue !== 'todos';
+    }
+    if (filter.key === 'severidades') {
+      return filter.value.trim().length > 0;
+    }
+    return true;
+  });
+  const activeEventFilterCount = visibleEventFilters.length;
   const activeUnitFilterCount = activeUnitNonZoneFilters.length;
   const activeZoneFilterCount = activeZoneFilters.length;
 
@@ -165,30 +175,6 @@ export default function FloatingFilterControls({
     setZoneTagSearch('');
   }, [setUnitsFilters]);
 
-  const handleEstadoToggle = useCallback((value: 'abiertos' | 'cerrados') => {
-    const current = new Set<'abiertos' | 'cerrados'>(
-      eventsFilters.estado === 'abiertos'
-        ? ['abiertos']
-        : eventsFilters.estado === 'cerrados'
-          ? ['cerrados']
-          : ['abiertos', 'cerrados']
-    );
-
-    if (current.has(value)) {
-      current.delete(value);
-    } else {
-      current.add(value);
-    }
-
-    if (current.size === 0 || current.size === 2) {
-      setEventsFilters({ estado: 'todos' });
-    } else if (current.has('abiertos')) {
-      setEventsFilters({ estado: 'abiertos' });
-    } else {
-      setEventsFilters({ estado: 'cerrados' });
-    }
-  }, [eventsFilters.estado, setEventsFilters]);
-
   const toggleSeverity = useCallback((severity: EventSeverity) => {
     toggleEventFilterValue('severidades', severity);
   }, [toggleEventFilterValue]);
@@ -214,7 +200,7 @@ export default function FloatingFilterControls({
   const zoneFilterBadgeCount = activeZoneFilterCount;
   const zonaLabel = (() => {
     if (zoneSelectionCount === 0) {
-      return 'Todas las zonas';
+      return '';
     }
 
     if (zoneSelectionCount === 1) {
@@ -230,15 +216,15 @@ export default function FloatingFilterControls({
   })();
   const showZonaLabel = zonaLabel.length > 0;
 
-  const selectedEstadoSet = (() => {
-    if (selectedEstado === 'abiertos') {
-      return new Set<'abiertos' | 'cerrados'>(['abiertos']);
-    }
-    if (selectedEstado === 'cerrados') {
-      return new Set<'abiertos' | 'cerrados'>(['cerrados']);
-    }
-    return new Set<'abiertos' | 'cerrados'>(['abiertos', 'cerrados']);
-  })();
+  const estadoSelectionCount = selectedEstado === 'todos' ? 0 : 1;
+  const estadoOptions = useMemo(
+    () => ([
+      { value: 'todos' as const, label: 'Todos' },
+      { value: 'abiertos' as const, label: 'Abiertos' },
+      { value: 'cerrados' as const, label: 'Cerrados' }
+    ]),
+    []
+  );
 
   const eventSelectionCount = activeEventFilterCount;
 
@@ -291,7 +277,7 @@ export default function FloatingFilterControls({
     unitBadgeCount: number
   ) => {
     const hasActiveFilters =
-      activeEventFilters.length > 0 ||
+      visibleEventFilters.length > 0 ||
       activeZoneFilters.length > 0 ||
       activeUnitNonZoneFilters.length > 0;
 
@@ -398,7 +384,7 @@ export default function FloatingFilterControls({
                         className="filter-section__toggle"
                         onClick={() => setEventStateCollapsed((value) => !value)}
                       >
-                        <span>Estado ({selectedEstadoSet.size})</span>
+                        <span>Estado ({estadoSelectionCount})</span>
                         <CaretDown
                           size={14}
                           weight="bold"
@@ -407,25 +393,19 @@ export default function FloatingFilterControls({
                       </button>
                       {!eventStateCollapsed && (
                         <div className="filter-section__content">
-                          <div className="filter-options">
-                            {(['abiertos', 'cerrados'] as const).map((value) => {
-                              const label = value === 'abiertos' ? 'Abierto' : 'Cerrado';
-                              const selected = selectedEstadoSet.has(value);
+                          <div className="filter-segment-group" role="radiogroup" aria-label="Estado de eventos">
+                            {estadoOptions.map((option) => {
+                              const active = option.value !== 'todos' && selectedEstado === option.value;
                               return (
-                                <Checkbox
-                                  key={value}
-                                  className="filter-checkbox filter-checkbox--state"
-                                  checked={selected}
-                                  onChange={() => handleEstadoToggle(value)}
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className={`filter-segment-button${active ? ' filter-segment-button--active' : ''}`}
+                                  onClick={() => setEventsFilters({ estado: option.value })}
+                                  aria-pressed={active}
                                 >
-                                  <span className="filter-option__content filter-option__content--estado">
-                                    <span
-                                      className={`filter-state-dot${value === 'abiertos' ? ' filter-state-dot--open' : ' filter-state-dot--closed'}`}
-                                      aria-hidden="true"
-                                    />
-                                    <span>{label}</span>
-                                  </span>
-                                </Checkbox>
+                                  {option.label}
+                                </button>
                               );
                             })}
                           </div>
@@ -490,11 +470,11 @@ export default function FloatingFilterControls({
                   </div>
                 )}
               >
-                <Button className="floating-filter-button" icon={<FunnelSimple size={16} />}>
-                  Eventos
-                  {eventSelectionCount > 0 && (
-                    <Tag className="floating-filter-button__tag">{eventSelectionCount}</Tag>
-                  )}
+            <Button className="floating-filter-button" icon={<FunnelSimple size={16} />}>
+              Eventos
+              {eventSelectionCount > 0 && (
+                <Tag className="floating-filter-button__tag">{eventSelectionCount}</Tag>
+              )}
                   <svg
                     className="floating-filter-button__caret"
                     width={18}
@@ -702,11 +682,11 @@ export default function FloatingFilterControls({
 
         {hasActiveFilters && (
           <div className="floating-filter-active">
-            {activeEventFilters.length > 0 && (
+            {visibleEventFilters.length > 0 && (
               <div className="floating-filter-active__group">
                 <span className="floating-filter-active__title">Eventos</span>
                 <div className="floating-filter-active__items">
-                  {activeEventFilters.map(renderFilterChip)}
+                  {visibleEventFilters.map(renderFilterChip)}
                 </div>
               </div>
             )}
@@ -784,6 +764,9 @@ const renderFilterValue = (
 
   if (domain === 'events' && filter.key === 'estado') {
     const normalized = filter.value.trim().toLowerCase();
+    if (normalized === 'todos') {
+      return null;
+    }
     const isOpen = normalized === 'abiertos' || normalized === 'abierto';
     const label = isOpen ? 'Abierto' : 'Cerrado';
     return (
@@ -816,11 +799,15 @@ const renderFilterValue = (
   }
 
   if (domain === 'events' && filter.key === 'severidades') {
-    const severityClass = `floating-filter-severity floating-filter-severity--${filter.value.toLowerCase()}`;
+    const trimmed = filter.value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const severityClass = `floating-filter-severity floating-filter-severity--${trimmed.toLowerCase()}`;
     return (
       <>
         {filter.label}:{' '}
-        <span className={severityClass}>{filter.value}</span>
+        <span className={severityClass}>{trimmed}</span>
       </>
     );
   }

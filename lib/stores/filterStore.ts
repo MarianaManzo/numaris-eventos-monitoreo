@@ -135,7 +135,7 @@ const UNIT_QUERY_KEY_MAP: Record<string, FilterQueryKey> = {
 
 const createDefaultEventsFilters = (): EventsFilters => ({
   estado: 'todos',
-  severidades: [],
+  severidades: [...DEFAULT_EVENT_SEVERITIES],
   etiquetas: [],
   unidades: [],
   dateRange: null,
@@ -152,7 +152,7 @@ const createDefaultUnitsFilters = (): UnitsFilters => ({
   zones: [],
   zoneTags: [],
   brandModels: [],
-  status: [],
+  status: [...DEFAULT_UNIT_STATUS],
   lastSeenRange: null,
   responsables: [],
   searchText: ''
@@ -225,7 +225,7 @@ const buildAppliedFilters = (
     });
   }
 
-  if (events.severidades.length > 0) {
+  if (!arraysHaveSameMembers(events.severidades, DEFAULT_EVENT_SEVERITIES)) {
     events.severidades.forEach((severity) => {
       pills.push({
         id: buildFilterId('events', 'severidades', severity),
@@ -312,7 +312,7 @@ const buildAppliedFilters = (
     });
   });
 
-  if (units.status.length > 0) {
+  if (!arraysHaveSameMembers(units.status, DEFAULT_UNIT_STATUS)) {
     units.status.forEach((status) => {
       pills.push({
         id: buildFilterId('units', 'status', status),

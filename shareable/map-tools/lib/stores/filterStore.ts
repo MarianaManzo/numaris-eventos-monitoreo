@@ -213,19 +213,7 @@ const buildAppliedFilters = (
   const pills: AppliedFilter[] = [];
 
   // Events filters
-  if (events.estado !== 'todos') {
-    pills.push({
-      id: buildFilterId('events', 'estado', events.estado),
-      domain: 'events',
-      key: 'estado',
-      label: 'Estado',
-      value: events.estado === 'abiertos' ? 'Abiertos' : 'Cerrados',
-      removable: true,
-      icon: 'events'
-    });
-  }
-
-  if (events.severidades.length > 0) {
+    if (events.severidades.length > 0) {
     events.severidades.forEach((severity) => {
       pills.push({
         id: buildFilterId('events', 'severidades', severity),
