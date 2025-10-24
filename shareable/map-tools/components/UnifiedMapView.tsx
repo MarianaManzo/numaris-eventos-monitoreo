@@ -20,6 +20,11 @@ import { useMapFitBounds } from '../hooks/useMapFitBounds';
 import type { EventLocation } from '../lib/events/generateEvent';
 import { getOperationalStatusFromId } from '../lib/events/eventStatus';
 import { calculateDistanceBetweenPositions } from '../lib/utils/geoUtils';
+import { useGlobalMapStore } from '../lib/stores/globalMapStore';
+import { generateGuadalajaraZonas } from '../lib/zonas/generateZonas';
+import type { ZonaWithRelations } from '../lib/zonas/types';
+import ZonaPolygon from './ZonaPolygon';
+import ZonaLabel from './ZonaLabel';
 
 interface EventMarkerData {
   id: string;
@@ -183,14 +188,90 @@ export default function UnifiedMapView({
   }, []);
   const previousSegmentRef = useRef<LatLngExpression[] | null>(null);
 
+  const {
+    showVehiclesOnMap,
+    setShowVehiclesOnMap,
+    showEventsOnMap,
+    setShowEventsOnMap,
+    showZonasOnMap,
+    setShowZonasOnMap,
+    showVehicleLabels,
+    setShowVehicleLabels,
+    showEventLabels,
+    setShowEventLabels,
+    showZonaLabels,
+    setShowZonaLabels
+  } = useGlobalMapStore();
+
+  const zonasBase = useMemo(() => generateGuadalajaraZonas(), []);
+  const zonasWithRelations = useMemo<ZonaWithRelations[]>(() => zonasBase.map((zona) => ({
+    ...zona,
+    vehicleCount: 0,
+    eventCount: 0
+  })), [zonasBase]);
+
+  const layerOptions = useMemo(() => ([
+    {
+      id: 'vehicles',
+      label: 'Unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehiclesOnMap,
+      onToggle: () => setShowVehiclesOnMap(!showVehiclesOnMap)
+    },
+    {
+      id: 'events',
+      label: 'Eventos',
+      icon: 'events' as const,
+      isVisible: showEventsOnMap,
+      onToggle: () => setShowEventsOnMap(!showEventsOnMap)
+    },
+    {
+      id: 'zones',
+      label: 'Zonas',
+      icon: 'zones' as const,
+      isVisible: showZonasOnMap,
+      onToggle: () => setShowZonasOnMap(!showZonasOnMap)
+    }
+  ]), [showVehiclesOnMap, showEventsOnMap, showZonasOnMap, setShowVehiclesOnMap, setShowEventsOnMap, setShowZonasOnMap]);
+
+  const labelLayers = useMemo(() => ([
+    {
+      id: 'vehicle-labels',
+      label: 'Etiquetas de unidades',
+      icon: 'vehicles' as const,
+      isVisible: showVehicleLabels,
+      onToggle: () => setShowVehicleLabels(!showVehicleLabels)
+    },
+    {
+      id: 'event-labels',
+      label: 'Etiquetas de eventos',
+      icon: 'events' as const,
+      isVisible: showEventLabels,
+      onToggle: () => setShowEventLabels(!showEventLabels)
+    },
+    {
+      id: 'zona-labels',
+      label: 'Etiquetas de zonas',
+      icon: 'zones' as const,
+      isVisible: showZonaLabels,
+      onToggle: () => setShowZonaLabels(!showZonaLabels)
+    }
+  ]), [showVehicleLabels, showEventLabels, showZonaLabels, setShowVehicleLabels, setShowEventLabels, setShowZonaLabels]);
+
   const { features, mapOptions } = viewConfig;
+  const shouldRenderVehicleMarkers = showVehiclesOnMap && showVehicleMarkers && vehicleMarkers.length > 0;
+  const shouldRenderEventMarkers = showEventsOnMap && eventMarkers.length > 0;
+  const handleZonaSelect = useCallback((zonaId: string) => {
+    // Placeholder handler for zone selection in unified map showcase
+  }, []);
   const visibleRoutes = routes.filter(route => route.visible);
 
   // Automatically fit bounds to show the route on initial load
   // Fit to event markers when:
   // 1. Event markers are present
   // 2. NOT in trayectos view (which is route-focused)
-  const shouldFitEventMarkers = eventMarkers.length > 0 &&
+  const shouldFitEventMarkers = showEventsOnMap &&
+                                eventMarkers.length > 0 &&
                                 viewConfig.name !== 'trayectos';
 
   // Disable initial fitBounds for registros-eventos view (custom logic handles this)
@@ -1017,6 +1098,9 @@ export default function UnifiedMapView({
 
         {/* Render event markers without clustering */}
         {(() => {
+          if (!shouldRenderEventMarkers) {
+            return null;
+          }
           const renderEventMarkers = () => eventMarkers.map(event => {
           // Extract location data if available
           const locationData = event.locationData;
@@ -1186,7 +1270,7 @@ export default function UnifiedMapView({
         })()}
 
         {/* Render vehicle markers individually (clustering disabled) */}
-        {showVehicleMarkers && vehicleMarkers.length > 0 &&
+        {shouldRenderVehicleMarkers &&
           clusteredVehicleData.map((vehicle) => (
             <UnidadMarker
               key={vehicle.id}
@@ -1201,6 +1285,22 @@ export default function UnifiedMapView({
             />
           ))
         }
+        {showZonasOnMap && zonasBase.map((zona) => (
+          <ZonaPolygon
+            key={zona.id}
+            zona={zona}
+            isSelected={false}
+            onSelect={handleZonaSelect}
+            opacity={0.7}
+          />
+        ))}
+        {showZonaLabels && zonasWithRelations.map((zona) => (
+          <ZonaLabel
+            key={`${zona.id}-label`}
+            zona={zona}
+            isSelected={false}
+          />
+        ))}
       </MapContainer>
 
       <MapToolbar
@@ -1210,6 +1310,8 @@ export default function UnifiedMapView({
         onRecenterRoute={handleRecenterRoute}
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
+        layers={layerOptions}
+        labelLayers={labelLayers}
       />
     </div>
   );

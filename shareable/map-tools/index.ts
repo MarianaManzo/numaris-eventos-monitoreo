@@ -3,13 +3,30 @@ export * from './components';
 export { useUnifiedMap } from './lib/hooks/useUnifiedMap';
 export { useMapFitBounds } from './hooks/useMapFitBounds';
 
-export * from './lib/map/types';
+export type {
+  MapPosition,
+  TimeRange,
+  MarkerType,
+  BaseMarker,
+  StopMarker,
+  EventMarker as MapEventMarker,
+  ReporteMarker,
+  InicioFinMarker,
+  UnifiedMarker,
+  MarkerFeatures,
+  ViewConfig,
+  MarkerEventHandlers,
+  ColorStates,
+  RouteData,
+  UnifiedMapProviderProps,
+  UnifiedMarkerProps
+} from './lib/map/types';
+export { VIEW_CONFIGS } from './lib/map/types';
 
 export * from './lib/events/types';
 export { getOperationalStatusFromId, getEventStatus, getOperationalStatus } from './lib/events/eventStatus';
 export { getSeverityColor, getEventIconPath } from './lib/events/eventStyles';
 export {
-  generateEventWithLocation,
   generateEventDetails,
   generateEventCollection,
   generateEventTimeline,
