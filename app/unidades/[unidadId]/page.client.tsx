@@ -11,6 +11,7 @@ import {
   type UnitsFilters
 } from '@/lib/stores/filterStore';
 import { generateVehicleName } from '@/lib/events/addressGenerator';
+import { cloneEventsFilters, cloneUnitsFilters } from '@/lib/stores/filterClones';
 
 const MainView = dynamic(() => import('@/components/Route/MainView'), { ssr: false });
 const DayView = dynamic(() => import('@/components/Route/DayView'), { ssr: false });
@@ -18,29 +19,6 @@ const DayView = dynamic(() => import('@/components/Route/DayView'), { ssr: false
 type UnidadDetailClientProps = {
   unidadId: string;
 };
-
-const cloneEventsFilters = (filters: EventsFilters): EventsFilters => ({
-  ...filters,
-  severidades: [...filters.severidades],
-  etiquetas: [...filters.etiquetas],
-  unidades: [...filters.unidades],
-  assignedUsers: [...filters.assignedUsers],
-  location: [...filters.location],
-  eventTypes: [...filters.eventTypes],
-  dateRange: filters.dateRange ? { ...filters.dateRange } : null
-});
-
-const cloneUnitsFilters = (filters: UnitsFilters): UnitsFilters => ({
-  ...filters,
-  tags: [...filters.tags],
-  zones: [...filters.zones],
-  zoneTags: [...filters.zoneTags],
-  brandModels: [...filters.brandModels],
-  status: [...filters.status],
-  responsables: [...filters.responsables],
-  searchText: filters.searchText,
-  lastSeenRange: filters.lastSeenRange ? { ...filters.lastSeenRange } : null
-});
 
 export default function UnidadDetailClient({ unidadId }: UnidadDetailClientProps) {
   const searchParams = useSearchParams();

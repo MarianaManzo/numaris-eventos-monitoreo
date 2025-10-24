@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Layout, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
@@ -14,6 +14,15 @@ import { useRouteStore } from '@/lib/stores/routeStore';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
 import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
+import {
+  useFilterStore,
+  type EventsFilters,
+  type UnitsFilters
+} from '@/lib/stores/filterStore';
+import {
+  cloneEventsFilters,
+  cloneUnitsFilters
+} from '@/lib/stores/filterClones';
 
 const { Content, Sider } = Layout;
 
@@ -70,8 +79,30 @@ const [visualizationSettings, setVisualizationSettings] = useState<Record<Visual
   vehicle: !!vehicleId,
   route: false
 });
+  const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
+  const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+  const detailFilterSnapshotRef = useRef<{ events: EventsFilters; units: UnitsFilters } | null>(null);
   const operationalStatus = event ? getOperationalStatusFromId(event.id) : null;
   const hasDualMarkers = operationalStatus === 'cerrado' && !!event?.locationData?.endLocation;
+
+  useEffect(() => {
+    if (!detailFilterSnapshotRef.current) {
+      const { events: currentEvents, units: currentUnits } = useFilterStore.getState();
+      detailFilterSnapshotRef.current = {
+        events: cloneEventsFilters(currentEvents),
+        units: cloneUnitsFilters(currentUnits)
+      };
+    }
+
+    return () => {
+      const snapshot = detailFilterSnapshotRef.current;
+      if (snapshot) {
+        setEventsFilters(cloneEventsFilters(snapshot.events));
+        setUnitsFilters(cloneUnitsFilters(snapshot.units));
+        detailFilterSnapshotRef.current = null;
+      }
+    };
+  }, [setEventsFilters, setUnitsFilters]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -304,7 +335,11 @@ const handleBack = () => {
 
             <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
               <div className="floating-filters-overlay">
-                <FloatingFilterControls showEventsDropdown={false} showUnitTag={false} />
+                <FloatingFilterControls
+                  showEventsDropdown={false}
+                  showUnitTag={false}
+                  forceShowZones
+                />
               </div>
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
@@ -426,6 +461,7 @@ const handleBack = () => {
                 showEventsDropdown={false}
                 visualizationOptions={visualizationOptions}
                 onToggleVisualizationOption={handleVisualizationToggle}
+                forceShowZones
               />
             </div>
             <EventDetailMapView
