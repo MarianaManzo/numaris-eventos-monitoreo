@@ -194,23 +194,6 @@ export default function FloatingFilterControls({
 
   const zoneSelectionCount = selectedZones.length + selectedZoneTags.length;
   const zoneFilterBadgeCount = activeZoneFilterCount;
-  const zonaLabel = (() => {
-    if (zoneSelectionCount === 0) {
-      return '';
-    }
-
-    if (zoneSelectionCount === 1) {
-      if (selectedZoneTags.length === 1) {
-        return selectedZoneTags[0];
-      }
-      if (selectedZones.length === 1) {
-        return selectedZones[0];
-      }
-    }
-
-    return '';
-  })();
-  const showZonaLabel = zonaLabel.length > 0;
 
   const estadoSelectionCount = selectedEstado === 'todos' ? 0 : 1;
   const estadoOptions = useMemo(
@@ -630,9 +613,6 @@ export default function FloatingFilterControls({
                 Zonas
                 {zoneFilterBadgeCount > 0 && (
                   <Tag className="floating-filter-button__tag">{zoneFilterBadgeCount}</Tag>
-                )}
-                {showZonaLabel && (
-                  <span style={{ marginLeft: 8, fontWeight: 600, color: '#1f2937' }}>{zonaLabel}</span>
                 )}
                 <svg
                   className="floating-filter-button__caret"
