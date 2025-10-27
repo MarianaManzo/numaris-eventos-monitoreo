@@ -247,6 +247,10 @@ export default function MapView() {
 
   const visibleRoutes = routes.filter(route => route.visible);
 
+  const handleZonaSelect = (zonaId: string) => {
+    console.info('[Shared MapView] Zona seleccionada', zonaId);
+  };
+
   return (
     <div className={`${isFullscreen ? 'fixed left-0 right-0 bottom-0 z-[9999] bg-transparent' : 'w-full h-full relative'}`} style={isFullscreen ? { top: '64px' } : {}}>
       <MapContainer
@@ -330,6 +334,3 @@ export default function MapView() {
     </div>
   );
 }
-  const handleZonaSelect = useCallback((zonaId: string) => {
-    console.info('[MapView] Zona seleccionado', zonaId);
-  }, []);

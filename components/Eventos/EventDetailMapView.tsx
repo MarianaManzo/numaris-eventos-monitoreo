@@ -11,6 +11,7 @@ import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import dayjs from 'dayjs';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
+import { useFilterStore } from '@/lib/stores/filterStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import ZonaPolygon from '../Map/ZonaPolygon';
 import ZonaLabel from '../Map/ZonaLabel';
@@ -105,21 +106,49 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
     setShowZonaLabels
   } = useGlobalMapStore();
 
-  const { zonas, setZonas, getVisibleZonas } = useZonaStore();
+  const { zonas, setZonas, getVisibleZonas, selectedZonaId, filteredTags, searchQuery } = useZonaStore();
+  const { unidades: pillSelectedUnits, zones: pillSelectedZones } = useFilterStore((state) => state.units);
   useEffect(() => {
     if (zonas.length === 0) {
       setZonas(generateGuadalajaraZonas());
     }
   }, [zonas.length, setZonas]);
-  const visibleZonas = useMemo(() => getVisibleZonas(), [zonas, getVisibleZonas]);
-  const visibleZonaLabels = useMemo<ZonaWithRelations[]>(() => visibleZonas.map((zona) => {
-    const maybeWithCounts = zona as Partial<ZonaWithRelations>;
-    return {
-      ...zona,
-      vehicleCount: maybeWithCounts.vehicleCount ?? 0,
-      eventCount: maybeWithCounts.eventCount ?? 0
-    };
-  }), [visibleZonas]);
+
+  const visibleZonas = useMemo(() => {
+    const baseZonas = zonas.length > 0 ? zonas : generateGuadalajaraZonas();
+    let filtered = baseZonas;
+
+    if (filteredTags.length > 0) {
+      const tagSet = new Set(filteredTags);
+      filtered = filtered.filter((zona) => (zona.etiquetas || []).some((tag) => tagSet.has(tag)));
+    }
+
+    if (searchQuery.trim().length > 0) {
+      const query = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter((zona) => zona.nombre.toLowerCase().includes(query));
+    }
+
+    if (pillSelectedZones.length > 0) {
+      const byName = pillSelectedZones
+        .map((name) => filtered.find((zona) => zona.nombre.toLowerCase() === name.toLowerCase()))
+        .filter((zona): zona is typeof filtered[number] => Boolean(zona));
+      if (byName.length > 0) {
+        return byName;
+      }
+    }
+
+    if (selectedZonaId) {
+      return filtered.filter((zona) => zona.id === selectedZonaId);
+    }
+
+    // Default to store-visible zonas when no filters selected
+    return getVisibleZonas();
+  }, [zonas, filteredTags, searchQuery, pillSelectedZones, selectedZonaId, getVisibleZonas]);
+  const visibleZonaLabels = useMemo<ZonaWithRelations[]>(() => visibleZonas.map((zona) => ({
+    ...zona,
+    vehicleCount: (zona as Partial<ZonaWithRelations>).vehicleCount ?? 0,
+    eventCount: (zona as Partial<ZonaWithRelations>).eventCount ?? 0
+  })), [visibleZonas]);
 
   const layerOptions = useMemo(() => ([
     {
@@ -171,7 +200,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
 
   const showStartMarker = visualizationSettings.start && showEventsOnMap;
   const showEndMarker = visualizationSettings.end && showEventsOnMap;
-  const showVehicleLayerMarker = visualizationSettings.vehicle && showVehiclesOnMap;
+  const showVehicleLayerMarker = visualizationSettings.vehicle && showVehiclesOnMap && isVehicleAllowedByFilter;
   const showRouteLine = visualizationSettings.route;
 
   // Generate locations from event ID for consistency (geofence or address)
@@ -204,6 +233,25 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
     event.position[0] + 0.002,
     event.position[1] + 0.002
   ] : event.position;
+
+  const vehicleDisplayName = useMemo(() => {
+    if (!vehicleId) return null;
+    return generateVehicleName(vehicleId);
+  }, [vehicleId]);
+
+  const isVehicleAllowedByFilter = useMemo(() => {
+    if (!vehicleId) {
+      return false;
+    }
+    if (pillSelectedUnits.length === 0) {
+      return true;
+    }
+    if (!vehicleDisplayName) {
+      return false;
+    }
+    const target = vehicleDisplayName.toLowerCase();
+    return pillSelectedUnits.some((name) => name.toLowerCase() === target);
+  }, [vehicleId, vehicleDisplayName, pillSelectedUnits]);
 
   const endMarkerPosition = useMemo((): [number, number] | null => {
     if (!hasDualMarkers || !locationData) {
@@ -522,7 +570,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
           <UnidadMarker
             key={`vehicle-${vehicleId}`}
             position={vehiclePosition}
-            nombre={generateVehicleName(vehicleId)}
+            nombre={vehicleDisplayName ?? generateVehicleName(vehicleId)}
             unidadId={vehicleId}
             estado="En ruta"
             isSelected={false}
