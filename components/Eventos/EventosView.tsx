@@ -14,6 +14,8 @@ import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
+import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
+import { generateVehicleName } from '@/lib/events/addressGenerator';
 
 const { Content, Sider } = Layout;
 
@@ -93,11 +95,18 @@ export default function EventosView() {
         const formattedTimestamp = Number.isNaN(timestamp.getTime())
           ? event.fechaCreacion
           : timestamp.toLocaleString('es-MX', { hour12: false });
+        const status = getOperationalStatusFromId(event.id) ?? 'abierto';
+        const unitName = event.vehicleId
+          ? generateVehicleName(event.vehicleId)
+          : event.responsable;
+
         return {
           id: event.id,
-          title: event.evento,
-          subtitle: event.vehicleId ? `Unidad ${event.vehicleId}` : event.responsable,
+          name: event.evento,
           severity: event.severidad,
+          status,
+          unitName,
+          vehicleId: event.vehicleId,
           timestamp: formattedTimestamp
         };
       }),

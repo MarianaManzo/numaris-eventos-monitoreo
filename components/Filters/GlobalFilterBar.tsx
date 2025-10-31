@@ -11,6 +11,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import PaginationControls from '@/components/Common/PaginationControls';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
+import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
 
 type GlobalFilterContext = 'monitoreo' | 'unidad' | 'evento' | 'zona';
 
@@ -35,11 +36,25 @@ interface UnitDropdownEntry {
 
 interface EventDropdownEntry {
   id: string;
-  title: string;
-  subtitle?: string;
-  severity?: string;
+  name: string;
+  severity?: 'Alta' | 'Media' | 'Baja' | 'Informativa';
+  status?: 'abierto' | 'en_progreso' | 'cerrado';
+  unitName?: string;
+  vehicleId?: string;
   timestamp?: string;
 }
+
+const formatEventDisplayName = (entry: EventDropdownEntry): string => {
+  const numericMatch = entry.id.match(/\d+/g);
+  if (numericMatch && numericMatch.length > 0) {
+    const last = numericMatch[numericMatch.length - 1].padStart(2, '0');
+    return `EVT-${last} ${entry.name}`.trim();
+  }
+  if (entry.id && entry.id !== entry.name) {
+    return `${entry.id} ${entry.name}`.trim();
+  }
+  return entry.name;
+};
 
 interface ZoneDropdownEntry {
   id: string;
@@ -300,9 +315,6 @@ export default function GlobalFilterBar({
   const [unitSearch, setUnitSearch] = useState('');
   const [eventSearch, setEventSearchLocal] = useState('');
   const [zoneSearch, setZoneSearch] = useState('');
-  const [unitTagPage, setUnitTagPage] = useState(0);
-  const [zoneTagPage, setZoneTagPage] = useState(0);
-  const [eventTagPage, setEventTagPage] = useState(0);
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
@@ -323,9 +335,10 @@ export default function GlobalFilterBar({
     if (eventEntries && eventEntries.length > 0) {
       return eventEntries;
     }
-    return EVENT_NAME_OPTIONS.map((title, index) => ({
-      id: `static-event-${index}`,
-      title
+    return EVENT_NAME_OPTIONS.map((name, index) => ({
+      id: `sample-${index}`,
+      name,
+      severity: 'Informativa'
     }));
   }, [eventEntries]);
 
@@ -343,13 +356,13 @@ export default function GlobalFilterBar({
       return eventDropdownEntries;
     }
     return eventDropdownEntries.filter((entry) => {
-      const composite = `${entry.title} ${entry.subtitle ?? ''} ${entry.severity ?? ''}`.toLowerCase();
+      const composite = `${entry.id} ${entry.name} ${entry.severity ?? ''} ${entry.status ?? ''} ${entry.unitName ?? ''}`.toLowerCase();
       return composite.includes(query);
     });
   }, [eventSearch, eventDropdownEntries]);
 
   const filteredEventNames = useMemo(
-    () => filteredEventEntries.map((entry) => entry.title),
+    () => filteredEventEntries.map((entry) => formatEventDisplayName(entry)),
     [filteredEventEntries]
   );
 
@@ -391,18 +404,8 @@ export default function GlobalFilterBar({
     }
   }, [eventListTotalPages, eventsPage, setPage]);
 
-  const unitTagTotalPages = unitTagOptions.length === 0 ? 0 : Math.ceil(unitTagOptions.length / DROPDOWN_PAGE_SIZE);
   const zoneListTotalPages = filteredZoneNames.length === 0 ? 0 : Math.ceil(filteredZoneNames.length / zonesPageSize);
   const clampedZonesPage = zoneListTotalPages === 0 ? 0 : Math.min(zonesPage, zoneListTotalPages - 1);
-  const zoneTagTotalPages = zoneTagOptions.length === 0 ? 0 : Math.ceil(zoneTagOptions.length / DROPDOWN_PAGE_SIZE);
-  const eventTagTotalPages = EVENT_TAGS.length === 0 ? 0 : Math.ceil(EVENT_TAGS.length / DROPDOWN_PAGE_SIZE);
-
-  useEffect(() => {
-    setUnitTagPage((prev) => {
-      const clamped = clampPageIndex(prev, unitTagTotalPages);
-      return clamped === prev ? prev : clamped;
-    });
-  }, [unitTagTotalPages]);
 
   useEffect(() => {
     if (zoneListTotalPages === 0) {
@@ -416,39 +419,16 @@ export default function GlobalFilterBar({
     }
   }, [zoneListTotalPages, zonesPage, setPage]);
 
-  useEffect(() => {
-    setZoneTagPage((prev) => {
-      const clamped = clampPageIndex(prev, zoneTagTotalPages);
-      return clamped === prev ? prev : clamped;
-    });
-  }, [zoneTagTotalPages]);
-
-  useEffect(() => {
-    setEventTagPage((prev) => {
-      const clamped = clampPageIndex(prev, eventTagTotalPages);
-      return clamped === prev ? prev : clamped;
-    });
-  }, [eventTagTotalPages]);
-
   const paginatedUnitNames = useMemo(
     () => paginateArray(filteredUnitNames, clampedUnitsPage, unitsPageSize),
     [filteredUnitNames, clampedUnitsPage, unitsPageSize]
   );
-  const paginatedEventEntries = useMemo(
-    () => paginateArray(filteredEventEntries, clampedEventsPage, eventsPageSize),
-    [filteredEventEntries, clampedEventsPage, eventsPageSize]
-  );
-  const unitTagLastPage = Math.max(0, unitTagTotalPages - 1);
-  const paginatedUnitTags = useMemo(() => paginateArray(unitTagOptions, Math.min(unitTagPage, unitTagLastPage)), [unitTagOptions, unitTagPage, unitTagLastPage]);
+  const eventListEntries = filteredEventEntries;
+  const eventListReadOnly = context === 'evento';
   const paginatedZoneNames = useMemo(
     () => paginateArray(filteredZoneNames, clampedZonesPage, zonesPageSize),
     [filteredZoneNames, clampedZonesPage, zonesPageSize]
   );
-  const zoneTagLastPage = Math.max(0, zoneTagTotalPages - 1);
-  const paginatedZoneTags = useMemo(() => paginateArray(zoneTagOptions, Math.min(zoneTagPage, zoneTagLastPage)), [zoneTagOptions, zoneTagPage, zoneTagLastPage]);
-  const eventTagLastPage = Math.max(0, eventTagTotalPages - 1);
-  const paginatedEventTags = useMemo(() => paginateArray(EVENT_TAGS, Math.min(eventTagPage, eventTagLastPage)), [eventTagPage, eventTagLastPage]);
-
   useEffect(() => {
     setEventSearchLocal(eventsFilters.searchText);
   }, [eventsFilters.searchText]);
@@ -462,33 +442,56 @@ export default function GlobalFilterBar({
   const containerHeight = isBarOpen ? ROW_HEIGHT : COLLAPSED_HEIGHT;
   const contentOpacity = isBarOpen ? 1 : 0;
 
-  const renderCollapsibleSection = ({ title, children, disabled }: { title: string; children: ReactNode; disabled?: boolean; }): ReactNode => {
-    const content = (
-      <Collapse
-        bordered={false}
-        defaultActiveKey={disabled ? [] : ['1']}
-        style={{ background: 'transparent' }}
-        className="global-filter-collapse"
-        items={[
-          {
-            key: '1',
-            label: title,
-            children
-          } as CollapseProps['items'][number]
-        ]}
-      />
-    );
-
-    if (!disabled) {
-      return content;
+const renderCollapsibleSection = ({
+  title,
+  children,
+  disabled,
+  showDivider = false,
+  defaultOpen = false
+}: {
+  title: string;
+  children: ReactNode;
+  disabled?: boolean;
+  showDivider?: boolean;
+  defaultOpen?: boolean;
+}): ReactNode => {
+  const shouldOpen = !disabled && defaultOpen;
+  const collapseItems: CollapseProps['items'] = [
+    {
+      key: '1',
+      label: title,
+      children
     }
+  ];
+  const content = (
+    <Collapse
+      bordered={false}
+      defaultActiveKey={shouldOpen ? ['1'] : []}
+      style={{ background: 'transparent' }}
+      className="global-filter-collapse"
+      items={collapseItems}
+    />
+  );
+  const sectionContent = disabled ? (
+    <Tooltip title="Unavailable in this view">
+      <div style={{ opacity: 0.5, pointerEvents: 'none' }}>{content}</div>
+    </Tooltip>
+  ) : (
+    content
+  );
 
-    return (
-      <Tooltip title="Unavailable in this view">
-        <div style={{ opacity: 0.5, pointerEvents: 'none' }}>{content}</div>
-      </Tooltip>
-    );
-  };
+  return (
+    <div
+      style={{
+        marginTop: showDivider ? 12 : 0,
+        paddingTop: showDivider ? 12 : 0,
+        borderTop: showDivider ? '1px solid rgba(15,23,42,0.08)' : undefined
+      }}
+    >
+      {sectionContent}
+    </div>
+  );
+};
 
   const eventDropdownBadgeCount = (eventsFilters.estado !== 'todos' ? 1 : 0) +
     (eventsFilters.severidades.length !== DEFAULT_EVENT_SEVERITIES.length ? eventsFilters.severidades.length : 0) +
@@ -590,6 +593,8 @@ export default function GlobalFilterBar({
               {renderCollapsibleSection({
                 title: 'Listado de unidades',
                 disabled: false,
+                showDivider: true,
+                defaultOpen: true,
                 children: (
                   <>
                     <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -613,10 +618,11 @@ export default function GlobalFilterBar({
               {renderCollapsibleSection({
                 title: 'Etiquetas de unidad',
                 disabled: false,
+                showDivider: true,
                 children: (
                   <>
                     <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {paginatedUnitTags.map((tag) => {
+                      {unitTagOptions.map((tag) => {
                         const active = unitsFilters.tags.includes(tag);
                         return renderCheckboxOption({
                           label: tag,
@@ -625,11 +631,6 @@ export default function GlobalFilterBar({
                         });
                       })}
                     </div>
-                    <PaginationControls
-                      currentPage={Math.min(unitTagPage, unitTagLastPage)}
-                      totalPages={unitTagTotalPages}
-                      onPageChange={(page) => setUnitTagPage(clampPageIndex(page, unitTagTotalPages))}
-                    />
                   </>
                 )
               })}
@@ -692,66 +693,139 @@ export default function GlobalFilterBar({
                 placeholder="Buscar evento"
                 value={eventSearch}
                 onChange={handleEventSearchChange}
-                optionsPreview={filteredEventNames.slice(0, 4)}
               />
 
-              {context === 'evento' && eventDropdownEntries.length > 0 && renderCollapsibleSection({
+              {eventListEntries.length > 0 && renderCollapsibleSection({
                 title: 'Listado de eventos',
                 disabled: false,
+                showDivider: true,
+                defaultOpen: true,
                 children: (
-                  <>
-                    <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {paginatedEventEntries.map((event) => {
-                        const isSelected = selectedEventId === event.id;
-                        return (
-                          <button
-                            key={event.id}
-                            type="button"
-                            disabled={!onEventSelect}
-                            onClick={() => onEventSelect?.(event.id)}
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              gap: '4px',
-                              padding: '10px 12px',
-                              borderRadius: '12px',
-                              border: isSelected ? '2px solid #1867ff' : '1px solid #e2e8f0',
-                              backgroundColor: isSelected ? '#f1f5ff' : '#ffffff',
-                              cursor: onEventSelect ? 'pointer' : 'default',
-                              opacity: onEventSelect ? 1 : 0.75,
-                              textAlign: 'left',
-                              transition: 'border 0.15s ease, background-color 0.15s ease'
-                            }}
-                          >
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                              {event.title}
-                            </span>
-                            {event.subtitle && (
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>{event.subtitle}</span>
-                            )}
-                            {(event.severity || event.timestamp) && (
-                              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: '#64748b' }}>
-                                {event.severity && <span style={{ fontWeight: 600 }}>{event.severity}</span>}
-                                {event.timestamp && <span>{event.timestamp}</span>}
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <PaginationControls
-                      currentPage={clampedEventsPage}
-                      totalPages={eventListTotalPages}
-                      onPageChange={(page) => setPage('events', clampPageIndex(page, eventListTotalPages))}
-                    />
-                  </>
+                  (() => {
+                    const renderEventItems = () => (
+                      <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {eventListEntries.map((event) => {
+                          const severity = event.severity ?? 'Informativa';
+                          const severityColors = getSeverityColor(severity);
+                          const displayName = formatEventDisplayName(event);
+                          const isSelected = selectedEventId === event.id;
+                          const isInteractive = !!onEventSelect && !eventListReadOnly;
+
+                          return (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={() => {
+                                if (isInteractive) {
+                                  onEventSelect?.(event.id);
+                                }
+                              }}
+                              disabled={!isInteractive}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '10px 12px',
+                                borderRadius: '12px',
+                                border: isSelected ? '2px solid #1867ff' : '1px solid #e2e8f0',
+                                backgroundColor: isSelected ? '#f1f5ff' : '#ffffff',
+                                cursor: isInteractive ? 'pointer' : 'default',
+                                opacity: isInteractive ? 1 : 0.7,
+                                transition: 'border 0.15s ease, background-color 0.15s ease'
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  borderRadius: 4,
+                                  border: '1px solid #cbd5e1',
+                                  backgroundColor: isSelected ? '#1867ff' : '#ffffff',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  transition: 'background-color 0.15s ease'
+                                }}
+                              >
+                                {isSelected && (
+                                  <svg width={10} height={10} viewBox="0 0 20 20" fill="#ffffff">
+                                    <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  backgroundColor: severityColors.bg,
+                                  flexShrink: 0
+                                }}
+                              >
+                                <svg width={12} height={12} viewBox="0 0 256 256" fill={severityColors.text}>
+                                  <path d={getEventIconPath(severity)} />
+                                </svg>
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  color: '#0f172a',
+                                  flex: 1,
+                                  minWidth: 0,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                              >
+                                {displayName}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+
+                    if (eventListReadOnly) {
+                      return (
+                        <Tooltip title="This list is unavailable in the current view.">
+                          <div style={{ pointerEvents: 'none', opacity: 0.6 }}>
+                            {renderEventItems()}
+                            <PaginationControls
+                              currentPage={clampedEventsPage}
+                              totalPages={eventListTotalPages}
+                              onPageChange={() => {}}
+                              disabled
+                            />
+                          </div>
+                        </Tooltip>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {renderEventItems()}
+                        <PaginationControls
+                          currentPage={clampedEventsPage}
+                          totalPages={eventListTotalPages}
+                          onPageChange={(page) => setPage('events', clampPageIndex(page, eventListTotalPages))}
+                        />
+                      </>
+                    );
+                  })()
                 )
               })}
 
               {renderCollapsibleSection({
                 title: 'Estado',
                 disabled: isEventElementOverride,
+                showDivider: true,
                 children: (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {(['todos', 'abiertos', 'cerrados'] as const).map((estado) => {
@@ -780,6 +854,7 @@ export default function GlobalFilterBar({
               {renderCollapsibleSection({
                 title: 'Severidad',
                 disabled: isEventElementOverride,
+                showDivider: true,
                 children: (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {DEFAULT_EVENT_SEVERITIES.map((severity) => {
@@ -798,10 +873,11 @@ export default function GlobalFilterBar({
               {renderCollapsibleSection({
                 title: 'Etiquetas',
                 disabled: isEventElementOverride,
+                showDivider: true,
                 children: (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
-                      {paginatedEventTags.map((tag) => {
+                      {EVENT_TAGS.map((tag) => {
                         const isActive = eventsFilters.etiquetas.includes(tag);
                         return renderCheckboxOption({
                           label: tag,
@@ -811,12 +887,6 @@ export default function GlobalFilterBar({
                         });
                       })}
                     </div>
-                    <PaginationControls
-                      currentPage={Math.min(eventTagPage, eventTagLastPage)}
-                      totalPages={eventTagTotalPages}
-                      onPageChange={(page) => setEventTagPage(clampPageIndex(page, eventTagTotalPages))}
-                      disabled={isEventElementOverride}
-                    />
                   </>
                 )
               })}
@@ -840,6 +910,8 @@ export default function GlobalFilterBar({
               {renderCollapsibleSection({
                 title: 'Listado de zonas',
                 disabled: false,
+                showDivider: true,
+                defaultOpen: true,
                 children: (
                   <>
                     <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -871,10 +943,11 @@ export default function GlobalFilterBar({
               {renderCollapsibleSection({
                 title: 'Etiquetas de zona',
                 disabled: false,
+                showDivider: true,
                 children: (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
-                      {paginatedZoneTags.map((tag) => {
+                      {zoneTagOptions.map((tag) => {
                         const active = unitsFilters.zoneTags.includes(tag);
                         return renderCheckboxOption({
                           label: tag,
@@ -883,11 +956,6 @@ export default function GlobalFilterBar({
                         });
                       })}
                     </div>
-                    <PaginationControls
-                      currentPage={Math.min(zoneTagPage, zoneTagLastPage)}
-                      totalPages={zoneTagTotalPages}
-                      onPageChange={(page) => setZoneTagPage(clampPageIndex(page, zoneTagTotalPages))}
-                    />
                   </>
                 )
               })}
@@ -1032,10 +1100,9 @@ interface DropdownSearchInputProps {
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
-  optionsPreview?: string[];
 }
 
-function DropdownSearchInput({ placeholder, value, onChange, optionsPreview }: DropdownSearchInputProps) {
+function DropdownSearchInput({ placeholder, value, onChange }: DropdownSearchInputProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div
@@ -1077,11 +1144,6 @@ function DropdownSearchInput({ placeholder, value, onChange, optionsPreview }: D
           </button>
         )}
       </div>
-      {optionsPreview && optionsPreview.length > 0 && (
-        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-          Ej: {optionsPreview.join(', ')}
-        </div>
-      )}
     </div>
   );
 }

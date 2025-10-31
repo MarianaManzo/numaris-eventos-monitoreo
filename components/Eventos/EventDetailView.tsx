@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Layout, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
@@ -14,6 +14,7 @@ import { useRouteStore } from '@/lib/stores/routeStore';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
+import { generateVehicleName } from '@/lib/events/addressGenerator';
 import {
   useFilterStore,
   DEFAULT_EVENT_SEVERITIES,
@@ -94,6 +95,27 @@ export default function EventDetailView({
         { id: 'vehicle' as const, label: 'Unidad del evento', checked: visualizationSettings.vehicle, disabled: !vehicleId }
       ]
     : undefined;
+
+  const detailEventEntries = useMemo(() => {
+    if (!event) {
+      return [];
+    }
+    const formattedTimestamp = dayjs(event.fechaCreacion).format('YYYY-MM-DD HH:mm');
+    const status = (event.status as 'abierto' | 'en_progreso' | 'cerrado' | undefined) ?? getOperationalStatusFromId(event.id) ?? 'abierto';
+    const unitName = vehicleId ? generateVehicleName(vehicleId) : event.responsable;
+
+    return [
+      {
+        id: event.id,
+        name: event.evento,
+        severity: event.severidad,
+        status,
+        unitName,
+        vehicleId: vehicleId ?? undefined,
+        timestamp: formattedTimestamp
+      }
+    ];
+  }, [event, vehicleId]);
 
   const monitoringFiltersApplied =
     eventsFiltersState.estado !== 'todos' ||
@@ -302,7 +324,13 @@ export default function EventDetailView({
             flexDirection: 'column'
           }}
         >
-          <GlobalFilterBar context="evento" eventElementOptions={eventElementOptionsData} onEventElementToggle={handleVisualizationToggle} />
+          <GlobalFilterBar
+            context="evento"
+            eventElementOptions={eventElementOptionsData}
+            onEventElementToggle={handleVisualizationToggle}
+            eventEntries={detailEventEntries}
+            selectedEventId={event?.id ?? null}
+          />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
               width={sidebarWidth}
@@ -374,7 +402,13 @@ export default function EventDetailView({
             flexDirection: 'column'
           }}
         >
-          <GlobalFilterBar context="evento" eventElementOptions={eventElementOptionsData} onEventElementToggle={handleVisualizationToggle} />
+          <GlobalFilterBar
+            context="evento"
+            eventElementOptions={eventElementOptionsData}
+            onEventElementToggle={handleVisualizationToggle}
+            eventEntries={detailEventEntries}
+            selectedEventId={event?.id ?? null}
+          />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
               width={sidebarWidth}
