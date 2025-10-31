@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
-import { Button, Typography, Popover, Input, Select, Switch } from 'antd';
+import { Button, Typography, Input, Switch } from 'antd';
 import type { IconProps } from 'phosphor-react';
 import {
-  Funnel,
   MagnifyingGlass,
   Buildings,
   House,
@@ -18,7 +17,7 @@ import {
   WarningOctagon,
   FirstAid
 } from 'phosphor-react';
-import { generateGuadalajaraZonas, getUniqueTags, filterZonas } from '@/lib/zonas/generateZonas';
+import { generateGuadalajaraZonas, filterZonas } from '@/lib/zonas/generateZonas';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
@@ -54,7 +53,6 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
   // Global map store for context layer visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap } = useGlobalMapStore();
 
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -62,18 +60,16 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
   const {
     zonas,
     selectedZonaId,
-    filteredTags,
     searchQuery,
     setZonas,
     toggleZona,
     selectZona,
-    setFilteredTags,
     setSearchQuery,
     selectAllZonas,
     deselectAllZonas,
     getVisibleZonas
   } = useZonaStore();
-  const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+  const zoneTagFilters = useFilterStore((state) => state.units.zoneTags);
 
   // Generate zonas once on mount
   useEffect(() => {
@@ -83,21 +79,12 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
     }
   }, []); 
 
-  // Get available tags
-  const availableTags = useMemo(() => {
-    return getUniqueTags(zonas);
-  }, [zonas]);
-
   // Filter zonas based on search and tags
   const filteredZonasWithRelations = useMemo(() => {
-    const filtered = filterZonas(zonas, searchQuery, filteredTags);
+    const filtered = filterZonas(zonas, searchQuery, zoneTagFilters);
     const filteredIds = new Set(filtered.map(z => z.id));
     return zonasWithRelations.filter(z => filteredIds.has(z.id));
-  }, [zonasWithRelations, searchQuery, filteredTags, zonas]);
-
-  useEffect(() => {
-    setUnitsFilters({ zoneTags: filteredTags });
-  }, [filteredTags, setUnitsFilters]);
+  }, [zonasWithRelations, searchQuery, zoneTagFilters, zonas]);
 
   const visibleZonas = getVisibleZonas();
   const visibleCount = visibleZonas.length;
@@ -130,56 +117,6 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
   const handleZonaClick = (zonaId: string) => {
     selectZona(selectedZonaId === zonaId ? null : zonaId);
   };
-
-  // Define filter content for Popover
-  const filterContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '4px' }}>
-      {/* Tags Filter */}
-      <div>
-        <div style={{ marginBottom: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-            <path d="M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63Zm-96,96L48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z"/>
-          </svg>
-          Etiquetas
-          <span style={{ marginLeft: 'auto', fontSize: '14px', fontWeight: 600, color: '#3b82f6' }}>
-            {filteredTags.length}
-          </span>
-        </div>
-        <Select
-          mode="multiple"
-          placeholder="Seleccionar etiquetas"
-          value={filteredTags}
-          onChange={setFilteredTags}
-          style={{ width: '100%' }}
-          options={availableTags.map(tag => ({ label: tag, value: tag }))}
-          maxTagCount="responsive"
-        />
-      </div>
-
-      {/* Clear Button */}
-      <div style={{ paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-        <Button
-          block
-          onClick={() => {
-            setFilteredTags([]);
-            setSearchQuery('');
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-          Limpiar
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -241,25 +178,6 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
               }}
             />
           )}
-          <Popover
-            content={filterContent}
-            title="Filtros"
-            trigger="click"
-            open={isFiltersOpen}
-            onOpenChange={setIsFiltersOpen}
-            placement="bottomLeft"
-            overlayStyle={{ width: 400 }}
-          >
-            <Button
-              icon={<Funnel size={16} />}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            />
-          </Popover>
         </div>
       </div>
 

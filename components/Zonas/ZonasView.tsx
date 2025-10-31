@@ -10,7 +10,7 @@ import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { isPointInZona, calculateCentroid } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
-import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 
 const { Content, Sider } = Layout;
 
@@ -186,45 +186,53 @@ export default function ZonasView() {
           </div>
 
           {/* Main Layout with Sidebar and Content */}
-          <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
-            <Sider
-              width={sidebarWidth}
-              style={{
-                position: 'relative',
-                background: '#fff',
-                borderRight: '1px solid #f0f0f0',
-                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-                height: '100%',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Skeleton Loading for Sidebar */}
-              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
-                <Skeleton.Input active style={{ width: '100%', height: 32 }} />
-              </div>
-
-              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <Skeleton.Input active style={{ width: 120, height: 20 }} />
-                <div style={{ marginLeft: 'auto', width: '30px' }}>
-                  <Skeleton.Button active style={{ width: 30, height: 22 }} />
+          <Layout
+            style={{
+              marginLeft: menuCollapsed ? '48px' : '240px',
+              transition: 'margin-left 0.3s ease',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <GlobalFilterBar context="zona" />
+            <Layout style={{ flex: 1, display: 'flex' }}>
+              <Sider
+                width={sidebarWidth}
+                style={{
+                  position: 'relative',
+                  background: '#fff',
+                  borderRight: '1px solid #f0f0f0',
+                  boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                  height: '100%',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Skeleton Loading for Sidebar */}
+                <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Skeleton.Input active style={{ width: '100%', height: 32 }} />
                 </div>
-              </div>
 
-              <div style={{ padding: '16px 24px' }}>
-                <Skeleton active paragraph={{ rows: 8 }} />
-              </div>
-            </Sider>
+                <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Skeleton.Input active style={{ width: 120, height: 20 }} />
+                  <div style={{ marginLeft: 'auto', width: '30px' }}>
+                    <Skeleton.Button active style={{ width: 30, height: 22 }} />
+                  </div>
+                </div>
 
-            <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
-              <div className="floating-filters-overlay">
-                <FloatingFilterControls />
-              </div>
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
-                  <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
-                </Skeleton.Node>
-              </div>
-            </Content>
+                <div style={{ padding: '16px 24px' }}>
+                  <Skeleton active paragraph={{ rows: 8 }} />
+                </div>
+              </Sider>
+
+              <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
+                    <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
+                  </Skeleton.Node>
+                </div>
+              </Content>
+            </Layout>
           </Layout>
         </Layout>
       </Layout>
@@ -255,50 +263,58 @@ export default function ZonasView() {
         </div>
 
         {/* Main Layout with Sidebar and Content */}
-        <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
-          <Sider
-            width={sidebarWidth}
-            style={{
-              position: 'relative',
-              background: '#fff',
-              borderRight: '1px solid #f0f0f0',
-              boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-              height: '100%',
-              overflow: 'hidden'
-            }}
-          >
-            <ZonasSidebar zonasWithRelations={zonasWithRelations} />
-            <div
-              onMouseDown={handleSidebarResize}
+        <Layout
+          style={{
+            marginLeft: menuCollapsed ? '48px' : '240px',
+            transition: 'margin-left 0.3s ease',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <GlobalFilterBar context="zona" />
+          <Layout style={{ flex: 1, display: 'flex' }}>
+            <Sider
+              width={sidebarWidth}
               style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '8px',
-                cursor: 'col-resize',
-                backgroundColor: 'transparent',
-                zIndex: 1000
+                position: 'relative',
+                background: '#fff',
+                borderRight: '1px solid #f0f0f0',
+                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                height: '100%',
+                overflow: 'hidden'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            />
-          </Sider>
+            >
+              <ZonasSidebar zonasWithRelations={zonasWithRelations} />
+              <div
+                onMouseDown={handleSidebarResize}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '8px',
+                  cursor: 'col-resize',
+                  backgroundColor: 'transparent',
+                  zIndex: 1000
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              />
+            </Sider>
 
-          <Content className="relative" style={{ flex: 1, height: '100%' }}>
-            <div className="floating-filters-overlay">
-              <FloatingFilterControls />
-            </div>
-            <ZonasMapView
-              zonas={zonas}
-              selectedZonaId={selectedZonaId}
-              onZonaSelect={handleZonaSelect}
-              vehicleMarkers={vehicleMarkers}
-              eventMarkers={eventMarkers}
-              showVehicleMarkers={true}
-              showEventMarkers={true}
-            />
-          </Content>
+            <Content className="relative" style={{ flex: 1, height: '100%' }}>
+              <ZonasMapView
+                zonas={zonas}
+                selectedZonaId={selectedZonaId}
+                onZonaSelect={handleZonaSelect}
+                vehicleMarkers={vehicleMarkers}
+                eventMarkers={eventMarkers}
+                showVehicleMarkers={true}
+                showEventMarkers={true}
+              />
+            </Content>
+          </Layout>
         </Layout>
       </Layout>
     </Layout>

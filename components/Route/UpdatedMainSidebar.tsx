@@ -1,21 +1,21 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Button, Typography, Dropdown, Space, Checkbox, Skeleton, Input, Popover, Select, Radio, Badge } from 'antd';
+import { Button, Typography, Dropdown, Space, Checkbox, Skeleton, Input, Popover, Radio } from 'antd';
 import { LeftOutlined, EllipsisOutlined, CalendarOutlined, EyeOutlined } from '@ant-design/icons';
-import { MapPin, Circle, Gauge, Thermometer, ArrowsLeftRight, Truck, Snowflake, Plug, WifiHigh, MagnifyingGlass, Funnel, SortAscending } from 'phosphor-react';
+import { MapPin, Circle, Gauge, Thermometer, ArrowsLeftRight, Truck, Snowflake, Plug, WifiHigh, MagnifyingGlass, SortAscending } from 'phosphor-react';
 import { RouteData } from '@/types/route';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import dayjs from 'dayjs';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
-import type { EventWithLocation, EventSeverity } from '@/lib/events/types';
+import type { EventWithLocation } from '@/lib/events/types';
 import type { EventLocation } from '@/lib/events/generateEvent';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
 import { getSeverityColor } from '@/lib/events/eventStyles';
 import { getOperationalStatusFromId, type OperationalStatus } from '@/lib/events/eventStatus';
-import EventFilterModalContent from '@/components/Events/EventFilterModal';
+import { useFilterStore } from '@/lib/stores/filterStore';
 
 const { Text, Title } = Typography;
 
@@ -386,14 +386,12 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
   const [columnWidths] = useState({ evento: 250, fecha: 200, severidad: 150 });
 
   // Search/Filter/Sort state for Eventos tab
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
-  const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
-  const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('abiertos');
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'vehicle-asc' | 'event-asc'>('date-desc');
+  const eventsFilters = useFilterStore((state) => state.events);
+  const { etiquetas: selectedEtiquetas, severidades: selectedSeveridades, estado: selectedEstado } = eventsFilters;
 
   // Handle tab change with loading state
   const handleTabChange = (tab: string) => {
@@ -420,23 +418,6 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
   // Generate events once per vehicle (regenerate when unidadId changes)
   const events = useMemo(() => generateRandomEvents(), [unidadId]);
 
-  // Get unique tags from events for filter dropdowns
-  const availableEtiquetas = useMemo(() => {
-    const unique = Array.from(new Set(events.map(e => e.etiqueta).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [events]);
-
-  // Calculate active filter count
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedEtiquetas.length > 0) count++;
-    // Count severidad filter only if it's not the default (all 4 selected)
-    if (selectedSeveridades.length !== 4) count++;
-    // Count estado filter only if it's not the default ('abiertos')
-    if (selectedEstado !== 'abiertos') count++;
-    return count;
-  }, [selectedEtiquetas, selectedSeveridades, selectedEstado]);
-
   // Apply filters and sorting to events
   const filteredAndSortedEvents = useMemo(() => {
     let filtered = events;
@@ -462,17 +443,16 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
       );
     }
 
-    // Filter by estado (operational status) - Binary toggle
-    filtered = filtered.filter(e => {
-      const operationalStatus = getOperationalStatusFromId(e.id);
-      if (selectedEstado === 'abiertos') {
-        // Abiertos includes both 'abierto' and 'en_progreso'
-        return operationalStatus === 'abierto' || operationalStatus === 'en_progreso';
-      } else {
-        // Cerrados only includes 'cerrado'
+    // Filter by estado (operational status)
+    if (selectedEstado !== 'todos') {
+      filtered = filtered.filter(e => {
+        const operationalStatus = getOperationalStatusFromId(e.id);
+        if (selectedEstado === 'abiertos') {
+          return operationalStatus === 'abierto' || operationalStatus === 'en_progreso';
+        }
         return operationalStatus === 'cerrado';
-      }
-    });
+      });
+    }
 
     // Apply sorting
     const severityOrder = { 'Alta': 0, 'Media': 1, 'Baja': 2, 'Informativa': 3 };
@@ -1066,37 +1046,6 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
                       onClick={() => setIsSearchExpanded(true)}
                     />
                   )}
-
-                  {/* Filter button with badge */}
-                  <Popover
-                    content={
-                      <EventFilterModalContent
-                        selectedEstado={selectedEstado}
-                        onEstadoChange={setSelectedEstado}
-                        selectedSeveridades={selectedSeveridades}
-                        onSeveridadesChange={setSelectedSeveridades}
-                        selectedEtiquetas={selectedEtiquetas}
-                        onEtiquetasChange={setSelectedEtiquetas}
-                        availableEtiquetas={availableEtiquetas}
-                        showUnidadesFilter={false}
-                      />
-                    }
-                    title="Filtros"
-                    trigger="click"
-                    open={isFiltersOpen}
-                    onOpenChange={setIsFiltersOpen}
-                    placement="rightTop"
-                  >
-                    <Badge count={activeFilterCount} offset={[-4, 4]}>
-                      <Button
-                        icon={<Funnel size={16} />}
-                        style={{
-                          border: isFiltersOpen ? '2px solid #1867ff' : undefined,
-                          boxShadow: isFiltersOpen ? '0 0 0 2px rgba(24, 103, 255, 0.1)' : undefined
-                        }}
-                      />
-                    </Badge>
-                  </Popover>
 
                   {/* Sort button */}
                   <Popover

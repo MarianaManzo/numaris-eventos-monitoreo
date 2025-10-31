@@ -200,7 +200,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
 
   const showStartMarker = visualizationSettings.start && showEventsOnMap;
   const showEndMarker = visualizationSettings.end && showEventsOnMap;
-  const showVehicleLayerMarker = visualizationSettings.vehicle && showVehiclesOnMap && isVehicleAllowedByFilter;
+  const showVehicleLayerMarker = visualizationSettings.vehicle && showVehiclesOnMap;
   const showRouteLine = visualizationSettings.route;
 
   // Generate locations from event ID for consistency (geofence or address)

@@ -12,7 +12,7 @@ import type { EventContext } from '@/lib/events/types';
 import type { EventLocation } from '@/lib/events/generateEvent';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
-import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import {
   useFilterStore,
@@ -309,8 +309,18 @@ const handleBack = () => {
             />
           </div>
 
-          {/* Main Layout with Sidebar and Content */}
-          <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
+        {/* Main Layout with Sidebar and Content */}
+        <Layout
+          style={{
+            marginLeft: menuCollapsed ? '48px' : '240px',
+            transition: 'margin-left 0.3s ease',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <GlobalFilterBar context="evento" />
+          <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
               width={sidebarWidth}
               style={{
@@ -334,13 +344,6 @@ const handleBack = () => {
             </Sider>
 
             <Content className="relative" style={{ flex: 1, height: '100%', backgroundColor: '#f5f5f5' }}>
-              <div className="floating-filters-overlay">
-                <FloatingFilterControls
-                  showEventsDropdown={false}
-                  showUnitTag={false}
-                  forceShowZones
-                />
-              </div>
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Skeleton.Node active style={{ width: '80%', height: '80%' }}>
                   <div style={{ width: '100%', height: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }} />
@@ -348,6 +351,7 @@ const handleBack = () => {
               </div>
             </Content>
           </Layout>
+        </Layout>
         </Layout>
       </Layout>
     );
@@ -377,18 +381,28 @@ const handleBack = () => {
         </div>
 
         {/* Main Layout with Sidebar and Content */}
-        <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
-          <Sider
-            width={sidebarWidth}
-            style={{
-              position: 'relative',
-              background: '#fff',
-              borderRight: '1px solid #f0f0f0',
-              boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-              height: '100%',
-              overflow: 'hidden'
-            }}
-          >
+        <Layout
+          style={{
+            marginLeft: menuCollapsed ? '48px' : '240px',
+            transition: 'margin-left 0.3s ease',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <GlobalFilterBar context="evento" />
+          <Layout style={{ flex: 1, display: 'flex' }}>
+            <Sider
+              width={sidebarWidth}
+              style={{
+                position: 'relative',
+                background: '#fff',
+                borderRight: '1px solid #f0f0f0',
+                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                height: '100%',
+                overflow: 'hidden'
+              }}
+            >
             {/* Back Button */}
             <div style={{
               padding: '16px',
@@ -454,23 +468,15 @@ const handleBack = () => {
             />
           </Sider>
 
-          <Content className="relative" style={{ flex: 1, height: '100%' }}>
-            <div className="floating-filters-overlay">
-              <FloatingFilterControls
-                showUnitTag={false}
-                showEventsDropdown={false}
-                visualizationOptions={visualizationOptions}
-                onToggleVisualizationOption={handleVisualizationToggle}
-                forceShowZones
+            <Content className="relative" style={{ flex: 1, height: '100%' }}>
+              <EventDetailMapView
+                event={event}
+                vehicleId={vehicleId}
+                viewDate={viewDate}
+                visualization={visualizationSettings}
               />
-            </div>
-            <EventDetailMapView
-              event={event}
-              vehicleId={vehicleId}
-              viewDate={viewDate}
-              visualization={visualizationSettings}
-            />
-          </Content>
+            </Content>
+          </Layout>
         </Layout>
       </Layout>
     </Layout>

@@ -10,7 +10,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateEventsForMap } from './generateEventsForUnidades';
-import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 
 const { Content, Sider } = Layout;
 
@@ -218,70 +218,78 @@ export default function UnidadesView() {
           </div>
 
         {/* Main Layout with Sidebar and Content */}
-          <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
-          <Sider
-            width={sidebarWidth}
+          <Layout
             style={{
-              position: 'relative',
-              background: '#fff',
-              borderRight: '1px solid #f0f0f0',
-              boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+              marginLeft: menuCollapsed ? '48px' : '240px',
+              transition: 'margin-left 0.3s ease',
               height: '100%',
-              overflow: 'hidden'
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
-            <UnidadesSidebar
-              unidades={unidades}
-              filteredUnidades={filteredUnidades}
-              onUnidadesGenerated={handleUnidadesGenerated}
-              onUnidadSelect={handleUnidadSelect}
-              onFiltersChange={handleFiltersChange}
-              selectedUnidadId={selectedUnidadId}
-            />
-            <div
-              onMouseDown={handleSidebarResize}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '8px',
-                cursor: 'col-resize',
-                backgroundColor: 'transparent',
-                zIndex: 1000
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            />
-          </Sider>
+            <GlobalFilterBar context="monitoreo" />
+            <Layout style={{ flex: 1, display: 'flex' }}>
+              <Sider
+                width={sidebarWidth}
+                style={{
+                  position: 'relative',
+                  background: '#fff',
+                  borderRight: '1px solid #f0f0f0',
+                  boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                  height: '100%',
+                  overflow: 'hidden'
+                }}
+              >
+                <UnidadesSidebar
+                  unidades={unidades}
+                  filteredUnidades={filteredUnidades}
+                  onUnidadesGenerated={handleUnidadesGenerated}
+                  onUnidadSelect={handleUnidadSelect}
+                  onFiltersChange={handleFiltersChange}
+                  selectedUnidadId={selectedUnidadId}
+                />
+                <div
+                  onMouseDown={handleSidebarResize}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: '8px',
+                    cursor: 'col-resize',
+                    backgroundColor: 'transparent',
+                    zIndex: 1000
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                />
+              </Sider>
 
-          <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
-            <div className="floating-filters-overlay">
-              <FloatingFilterControls />
-            </div>
-            <UnidadesMapView
-              unidadMarkers={showVehiclesOnMap ? filteredUnidades.map(u => ({
-                id: u.id,
-                position: u.position,
-                nombre: u.nombre,
-                estado: u.estado,
-                etiqueta: u.etiqueta,
-                responsable: u.responsable
-              })) : []}
-              selectedUnidadId={selectedUnidadId}
-              selectedUnidadPosition={selectedUnidadPosition || undefined}
-              onUnidadSelect={handleUnidadSelect}
-              showVehicleMarkers={showVehiclesOnMap}
-              eventMarkers={eventMarkers}
-              zonas={zonas}
-              showZonasOnMap={showZonasOnMap}
-              onToggleZonasVisibility={setShowZonasOnMap}
-              showEventMarkers={showEventsOnMap}
-              onToggleEventsVisibility={setShowEventsOnMap}
-              showVehiclesOnMap={showVehiclesOnMap}
-              onToggleVehiclesVisibility={setShowVehiclesOnMap}
-            />
-          </Content>
+              <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
+                <UnidadesMapView
+                  unidadMarkers={showVehiclesOnMap ? filteredUnidades.map(u => ({
+                    id: u.id,
+                    position: u.position,
+                    nombre: u.nombre,
+                    estado: u.estado,
+                    etiqueta: u.etiqueta,
+                    responsable: u.responsable
+                  })) : []}
+                  selectedUnidadId={selectedUnidadId}
+                  selectedUnidadPosition={selectedUnidadPosition || undefined}
+                  onUnidadSelect={handleUnidadSelect}
+                  showVehicleMarkers={showVehiclesOnMap}
+                  eventMarkers={eventMarkers}
+                  zonas={zonas}
+                  showZonasOnMap={showZonasOnMap}
+                  onToggleZonasVisibility={setShowZonasOnMap}
+                  showEventMarkers={showEventsOnMap}
+                  onToggleEventsVisibility={setShowEventsOnMap}
+                  showVehiclesOnMap={showVehiclesOnMap}
+                  onToggleVehiclesVisibility={setShowVehiclesOnMap}
+                />
+              </Content>
+            </Layout>
           </Layout>
         </Layout>
       </div>

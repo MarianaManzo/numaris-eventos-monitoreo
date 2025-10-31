@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
+import { useFilterStore } from '@/lib/stores/filterStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 interface MenuItem {
   key: string;
@@ -27,6 +28,10 @@ export default function CollapsibleMenu({
 }: CollapsibleMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const appliedFilters = useFilterStore((state) => state.appliedFilters);
+  const removableFilterCount = appliedFilters.filter((filter) => filter.removable !== false).length;
+  const isBarOpen = useFilterUiStore((state) => state.isBarOpen);
+  const toggleBar = useFilterUiStore((state) => state.toggleBar);
 
   const menuItems: MenuItem[] = [
     {
@@ -96,10 +101,88 @@ export default function CollapsibleMenu({
         borderRight: '1px solid #d9d9d9',
       }}
     >
+      {/* Global Filters Trigger */}
+      <div
+        style={{
+          padding: isCollapsed ? '16px 0 12px 0' : '16px 16px 12px 16px',
+          display: 'flex',
+          justifyContent: isCollapsed ? 'center' : 'flex-start'
+        }}
+      >
+        <button
+          onClick={toggleBar}
+          className="transition-all"
+          style={{
+            width: isCollapsed ? '40px' : '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'space-between',
+            gap: isCollapsed ? 0 : '12px',
+            padding: isCollapsed ? '10px' : '10px 14px',
+            borderRadius: isCollapsed ? '12px' : '10px',
+            border: '1px solid rgba(24,103,255,0.18)',
+            backgroundColor: isBarOpen ? 'rgba(24,103,255,0.08)' : '#ffffff',
+            color: '#0f172a',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 600,
+            position: 'relative'
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '20px',
+              height: '20px',
+              color: '#1867ff'
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M240,56a8,8,0,0,0-8-8H24a8,8,0,0,0-5.66,13.66L112,155.31V216a8,8,0,0,0,11.37,7.16l32-16A8,8,0,0,0,160,200V155.31L245.66,61.66A8,8,0,0,0,240,56Z" />
+            </svg>
+          </span>
+          {!isCollapsed && (
+            <span style={{ flex: 1, textAlign: 'left' }}>
+              Filtros
+            </span>
+          )}
+          {removableFilterCount > 0 && (
+            <span
+              style={{
+                minWidth: '20px',
+                height: '20px',
+                padding: '0 6px',
+                borderRadius: '999px',
+                backgroundColor: '#1867ff',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {removableFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div
+        style={{
+          width: '100%',
+          height: '1px',
+          backgroundColor: 'rgba(15,23,42,0.08)',
+          margin: isCollapsed ? '0 0 12px 0' : '0 12px 12px 12px'
+        }}
+      />
+
       {/* Toggle Button */}
       <div
         style={{
-          padding: isCollapsed ? '16px 0' : '16px',
+          padding: isCollapsed ? '0 0 12px 0' : '0 16px 12px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: isCollapsed ? 'center' : 'flex-start',

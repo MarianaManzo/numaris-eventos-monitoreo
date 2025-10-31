@@ -2,7 +2,26 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { Crosshair, FunnelSimple, Check } from 'phosphor-react';
+import { Crosshair, FunnelSimple, Check, CaretDown, CaretUp } from 'phosphor-react';
+
+type ViewId = 'monitoreo' | 'unidad' | 'evento' | 'zona';
+
+const viewOptions: Array<{ id: ViewId; label: string }> = [
+  { id: 'monitoreo', label: 'Monitoreo' },
+  { id: 'unidad', label: 'Detalle de unidad' },
+  { id: 'evento', label: 'Detalle de evento' },
+  { id: 'zona', label: 'Detalle de zona' }
+];
+
+const filterDefinitions: Array<{
+  id: string;
+  label: string;
+  appliesTo: ViewId[];
+}> = [
+  { id: 'status', label: 'Vehiculos activos', appliesTo: ['monitoreo', 'unidad', 'evento', 'zona'] },
+  { id: 'alerts', label: 'Alertas criticas', appliesTo: ['monitoreo', 'evento'] },
+  { id: 'zone', label: 'Zona Norte', appliesTo: ['monitoreo'] }
+];
 
 export default function MockupFocusModeClient() {
   const params = useSearchParams();
@@ -10,15 +29,54 @@ export default function MockupFocusModeClient() {
 
   const [isFocusActive, setIsFocusActive] = useState(preset === 'on');
   const [showToast, setShowToast] = useState(false);
+  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewId>('monitoreo');
+  const [activeFilterIds, setActiveFilterIds] = useState<string[]>(['status', 'alerts', 'zone']);
   const [selectedContext, setSelectedContext] = useState<'eventos' | 'geofence' | 'route'>('eventos');
 
   const focusedCount = 45;
   const totalCount = 150;
 
+  const panelWidth = 320;
+  const filterButtonOffset = 12;
+  const activeFilterCount = activeFilterIds.length;
+  const filterButtonLabel = activeFilterCount > 0 ? `Filtros (${activeFilterCount})` : 'Filtros';
+
+  const filterPills = filterDefinitions.map((filter) => {
+    const disabled = !filter.appliesTo.includes(currentView);
+    const active = activeFilterIds.includes(filter.id);
+    return { ...filter, disabled, active };
+  });
+
+  const panelItems = [
+    { id: 'unit-102', title: 'Unidad 102', detail: 'Alerta: geocerca norte', meta: 'hace 2 min' },
+    { id: 'unit-086', title: 'Unidad 086', detail: 'Sin asignar - Zona centro', meta: 'hace 5 min' },
+    { id: 'unit-211', title: 'Unidad 211', detail: 'Mantenimiento programado', meta: 'hace 12 min' }
+  ];
+
   const contextLabels = {
     eventos: 'Event Vehicles',
     geofence: 'Vehicles in Zone A',
     route: 'Route Vehicles'
+  };
+
+  const handleToggleFiltersButton = () => {
+    setIsFilterBarOpen((prev) => !prev);
+  };
+
+  const toggleFilter = (filterId: string) => {
+    setActiveFilterIds((prev) =>
+      prev.includes(filterId) ? prev.filter((id) => id !== filterId) : [...prev, filterId]
+    );
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilterIds([]);
+  };
+
+  const handleViewChange = (view: ViewId) => {
+    setCurrentView(view);
+    setIsFilterBarOpen(true);
   };
 
   const handleToggleFocus = () => {
@@ -57,150 +115,312 @@ export default function MockupFocusModeClient() {
         {/* Left Panel - Mockup */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          {/* Map Toolbar Mockup - Final Implementation */}
+          {/* Monitoring Layout Mockup - Filter Chip Anchored to Panel */}
           <div style={{
             backgroundColor: 'white',
             borderRadius: '12px',
             padding: '20px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
           }}>
             <div style={{ marginBottom: '16px', fontSize: '13px', fontWeight: 600, color: '#6b7280' }}>
-              MAP TOOLBAR (FINAL DESIGN)
+              MONITORING LAYOUT (FILTER CHIP)
             </div>
-
-            {/* Toolbar - Single row layout with icon-only buttons */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexWrap: 'wrap'
+            <p style={{
+              margin: '0 0 16px 0',
+              fontSize: '13px',
+              color: '#6b7280',
+              lineHeight: 1.6
             }}>
-              {/* Filters Button - Icon Only (opens modal) */}
-              <button style={{
-                width: '44px',
-                height: '44px',
-                backgroundColor: 'white',
-                border: '2px solid #e5e7eb',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                color: '#374151'
-              }}>
-                <FunnelSimple size={20} weight="fill" />
-                <span style={{
-                  position: 'absolute',
-                  top: '-6px',
-                  right: '-6px',
-                  backgroundColor: '#1867ff',
-                  color: 'white',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '10px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px solid white'
-                }}>
-                  3
-                </span>
-              </button>
-
+              Chip flotante anclado al panel lateral (12 px de separacion). Permanece visible en todas las vistas y despliega una barra superpuesta con pills y accion de limpiar sin restar espacio al mapa.
+            </p>
+            <div style={{
+              position: 'relative',
+              height: '360px',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              display: 'flex',
+              backgroundColor: '#0f172a',
+              boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.2)'
+            }}>
               <div style={{
-                width: '1px',
-                height: '32px',
-                backgroundColor: '#d1d5db',
-                margin: '0 4px'
-              }} />
-
-              <button
-                onClick={handleToggleFocus}
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  backgroundColor: isFocusActive ? '#1867ff' : 'white',
-                  border: `2px solid ${isFocusActive ? '#1867ff' : '#e5e7eb'}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
+                flex: 1,
+                position: 'relative',
+                backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(59,130,246,0.18) 0, rgba(30,64,175,0) 55%), radial-gradient(circle at 80% 60%, rgba(45,212,191,0.18) 0, rgba(13,148,136,0) 55%)',
+                backgroundColor: '#0f172a'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+                  backgroundSize: '48px 48px',
+                  opacity: 0.5
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  top: '24px',
+                  left: '24px',
+                  display: 'inline-flex',
+                  padding: '8px 12px',
+                  borderRadius: '999px',
+                  backdropFilter: 'blur(14px)',
+                  backgroundColor: 'rgba(15,23,42,0.6)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  textTransform: 'uppercase'
+                }}>
+                  Vista: {viewOptions.find((view) => view.id === currentView)?.label}
+                </div>
+                <div style={{
+                  position: 'absolute',
+                  bottom: '28px',
+                  left: '28px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  color: isFocusActive ? 'white' : '#374151'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isFocusActive) {
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isFocusActive) {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  backgroundColor: 'rgba(15,23,42,0.65)',
+                  color: 'white',
+                  fontSize: '13px'
+                }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                    <Crosshair size={16} weight={isFocusActive ? 'fill' : 'regular'} />
+                    {isFocusActive ? 'Focus activo' : 'Focus inactivo'}
+                  </span>
+                  <span style={{ opacity: 0.65 }}>
+                    {focusedCount}/{totalCount} unidades destacadas
+                  </span>
+                </div>
+              </div>
+              <div style={{
+                width: `${panelWidth}px`,
+                backgroundColor: 'white',
+                borderLeft: '1px solid #e5e7eb',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
+                      Panel lateral
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginTop: '4px' }}>
+                      {viewOptions.find((view) => view.id === currentView)?.label}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleToggleFocus}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '999px',
+                      border: `1px solid ${isFocusActive ? '#1867ff' : '#d1d5db'}`,
+                      color: isFocusActive ? '#1867ff' : '#374151',
+                      backgroundColor: isFocusActive ? '#eff6ff' : 'white',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Crosshair size={16} weight={isFocusActive ? 'fill' : 'regular'} />
+                    {isFocusActive ? 'Focus activo' : 'Activar focus'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {viewOptions.map((view) => {
+                    const isSelected = currentView === view.id;
+                    return (
+                      <button
+                        key={view.id}
+                        onClick={() => handleViewChange(view.id)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '10px',
+                          border: `1px solid ${isSelected ? '#1867ff' : '#e5e7eb'}`,
+                          backgroundColor: isSelected ? '#eff6ff' : 'white',
+                          color: isSelected ? '#1867ff' : '#374151',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {view.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {panelItems.map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '12px',
+                        border: '1px solid #e5e7eb',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        backgroundColor: '#f9fafb'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>{item.title}</span>
+                        <span style={{ fontSize: '11px', color: '#6b7280' }}>{item.meta}</span>
+                      </div>
+                      <span style={{ fontSize: '13px', color: '#4b5563' }}>{item.detail}</span>
+                      <span style={{ fontSize: '11px', color: '#1867ff', fontWeight: 600 }}>
+                        Filtrado por: {filterButtonLabel}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleToggleFiltersButton}
+                style={{
+                  position: 'absolute',
+                  top: '28px',
+                  left: `calc(100% - ${panelWidth}px - ${filterButtonOffset}px)`,
+                  zIndex: 30,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(24,103,255,0.65)',
+                  backgroundColor: 'rgba(255,255,255,0.96)',
+                  color: '#0f172a',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  boxShadow: '0 12px 28px rgba(24,103,255,0.22)',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)'
                 }}
               >
-                <Crosshair size={20} weight={isFocusActive ? 'fill' : 'regular'} />
-
-                {isFocusActive && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    backgroundColor: '#16a34a',
-                    color: 'white',
-                    padding: '3px 8px',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    border: '2px solid white',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {focusedCount}/{totalCount}
-                  </span>
-                )}
+                <FunnelSimple size={18} weight="fill" />
+                <span>{filterButtonLabel}</span>
+                {isFilterBarOpen ? <CaretUp size={14} weight="bold" /> : <CaretDown size={14} weight="bold" />}
               </button>
-
-              <div style={{ flex: 1 }} />
-
               <div style={{
+                position: 'absolute',
+                top: '0px',
+                left: `calc(100% - ${panelWidth}px - ${filterButtonOffset}px - 90px)`,
                 display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
                 gap: '8px',
-                alignItems: 'center'
+                pointerEvents: 'none',
+                zIndex: 25
               }}>
-                <button style={{
-                  width: '36px',
-                  height: '36px',
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6b7280'
-                }}>+</button>
-                <button style={{
-                  width: '36px',
-                  height: '36px',
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6b7280'
-                }}>−</button>
+                <div style={{
+                  padding: '6px 10px',
+                  borderRadius: '999px',
+                  backgroundColor: '#1867ff',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.01em',
+                  boxShadow: '0 8px 14px rgba(24,103,255,0.25)'
+                }}>
+                  Nueva ubicacion del boton
+                </div>
+                <div style={{
+                  width: '2px',
+                  height: '52px',
+                  background: 'linear-gradient(180deg, rgba(24,103,255,0.0) 0%, rgba(24,103,255,0.7) 100%)'
+                }} />
+                <div style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '5px',
+                  backgroundColor: '#1867ff',
+                  boxShadow: '0 0 0 6px rgba(24,103,255,0.22)'
+                }} />
               </div>
+              {isFilterBarOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '76px',
+                  left: `calc(100% - ${panelWidth}px)`,
+                  width: `${panelWidth}px`,
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 18px 36px rgba(15,23,42,0.12)',
+                  padding: '16px',
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'flex-start'
+                }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Filtros activos</span>
+                      <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                        Vista: {viewOptions.find((view) => view.id === currentView)?.label}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {filterPills.map((pill) => (
+                        <button
+                          key={pill.id}
+                          onClick={() => !pill.disabled && toggleFilter(pill.id)}
+                          title={pill.disabled ? 'No disponible en esta vista' : 'Quitar filtro'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 12px',
+                            borderRadius: '999px',
+                            border: `1px solid ${pill.active ? '#1867ff' : '#d1d5db'}`,
+                            backgroundColor: pill.disabled
+                              ? '#f3f4f6'
+                              : pill.active
+                                ? '#eff6ff'
+                                : 'white',
+                            color: pill.disabled ? '#9ca3af' : pill.active ? '#1867ff' : '#4b5563',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: pill.disabled ? 'not-allowed' : 'pointer',
+                            opacity: pill.disabled ? 0.6 : 1,
+                            boxShadow: pill.active ? '0 4px 10px rgba(24,103,255,0.12)' : 'none'
+                          }}
+                        >
+                          {pill.label}
+                          {!pill.disabled && pill.active && <span style={{ fontSize: '14px' }}>x</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleClearFilters}
+                    disabled={activeFilterCount === 0}
+                    style={{
+                      alignSelf: 'stretch',
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid transparent',
+                      backgroundColor: activeFilterCount === 0 ? '#f3f4f6' : '#fff1f2',
+                      color: activeFilterCount === 0 ? '#9ca3af' : '#be123c',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: activeFilterCount === 0 ? 'not-allowed' : 'pointer',
+                      minWidth: '92px',
+                      boxShadow: activeFilterCount === 0 ? 'none' : '0 8px 18px rgba(190,18,60,0.12)'
+                    }}
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: '14px', fontSize: '12px', color: '#6b7280' }}>
+              Animacion: barra flotante entra con slide/fade en 200 ms y se cierra con Esc, clic fuera o el mismo boton.
             </div>
           </div>
 
@@ -357,10 +577,10 @@ export default function MockupFocusModeClient() {
               Design Decisions
             </div>
             <ul style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.7, paddingLeft: '18px' }}>
-              <li>Icon-only button keeps toolbar compact; focus badge shows state.</li>
-              <li>Context chips allow switching between different filtered subsets.</li>
-              <li>Toast confirms the action without blocking user flow.</li>
-              <li>Mockup demonstrates final UI layout before implementation.</li>
+              <li>Filter chip floats next to the side panel so users find it instantly in any view.</li>
+              <li>Floating bar lists active pills, disabled states by view, and quick clear without eating vertical room.</li>
+              <li>Focus toggle lives in the panel header to connect with list context and avoid map clutter.</li>
+              <li>Map overlay stays muted so attention remains on vehicles and the side panel narrative.</li>
             </ul>
           </div>
         </div>

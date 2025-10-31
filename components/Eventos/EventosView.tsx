@@ -12,7 +12,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
-import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 
 const { Content, Sider } = Layout;
 
@@ -296,83 +296,85 @@ export default function EventosView() {
             style={{
               marginLeft: menuCollapsed ? '48px' : '240px',
               transition: 'margin-left 0.3s ease',
-              height: '100%'
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
-            <Sider
-              width={sidebarWidth}
-              style={{
-                position: 'relative',
-                background: '#fff',
-                borderRight: '1px solid #f0f0f0',
-                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-                height: '100%',
-                overflow: 'hidden'
-              }}
-            >
-              <EventosSidebar
-                events={events}
-                filteredEvents={filteredEvents}
-                onEventsGenerated={handleEventsGenerated}
-                onEventSelect={handleEventSelect}
-                onFiltersChange={handleFiltersChange}
-                selectedEventId={selectedEventId}
-                visibleVehicleIds={visibleVehicleIds}
-                onToggleFocusMode={handleToggleFocusMode}
-                vehiclesWithEvents={vehiclesWithEvents}
-                totalVehiclesCount={vehicleMarkers.length}
-              />
-              <div
-                onMouseDown={handleSidebarResize}
+            <GlobalFilterBar context="monitoreo" />
+            <Layout style={{ flex: 1, display: 'flex' }}>
+              <Sider
+                width={sidebarWidth}
                 style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '8px',
-                  cursor: 'col-resize',
-                  backgroundColor: 'transparent',
-                  zIndex: 1000
+                  position: 'relative',
+                  background: '#fff',
+                  borderRight: '1px solid #f0f0f0',
+                  boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+                  height: '100%',
+                  overflow: 'hidden'
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#cbd5e1')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              />
-            </Sider>
+              >
+                <EventosSidebar
+                  events={events}
+                  filteredEvents={filteredEvents}
+                  onEventsGenerated={handleEventsGenerated}
+                  onEventSelect={handleEventSelect}
+                  onFiltersChange={handleFiltersChange}
+                  selectedEventId={selectedEventId}
+                  visibleVehicleIds={visibleVehicleIds}
+                  onToggleFocusMode={handleToggleFocusMode}
+                  vehiclesWithEvents={vehiclesWithEvents}
+                  totalVehiclesCount={vehicleMarkers.length}
+                />
+                <div
+                  onMouseDown={handleSidebarResize}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: '8px',
+                    cursor: 'col-resize',
+                    backgroundColor: 'transparent',
+                    zIndex: 1000
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#cbd5e1')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                />
+              </Sider>
 
-            <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
-              <div className="floating-filters-overlay">
-                <FloatingFilterControls />
-              </div>
-              <EventosMapView
-                eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
-                  id: e.id,
-                  position: e.position,
-                  evento: e.evento,
-                  fechaCreacion: e.fechaCreacion,
-                  severidad: e.severidad,
-                  etiqueta: e.etiqueta,
-                  responsable: e.responsable,
-                  vehicleId: e.vehicleId
-                })) : []}
-                selectedEventId={selectedEventId}
-                selectedEventPosition={selectedEventPosition || undefined}
-                onEventSelect={handleEventSelect}
-                vehicleMarkers={vehicleMarkers}
-                showVehicleMarkers={showVehiclesOnMap}
-                onVisibleVehiclesChange={handleVisibleVehiclesChange}
-                filterByMapVehicles={filterByMapVehicles}
-                onToggleFilterByMapVehicles={handleToggleFilterByMapVehicles}
-                visibleVehicleIds={visibleVehicleIds}
-                isFocusModeActive={isFocusModeActive}
-                onToggleFocusMode={handleToggleFocusMode}
-                vehiclesWithEvents={vehiclesWithEvents}
-                zonas={zonas}
-                showZonasOnMap={showZonasOnMap}
-                onToggleZonasVisibility={setShowZonasOnMap}
-                showEventsOnMap={showEventsOnMap}
-                onToggleEventsVisibility={setShowEventsOnMap}
-              />
-            </Content>
+              <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
+                <EventosMapView
+                  eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
+                    id: e.id,
+                    position: e.position,
+                    evento: e.evento,
+                    fechaCreacion: e.fechaCreacion,
+                    severidad: e.severidad,
+                    etiqueta: e.etiqueta,
+                    responsable: e.responsable,
+                    vehicleId: e.vehicleId
+                  })) : []}
+                  selectedEventId={selectedEventId}
+                  selectedEventPosition={selectedEventPosition || undefined}
+                  onEventSelect={handleEventSelect}
+                  vehicleMarkers={vehicleMarkers}
+                  showVehicleMarkers={showVehiclesOnMap}
+                  onVisibleVehiclesChange={handleVisibleVehiclesChange}
+                  filterByMapVehicles={filterByMapVehicles}
+                  onToggleFilterByMapVehicles={handleToggleFilterByMapVehicles}
+                  visibleVehicleIds={visibleVehicleIds}
+                  isFocusModeActive={isFocusModeActive}
+                  onToggleFocusMode={handleToggleFocusMode}
+                  vehiclesWithEvents={vehiclesWithEvents}
+                  zonas={zonas}
+                  showZonasOnMap={showZonasOnMap}
+                  onToggleZonasVisibility={setShowZonasOnMap}
+                  showEventsOnMap={showEventsOnMap}
+                  onToggleEventsVisibility={setShowEventsOnMap}
+                />
+              </Content>
+            </Layout>
           </Layout>
         </Layout>
       </div>

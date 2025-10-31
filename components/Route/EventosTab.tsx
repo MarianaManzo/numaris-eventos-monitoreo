@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Phone, Megaphone, BatteryWarning, FirstAid, Plus, Lock, TrendUp, Clock, MagnifyingGlass, Funnel, X } from 'phosphor-react';
+import { Phone, Megaphone, BatteryWarning, FirstAid, Plus, Lock, TrendUp, Clock, MagnifyingGlass, X } from 'phosphor-react';
 import { EnvironmentOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { RouteSegment } from '@/types/route';
 import { useRouteStore } from '@/lib/stores/routeStore';
-import { List, Typography, Popover, Badge, Button } from 'antd';
+import { List, Typography, Button } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
-import type { EventNavigationContext, EventWithLocation, EventSeverity } from '@/lib/events/types';
+import type { EventNavigationContext, EventWithLocation } from '@/lib/events/types';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
-import EventFilterModalContent from '@/components/Events/EventFilterModal';
+import { useFilterStore } from '@/lib/stores/filterStore';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
 import { getSeverityColor } from '@/lib/events/eventStyles';
 import { getOperationalStatusFromId, type OperationalStatus } from '@/lib/events/eventStatus';
@@ -167,11 +167,8 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
   const eventListRef = useRef<HTMLDivElement>(null);
   const eventItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Filter state - NEW: Binary toggle for Estado instead of multi-select
-  const [selectedEtiquetas, setSelectedEtiquetas] = useState<string[]>([]);
-  const [selectedSeveridades, setSelectedSeveridades] = useState<EventSeverity[]>(['Alta', 'Media', 'Baja', 'Informativa']);
-  const [selectedEstado, setSelectedEstado] = useState<'todos' | 'abiertos' | 'cerrados'>('todos');
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const eventsFilters = useFilterStore((state) => state.events);
+  const { etiquetas: selectedEtiquetas, severidades: selectedSeveridades, estado: selectedEstado } = eventsFilters;
   const trajectoryListRef = useRef<HTMLDivElement>(null);
   const trajectoryItemsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
 
@@ -284,12 +281,6 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
     return generateEventsForDate(selectedDate);
   }, [selectedDate]);
 
-  // Get unique etiquetas for filter dropdowns
-  const availableEtiquetas = useMemo(() => {
-    const unique = Array.from(new Set(allEvents.map((e: Event & { etiqueta?: string }) => e.etiqueta).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [allEvents]);
-
   // Apply filters to events - NEW: Three-way toggle logic for Estado
   const events = useMemo(() => {
     let filtered = [...allEvents];
@@ -337,16 +328,6 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
     Baja: allEvents.filter(e => e.severidad === 'Baja').length,
     Informativa: allEvents.filter(e => e.severidad === 'Informativa').length,
   }), [allEvents]);
-
-  // Active filter count - NEW: Updated for three-way Estado toggle
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedEtiquetas.length > 0) count++;
-    if (selectedSeveridades.length !== 4) count++;
-    // Count estado filter if it's not the default ('todos')
-    if (selectedEstado !== 'todos') count++;
-    return count;
-  }, [selectedEtiquetas, selectedSeveridades, selectedEstado]);
 
   const handleEventClick = (eventId: string) => {
     onEventSelect(eventId, 'list');
@@ -618,41 +599,9 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
 
       {!hideSubTabs && activeSubTab === 'eventos' && (
         <>
-      {/* Filter Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid #eeeeee', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         <div style={{ fontSize: '14px', color: '#6b7280' }}>
           {events.length} evento{events.length !== 1 ? 's' : ''}
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Popover
-            content={
-              <EventFilterModalContent
-                selectedEstado={selectedEstado}
-                onEstadoChange={setSelectedEstado}
-                selectedSeveridades={selectedSeveridades}
-                onSeveridadesChange={setSelectedSeveridades}
-                selectedEtiquetas={selectedEtiquetas}
-                onEtiquetasChange={setSelectedEtiquetas}
-                availableEtiquetas={availableEtiquetas}
-                showUnidadesFilter={false}
-              />
-            }
-            title="Filtros"
-            trigger="click"
-            open={filterModalOpen}
-            onOpenChange={setFilterModalOpen}
-            placement="rightTop"
-          >
-            <Badge count={activeFilterCount} offset={[-4, 4]}>
-              <Button
-                icon={<Funnel size={16} />}
-                style={{
-                  border: filterModalOpen ? '2px solid #1867ff' : undefined,
-                  boxShadow: filterModalOpen ? '0 0 0 2px rgba(24, 103, 255, 0.1)' : undefined
-                }}
-              />
-            </Badge>
-          </Popover>
         </div>
       </div>
 

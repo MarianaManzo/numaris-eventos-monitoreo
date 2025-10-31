@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Button, Typography, Popover, Input, Select } from 'antd';
-import { Funnel, MagnifyingGlass, Car, TagSimple } from 'phosphor-react';
+import { Button, Typography, Input } from 'antd';
+import { MagnifyingGlass } from 'phosphor-react';
 import Link from 'next/link';
 import { type Unidad, generateUnidades } from '@/lib/unidades/generateUnidades';
 import { useFilterStore } from '@/lib/stores/filterStore';
 
 const { Text } = Typography;
-
-const DEFAULT_UNIT_STATUSES = ['Activo', 'Inactivo', 'En ruta', 'Detenido'];
 
 interface UnidadesSidebarProps {
   unidades: Unidad[];
@@ -44,7 +42,6 @@ export default function UnidadesSidebar({
   selectedUnidadId
 }: UnidadesSidebarProps) {
 
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [columnWidths] = useState({ nombre: 150, estado: 130, etiquetas: 130, responsable: 180 });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -61,28 +58,9 @@ export default function UnidadesSidebar({
     responsables: selectedResponsables
   } = unitsFilters;
 
-  const handleEtiquetasChange = useCallback((values: string[]) => {
-    setUnitsFilters({ tags: values });
-  }, [setUnitsFilters]);
-
-  const handleUnidadesChange = useCallback((values: string[]) => {
-    setUnitsFilters({ unidades: values });
-  }, [setUnitsFilters]);
-
   const handleSearchChange = useCallback((value: string) => {
     setUnitsFilters({ searchText: value });
   }, [setUnitsFilters]);
-
-  // Get unique tags and emails from unidades
-  const availableEtiquetas = useMemo(() => {
-    const unique = Array.from(new Set(unidades.map(u => u.etiqueta).filter(Boolean)));
-    return unique.sort();
-  }, [unidades]);
-
-  const availableUnidadesNombres = useMemo(() => {
-    const unique = Array.from(new Set(unidades.map(u => u.nombre)));
-    return unique.sort();
-  }, [unidades]);
 
   // Generate unidades once on mount
   useEffect(() => {
@@ -155,61 +133,6 @@ export default function UnidadesSidebar({
     onUnidadSelect(selectedUnidadId === unidadId ? null : unidadId);
   };
 
-  // Define filter content for Popover
-  const filterContent = (
-    <div style={{ width: 320, display: 'flex', flexDirection: 'column', gap: '20px', padding: '8px 8px' }}>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <Car size={18} weight="bold" color="#1f2937" />
-          <span style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>Unidades</span>
-          <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>{selectedUnidades.length}</span>
-        </div>
-        <Select
-          mode="multiple"
-          allowClear
-          placeholder="Seleccionar unidades"
-          value={selectedUnidades}
-          onChange={handleUnidadesChange}
-          style={{ width: '100%' }}
-          options={availableUnidadesNombres.map(nombre => ({ label: nombre, value: nombre }))}
-          maxTagCount="responsive"
-        />
-      </div>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <TagSimple size={18} weight="bold" color="#1f2937" />
-          <span style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>Etiquetas</span>
-          <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>{selectedEtiquetas.length}</span>
-        </div>
-        <Select
-          mode="multiple"
-          allowClear
-          placeholder="Seleccionar etiquetas"
-          value={selectedEtiquetas}
-          onChange={handleEtiquetasChange}
-          style={{ width: '100%' }}
-          options={availableEtiquetas.map(tag => ({ label: tag, value: tag }))}
-          maxTagCount="responsive"
-        />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-        <Button type="link" onClick={() => {
-          setUnitsFilters({
-            tags: [],
-            unidades: [],
-            status: [...DEFAULT_UNIT_STATUSES],
-            responsables: []
-          });
-        }}>
-          Limpiar
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -270,25 +193,6 @@ export default function UnidadesSidebar({
               }}
             />
           )}
-          <Popover
-            content={filterContent}
-            title="Filtros"
-            trigger="click"
-            open={isFiltersOpen}
-            onOpenChange={setIsFiltersOpen}
-            placement="bottomLeft"
-            overlayStyle={{ width: 400 }}
-          >
-            <Button
-              icon={<Funnel size={16} />}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            />
-          </Popover>
         </div>
       </div>
 

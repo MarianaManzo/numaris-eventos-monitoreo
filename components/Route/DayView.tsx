@@ -19,7 +19,7 @@ import EventListView from '@/components/Events/EventListView';
 import type { EventNavigationContext } from '@/lib/events/types';
 import { generateVehicleName } from '@/lib/events/addressGenerator';
 import { getVehicleCurrentPosition } from '@/lib/unidades/generateUnidades';
-import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
@@ -1436,9 +1436,9 @@ export default function DayView() {
           marginLeft: isFullscreen ? 0 : (menuCollapsed ? '48px' : '240px'),
           transition: 'margin-left 0.3s ease',
           height: '100%',
+          width: isFullscreen ? '100vw' : 'auto',
           display: 'flex',
-          flexDirection: 'row',
-          width: isFullscreen ? '100vw' : 'auto'
+          flexDirection: 'column'
         }}>
           {!isFullscreen && (
             <Sider
@@ -1808,13 +1808,7 @@ export default function DayView() {
             width: '100%',
             height: '100%'
           }}>
-            <div className="floating-filters-overlay">
-              <FloatingFilterControls
-                unidadId={unidadId}
-                showUnitButton={false}
-                forceShowZones={!!unidadId}
-              />
-            </div>
+            <GlobalFilterBar context={unidadId ? 'unidad' : 'monitoreo'} />
             <SingleRouteMapView
               route={generateRouteForDate ? {
                 ...generateRouteForDate,

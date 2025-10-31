@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Button, Typography, Popover, Input, Badge, Radio } from 'antd';
-import { Funnel, MagnifyingGlass, SortAscending } from 'phosphor-react';
+import { Button, Typography, Popover, Input, Radio } from 'antd';
+import { MagnifyingGlass, SortAscending } from 'phosphor-react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
 import type { EventSeverity, EventWithLocation } from '@/lib/events/types';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
-import EventFilterModalContent from '@/components/Events/EventFilterModal';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import { useFilterStore } from '@/lib/stores/filterStore';
@@ -140,7 +139,6 @@ export default function EventosSidebar({
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'vehicle-asc' | 'event-asc'>('date-desc');
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [columnWidths] = useState({ evento: 200, fecha: 150, severidad: 120, etiquetas: 130, responsable: 180, unidad: 100 });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -158,52 +156,9 @@ export default function EventosSidebar({
     focusMode: isFocusModeActive
   } = eventsFilters;
 
-  const handleEstadoChange = useCallback((estado: 'todos' | 'abiertos' | 'cerrados') => {
-    setEventsFilters({ estado });
-  }, [setEventsFilters]);
-
-  const handleSeveridadesChange = useCallback((values: EventSeverity[]) => {
-    setEventsFilters({ severidades: values });
-  }, [setEventsFilters]);
-
-  const handleEtiquetasChange = useCallback((values: string[]) => {
-    setEventsFilters({ etiquetas: values });
-  }, [setEventsFilters]);
-
-  const handleUnidadesChange = useCallback((values: string[]) => {
-    setEventsFilters({ unidades: values });
-  }, [setEventsFilters]);
-
   const handleSearchChange = useCallback((value: string) => {
     setEventsFilters({ searchText: value });
   }, [setEventsFilters]);
-
-  // Get unique tags and emails from events
-  const availableEtiquetas = useMemo(() => {
-    const unique = Array.from(new Set(events.map(e => e.etiqueta).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [events]);
-
-  const availableUnidades = useMemo(() => {
-    const unique = Array.from(new Set(events.map(e => e.vehicleId).filter((v): v is string => Boolean(v))));
-    return unique.sort();
-  }, [events]);
-
-  // Calculate active filter count - NEW: Updated for three-way Estado toggle and map vehicle filter
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedEtiquetas.length > 0) count++;
-    // Count severidad filter only if it's not the default (all 4 selected)
-    if (selectedSeveridades.length !== 4) count++;
-    // Count estado filter only if it's not the default ('todos')
-    if (selectedEstado !== 'todos') count++;
-    if (selectedUnidades.length > 0) count++;
-    // Count map vehicle filter if enabled
-    if (filterByMapVehicles) count++;
-    // Count focus mode if active
-    if (isFocusModeActive) count++;
-    return count;
-  }, [selectedEtiquetas, selectedSeveridades, selectedEstado, selectedUnidades, filterByMapVehicles, isFocusModeActive]);
 
   // Generate events once on mount
   useEffect(() => {
@@ -417,42 +372,6 @@ export default function EventosSidebar({
                 }}
               />
             )}
-            <Popover
-              content={
-    <EventFilterModalContent
-      selectedEstado={selectedEstado}
-      onEstadoChange={handleEstadoChange}
-      selectedSeveridades={selectedSeveridades}
-      onSeveridadesChange={handleSeveridadesChange}
-      selectedEtiquetas={selectedEtiquetas}
-      onEtiquetasChange={handleEtiquetasChange}
-      selectedUnidades={selectedUnidades}
-      onUnidadesChange={handleUnidadesChange}
-      availableEtiquetas={availableEtiquetas}
-      availableUnidades={availableUnidades}
-                  showUnidadesFilter={true}
-                  isFocusModeActive={isFocusModeActive}
-                  onToggleFocusMode={onToggleFocusMode}
-                  vehiclesWithEventsCount={vehiclesWithEvents.length}
-                  totalVehiclesCount={totalVehiclesCount}
-                />
-              }
-              title="Filtros"
-              trigger="click"
-              open={filterModalOpen}
-              onOpenChange={setFilterModalOpen}
-              placement="bottomLeft"
-            >
-              <Badge count={activeFilterCount} offset={[-4, 4]}>
-                <Button
-                  icon={<Funnel size={16} />}
-                  style={{
-                    border: filterModalOpen ? '2px solid #1867ff' : undefined,
-                    boxShadow: filterModalOpen ? '0 0 0 2px rgba(24, 103, 255, 0.1)' : undefined
-                  }}
-                />
-              </Badge>
-            </Popover>
             <Popover
               content={sortContent}
               title="Ordenar"

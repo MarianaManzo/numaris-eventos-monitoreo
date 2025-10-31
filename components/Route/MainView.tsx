@@ -12,7 +12,7 @@ import { getVehicleCurrentPosition } from '@/lib/unidades/generateUnidades';
 import { generateVehicleName } from '@/lib/events/addressGenerator';
 import dynamic from 'next/dynamic';
 import { generateSampleRoutes } from '@/lib/utils/routeGenerator';
-import FloatingFilterControls from '@/components/Filters/FloatingFilterControls';
+import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 
 const { Content, Sider } = Layout;
 
@@ -275,7 +275,17 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
         </div>
 
         {/* Main Layout with Sidebar and Content */}
-        <Layout style={{ marginLeft: menuCollapsed ? '48px' : '240px', transition: 'margin-left 0.3s ease', height: '100%' }}>
+        <Layout
+          style={{
+            marginLeft: menuCollapsed ? '48px' : '240px',
+            transition: 'margin-left 0.3s ease',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <GlobalFilterBar context={unidadId ? 'unidad' : 'monitoreo'} />
+          <Layout style={{ flex: 1, display: 'flex' }}>
           <Sider
             width={sidebarWidth}
             style={{
@@ -299,13 +309,6 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
           </Sider>
 
           <Content className="relative" style={{ flex: 1, height: '100%' }}>
-            <div className="floating-filters-overlay">
-              <FloatingFilterControls
-                unidadId={unidadId}
-                showUnitButton={false}
-                forceShowZones={!!unidadId}
-              />
-            </div>
             {/* Show TelematicaMapView for Telemática and Unidad tabs */}
             {(activeTab === 'telematica' || activeTab === 'unidad') ? (
               <TelematicaMapView unidadId={unidadId} />
@@ -322,6 +325,7 @@ export default function MainView({ unidadId }: MainViewProps = {}) {
               />
             )}
           </Content>
+          </Layout>
         </Layout>
       </Layout>
     </Layout>
