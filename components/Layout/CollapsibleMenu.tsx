@@ -18,13 +18,15 @@ interface CollapsibleMenuProps {
   currentSection?: string;
   isCollapsed?: boolean;
   onCollapse?: (collapsed: boolean) => void;
+  highlightedMenuKeys?: string[];
 }
 
 export default function CollapsibleMenu({
   onSectionChange,
   currentSection = 'unidades',
   isCollapsed = true,
-  onCollapse
+  onCollapse,
+  highlightedMenuKeys
 }: CollapsibleMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -218,6 +220,7 @@ export default function CollapsibleMenu({
       <div className="flex flex-col items-center" style={{ flex: 1 }}>
         {menuItems.map((item) => {
           const isSelected = item.key === effectiveCurrentSection;
+          const isHighlighted = highlightedMenuKeys?.includes(item.key);
           return (
             <div
               key={item.key}
@@ -248,6 +251,7 @@ export default function CollapsibleMenu({
             >
               <div
                 style={{
+                  position: 'relative',
                   width: '36px',
                   height: '36px',
                   display: 'flex',
@@ -271,6 +275,19 @@ export default function CollapsibleMenu({
                 }}
               >
                 {item.icon}
+                {isHighlighted && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: '#ef4444'
+                    }}
+                  />
+                )}
               </div>
               {!isCollapsed && (
                 <span

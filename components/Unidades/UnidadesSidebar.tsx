@@ -6,16 +6,22 @@ import { MagnifyingGlass } from 'phosphor-react';
 import Link from 'next/link';
 import { type Unidad, generateUnidades } from '@/lib/unidades/generateUnidades';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import PaginationControls from '@/components/Common/PaginationControls';
 
 const { Text } = Typography;
 
 interface UnidadesSidebarProps {
   unidades: Unidad[];
   filteredUnidades: Unidad[];
+  displayedUnidades: Unidad[];
   onUnidadesGenerated: (unidades: Unidad[]) => void;
   onUnidadSelect: (unidadId: string | null) => void;
   onFiltersChange: (filteredUnidades: Unidad[]) => void;
   selectedUnidadId: string | null;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -36,10 +42,15 @@ const getEstadoColor = (estado: string) => {
 export default function UnidadesSidebar({
   unidades,
   filteredUnidades,
+  displayedUnidades,
   onUnidadesGenerated,
   onUnidadSelect,
   onFiltersChange,
-  selectedUnidadId
+  selectedUnidadId,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageChange
 }: UnidadesSidebarProps) {
 
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -61,6 +72,10 @@ export default function UnidadesSidebar({
   const handleSearchChange = useCallback((value: string) => {
     setUnitsFilters({ searchText: value });
   }, [setUnitsFilters]);
+
+  const hasUnits = filteredUnidades.length > 0;
+  const pageStart = hasUnits ? currentPage * pageSize + 1 : 0;
+  const pageEnd = hasUnits ? Math.min(filteredUnidades.length, pageStart + pageSize - 1) : 0;
 
   // Generate unidades once on mount
   useEffect(() => {
@@ -243,7 +258,7 @@ export default function UnidadesSidebar({
           borderRight: '1px solid #e5e7eb',
           position: 'relative'
         } as React.CSSProperties}>
-        {filteredUnidades.map((unidad) => {
+        {displayedUnidades.map((unidad) => {
           const estadoStyle = getEstadoColor(unidad.estado);
           const isSelected = selectedUnidadId === unidad.id;
           const totalColumnWidth = columnWidths.nombre + columnWidths.estado + columnWidths.etiquetas + columnWidths.responsable + 64;
@@ -367,6 +382,24 @@ export default function UnidadesSidebar({
             </div>
           );
         })}
+      </div>
+
+      <div style={{
+        padding: '12px 16px',
+        borderLeft: '1px solid #e5e7eb',
+        borderRight: '1px solid #e5e7eb',
+        borderTop: '1px solid #e5e7eb',
+        backgroundColor: '#ffffff',
+        flexShrink: 0
+      }}>
+        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+          {hasUnits ? `Mostrando ${pageStart}-${pageEnd} de ${filteredUnidades.length}` : 'Sin resultados'}
+        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
       </div>
 
       {/* Footer */}

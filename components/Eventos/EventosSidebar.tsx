@@ -8,9 +8,11 @@ import dayjs from 'dayjs';
 import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
 import type { EventSeverity, EventWithLocation } from '@/lib/events/types';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
+import tableStyles from '@/components/Events/EventTable.module.css';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import PaginationControls from '@/components/Common/PaginationControls';
 
 const { Text } = Typography;
 
@@ -30,6 +32,7 @@ interface Event {
 interface EventosSidebarProps {
   events: Event[];
   filteredEvents: Event[];
+  displayedEvents: Event[];
   onEventsGenerated: (events: Event[]) => void;
   onEventSelect: (eventId: string | null) => void;
   onFiltersChange: (filteredEvents: Event[]) => void;
@@ -38,6 +41,10 @@ interface EventosSidebarProps {
   onToggleFocusMode?: () => void;
   vehiclesWithEvents?: string[];
   totalVehiclesCount?: number;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 // Helper function to generate event icon with correct severity color
@@ -125,6 +132,7 @@ const generateRandomEvents = (): Event[] => {
 export default function EventosSidebar({
   events,
   filteredEvents,
+  displayedEvents,
   onEventsGenerated,
   onEventSelect,
   onFiltersChange,
@@ -132,14 +140,17 @@ export default function EventosSidebar({
   visibleVehicleIds,
   onToggleFocusMode,
   vehiclesWithEvents = [],
-  totalVehiclesCount = 0
+  totalVehiclesCount = 0,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageChange
 }: EventosSidebarProps) {
   const router = useRouter();
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'severity-desc' | 'severity-asc' | 'vehicle-asc' | 'event-asc'>('date-desc');
-  const [columnWidths] = useState({ evento: 200, fecha: 150, severidad: 120, etiquetas: 130, responsable: 180, unidad: 100 });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -155,6 +166,10 @@ export default function EventosSidebar({
     filterByMapVehicles,
     focusMode: isFocusModeActive
   } = eventsFilters;
+
+  const hasEvents = filteredEvents.length > 0;
+  const pageStart = hasEvents ? currentPage * pageSize + 1 : 0;
+  const pageEnd = hasEvents ? Math.min(filteredEvents.length, pageStart + pageSize - 1) : 0;
 
   const handleSearchChange = useCallback((value: string) => {
     setEventsFilters({ searchText: value });
@@ -396,287 +411,94 @@ export default function EventosSidebar({
         </div>
       </div>
 
-      {/* Vehicle Event Cards */}
-      <div
-        ref={scrollContainerRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          padding: '16px',
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#cbd5e1 #f1f5f9',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        } as React.CSSProperties}
-      >
-        {filteredEvents.map((event) => {
-          // Generate consistent location using same seed as map markers
-          const locationName = generateLocationString(generateSeedFromEventId(event.id));
+      {/* Vehicle Event Table */}
+      <div className={tableStyles.tableWrapper} style={{ flex: 1, minHeight: 0 }}>
+        <div ref={scrollContainerRef} className={tableStyles.tableScroll}>
+          <div className={tableStyles.header}>
+            <span>Evento</span>
+            <span>Estado</span>
+            <span>Unidad</span>
+            <span>Horario</span>
+            <span>Ubicación</span>
+            <span>Responsable</span>
+            <span>Duración</span>
+          </div>
+          {displayedEvents.map((event) => {
+            // Generate consistent location using same seed as map markers
+            const locationName = generateLocationString(generateSeedFromEventId(event.id));
 
-          // Convert Event to EventWithLocation format
-          const eventWithLocation: EventWithLocation & { instructions?: string } = {
-            id: event.id,
-            evento: event.evento,
-            fechaCreacion: event.fechaCreacion,
-            severidad: event.severidad,
-            position: event.position,
-            responsable: event.responsable || 'Sin asignar',
-            instructions: event.instructions,
-            locationData: {
-              eventId: event.id,
-              startLocation: {
-                position: event.position,
-                locationName: locationName,
-                timestamp: dayjs(event.fechaCreacion)
-              },
-              endLocation: {
-                position: event.position,
-                locationName: locationName,
-                timestamp: dayjs(event.fechaCreacion)
-              },
-              routeAlignment: {
-                startsOnRoute: false,
-                endsOnRoute: false
+            // Convert Event to EventWithLocation format
+            const eventWithLocation: EventWithLocation & { instructions?: string } = {
+              id: event.id,
+              evento: event.evento,
+              fechaCreacion: event.fechaCreacion,
+              severidad: event.severidad,
+              position: event.position,
+              responsable: event.responsable || 'Sin asignar',
+              instructions: event.instructions,
+              locationData: {
+                eventId: event.id,
+                startLocation: {
+                  position: event.position,
+                  locationName: locationName,
+                  timestamp: dayjs(event.fechaCreacion)
+                },
+                endLocation: {
+                  position: event.position,
+                  locationName: locationName,
+                  timestamp: dayjs(event.fechaCreacion)
+                },
+                routeAlignment: {
+                  startsOnRoute: false,
+                  endsOnRoute: false
+                }
               }
-            }
-          };
+            };
 
-          const isSelected = selectedEventId === event.id;
+            const isSelected = selectedEventId === event.id;
 
-          return (
-            <div
-              key={event.id}
-              ref={(el) => { itemRefs.current[event.id] = el; }}
-            >
-              <VehicleEventCard
-                event={eventWithLocation}
-                isSelected={isSelected}
-                onClick={() => handleEventClick(event.id)}
-                vehicleId={event.vehicleId || 'unknown'}
-                navigationContext={{
-                  context: 'fleet',
-                  vehicleId: event.vehicleId
-                }}
-                showVehicle={true}
-                showNotes={true}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={event.id}
+                ref={(el) => { itemRefs.current[event.id] = el; }}
+              >
+                <VehicleEventCard
+                  event={eventWithLocation}
+                  isSelected={isSelected}
+                  onClick={() => handleEventClick(event.id)}
+                  vehicleId={event.vehicleId || 'unknown'}
+                  navigationContext={{
+                    context: 'fleet',
+                    vehicleId: event.vehicleId
+                  }}
+                  showVehicle={true}
+                  showNotes={true}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* OLD TABLE IMPLEMENTATION - Preserved for future use */}
-      {false && (
-        <>
-          {/* Table Header */}
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid #e5e7eb',
-            backgroundColor: '#f8f9fb',
-            display: 'flex',
-            fontSize: '12px',
-            fontWeight: 600,
-            color: '#64748b',
-            alignItems: 'center',
-            flexShrink: 0,
-            borderTop: '1px solid #e5e7eb',
-            borderLeftWidth: 1,
-            borderLeftStyle: 'solid',
-            borderLeftColor: '#e5e7eb',
-            borderRight: '1px solid #e5e7eb',
-            minWidth: `${columnWidths.evento + columnWidths.fecha + columnWidths.severidad + columnWidths.etiquetas + columnWidths.responsable + columnWidths.unidad + 96}px`
-          }}>
-            <div style={{ width: `${columnWidths.evento}px`, minWidth: `${columnWidths.evento}px`, display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '16px', flexShrink: 0 }}>
-              <span>Evento</span>
-            </div>
-            <div style={{ width: `${columnWidths.fecha}px`, flexShrink: 0, paddingRight: '16px' }}>
-              Fecha de creación
-            </div>
-            <div style={{ width: `${columnWidths.severidad}px`, flexShrink: 0, paddingRight: '16px' }}>
-              Severidad
-            </div>
-            <div style={{ width: `${columnWidths.etiquetas}px`, flexShrink: 0, paddingRight: '16px' }}>
-              Etiquetas
-            </div>
-            <div style={{ width: `${columnWidths.responsable}px`, flexShrink: 0, paddingRight: '16px' }}>
-              Responsable
-            </div>
-            <div style={{ width: `${columnWidths.unidad}px`, flexShrink: 0 }}>
-              Unidad
-            </div>
-          </div>
+      <div style={{
+        padding: '12px 16px',
+        borderLeft: '1px solid #e5e7eb',
+        borderRight: '1px solid #e5e7eb',
+        borderTop: '1px solid #e5e7eb',
+        backgroundColor: '#ffffff',
+        flexShrink: 0
+      }}>
+        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+          {hasEvents ? `Mostrando ${pageStart}-${pageEnd} de ${filteredEvents.length}` : 'Sin eventos'}
+        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+      </div>
 
-          {/* Events List */}
-          <div
-            ref={scrollContainerRef}
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'auto',
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#cbd5e1 #f1f5f9',
-              borderLeftWidth: 1,
-              borderLeftStyle: 'solid',
-              borderLeftColor: '#e5e7eb',
-              borderRight: '1px solid #e5e7eb',
-              position: 'relative'
-            } as React.CSSProperties}>
-        {filteredEvents.map((event) => {
-          const severityStyle = getSeverityColor(event.severidad);
-          const isSelected = selectedEventId === event.id;
-          const totalColumnWidth = columnWidths.evento + columnWidths.fecha + columnWidths.severidad + columnWidths.etiquetas + columnWidths.responsable + columnWidths.unidad + 96; // 96px for padding (16px * 6 columns)
-          return (
-            <div
-              key={event.id}
-              ref={(el) => { itemRefs.current[event.id] = el; }}
-              onClick={() => handleEventClick(event.id)}
-              style={{
-                display: 'flex',
-                padding: '0 16px',
-                minHeight: '48px',
-                minWidth: `${totalColumnWidth}px`,
-                height: 'auto',
-                borderBottom: '1px solid #e5e7eb',
-                alignItems: 'center',
-                fontSize: '14px',
-                backgroundColor: isSelected ? '#eff6ff' : '#fff',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                borderLeftWidth: 4,
-                borderLeftStyle: 'solid',
-                borderLeftColor: isSelected ? '#3b82f6' : 'transparent',
-                boxSizing: 'border-box'
-              }}
-              onMouseEnter={(e) => {
-                if (!isSelected) e.currentTarget.style.backgroundColor = '#f9fafb';
-              }}
-              onMouseLeave={(e) => {
-                if (!isSelected) e.currentTarget.style.backgroundColor = '#fff';
-              }}
-            >
-              <div style={{ width: `${columnWidths.evento}px`, minWidth: `${columnWidths.evento}px`, paddingRight: '16px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '20px',
-                  height: '20px',
-                  minWidth: '20px',
-                  minHeight: '20px',
-                  borderRadius: '50%',
-                  backgroundColor: severityStyle.bg,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: severityStyle.text,
-                  flexShrink: 0
-                }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px' }}>
-                    {event.icon}
-                  </span>
-                </div>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Build URL with fleet context
-                    const params = new URLSearchParams({
-                      context: 'fleet'
-                    });
-                    // Note: In fleet view, we could include vehicleId if events have that data
-                    // For now, just set context to 'fleet'
-                    router.push(`/eventos/${event.id}?${params.toString()}`);
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#0047cc';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#1867ff';
-                  }}
-                  style={{
-                    color: '#1867ff',
-                    fontWeight: 400,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    flex: 1,
-                    lineHeight: 1.4,
-                    cursor: 'pointer',
-                    transition: 'color 0.2s'
-                  }}
-                >
-                  {event.evento}
-                </span>
-              </div>
-              <span style={{
-                width: `${columnWidths.fecha}px`,
-                flexShrink: 0,
-                color: '#6b7280',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                paddingRight: '16px',
-                fontSize: '13px'
-              }} title={dayjs(event.fechaCreacion).format('DD/MM/YYYY hh:mm:ss a')}>{dayjs(event.fechaCreacion).format('DD/MM/YYYY hh:mm:ss a')}</span>
-              <div style={{
-                width: `${columnWidths.severidad}px`,
-                flexShrink: 0,
-                paddingRight: '16px',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '16px',
-                  backgroundColor: severityStyle.bg,
-                  border: `1px solid ${severityStyle.text}`,
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: severityStyle.text
-                }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px' }}>
-                    {event.icon}
-                  </span>
-                  <span>{severityStyle.label}</span>
-                </div>
-              </div>
-              <span style={{
-                width: `${columnWidths.etiquetas}px`,
-                flexShrink: 0,
-                color: '#374151',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                paddingRight: '16px',
-                fontSize: '13px'
-              }}>{event.etiqueta}</span>
-              <span style={{
-                width: `${columnWidths.responsable}px`,
-                flexShrink: 0,
-                color: '#374151',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                paddingRight: '16px',
-                fontSize: '13px'
-              }}>{event.responsable}</span>
-              <span style={{
-                width: `${columnWidths.unidad}px`,
-                flexShrink: 0,
-                color: '#1867ff',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontWeight: 500,
-                fontSize: '13px'
-              }}>XHDF</span>
-            </div>
-          );
-        })}
-          </div>
-        </>
-      )}
+
 
       {/* Footer */}
       <div style={{

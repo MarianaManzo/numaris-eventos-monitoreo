@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Layout, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
@@ -16,6 +16,7 @@ import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import {
   useFilterStore,
+  DEFAULT_EVENT_SEVERITIES,
   type EventsFilters,
   type UnitsFilters
 } from '@/lib/stores/filterStore';
@@ -71,19 +72,38 @@ export default function EventDetailView({
     }
     return 450;
   });
-const [event, setEvent] = useState<Event | null>(null);
-const [isLoading, setIsLoading] = useState(true);
-const [visualizationSettings, setVisualizationSettings] = useState<Record<VisualizationOptionKey, boolean>>({
-  start: true,
-  end: false,
-  vehicle: !!vehicleId,
-  route: false
-});
+  const [event, setEvent] = useState<Event | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [visualizationSettings, setVisualizationSettings] = useState<Record<VisualizationOptionKey, boolean>>({
+    start: true,
+    end: false,
+    vehicle: !!vehicleId,
+    route: false
+  });
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+  const eventsFiltersState = useFilterStore((state) => state.events);
   const detailFilterSnapshotRef = useRef<{ events: EventsFilters; units: UnitsFilters } | null>(null);
   const operationalStatus = event ? getOperationalStatusFromId(event.id) : null;
   const hasDualMarkers = operationalStatus === 'cerrado' && !!event?.locationData?.endLocation;
+
+  const eventElementOptionsData = event
+    ? [
+        { id: 'start' as const, label: 'Inicio del evento', checked: visualizationSettings.start, disabled: true },
+        { id: 'end' as const, label: 'Cierre del evento', checked: visualizationSettings.end, disabled: !hasDualMarkers },
+        { id: 'vehicle' as const, label: 'Unidad del evento', checked: visualizationSettings.vehicle, disabled: !vehicleId }
+      ]
+    : undefined;
+
+  const monitoringFiltersApplied =
+    eventsFiltersState.estado !== 'todos' ||
+    eventsFiltersState.severidades.length !== DEFAULT_EVENT_SEVERITIES.length ||
+    eventsFiltersState.etiquetas.length > 0;
+
+  const hasFilteredElements =
+    monitoringFiltersApplied ||
+    (eventElementOptionsData ? eventElementOptionsData.some((option) => !option.checked && !option.disabled) : false);
+
 
   useEffect(() => {
     if (!detailFilterSnapshotRef.current) {
@@ -180,14 +200,14 @@ const [visualizationSettings, setVisualizationSettings] = useState<Record<Visual
 
   useEffect(() => {
     if (!event) {
-    setVisualizationSettings({
-      start: true,
-      end: false,
-      vehicle: !!vehicleId,
-      route: false
-    });
-    return;
-  }
+      setVisualizationSettings({
+        start: true,
+        end: false,
+        vehicle: !!vehicleId,
+        route: false
+      });
+      return;
+    }
 
     setVisualizationSettings((prev) => ({
       start: true,
@@ -216,58 +236,20 @@ const [visualizationSettings, setVisualizationSettings] = useState<Record<Visual
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-const handleBack = () => {
-  // Context-aware back navigation
-  if (context === 'historical' && vehicleId && viewDate) {
-    router.push(`/unidades/${vehicleId}?tab=historial&view=day&date=${viewDate}`);
-  } else if (context === 'vehicle' && vehicleId) {
-    router.push(`/unidades/${vehicleId}?tab=eventos`);
-  } else {
-    // Fleet context or fallback
-    router.push('/eventos');
-  }
-};
-
-  const visualizationOptions = useMemo(() => {
-    if (!event) {
-      return [];
+  const handleBack = () => {
+    // Context-aware back navigation
+    if (context === 'historical' && vehicleId && viewDate) {
+      router.push(`/unidades/${vehicleId}?tab=historial&view=day&date=${viewDate}`);
+    } else if (context === 'vehicle' && vehicleId) {
+      router.push(`/unidades/${vehicleId}?tab=eventos`);
+    } else {
+      // Fleet context or fallback
+      router.push('/eventos');
     }
-
-    const options: { key: VisualizationOptionKey; label: string; checked: boolean; disabled?: boolean }[] = [
-      {
-        key: 'start',
-        label: 'Inicio del evento',
-        checked: visualizationSettings.start,
-        disabled: true
-      },
-      {
-        key: 'end',
-        label: 'Cierre del evento',
-        checked: visualizationSettings.end,
-        disabled: !hasDualMarkers
-      },
-      {
-        key: 'vehicle',
-        label: 'Unidad del evento',
-        checked: visualizationSettings.vehicle,
-        disabled: !vehicleId
-      },
-      {
-        key: 'route',
-        label: 'Trayecto del evento',
-        checked: visualizationSettings.route,
-        disabled: !hasDualMarkers
-      }
-    ];
-
-    return options;
-  }, [event, visualizationSettings, hasDualMarkers, vehicleId]);
+  };
 
   const handleVisualizationToggle = (key: VisualizationOptionKey) => {
     setVisualizationSettings((prev) => {
-      if (key === 'start') {
-        return prev;
-      }
       if (key === 'end' && !hasDualMarkers) {
         return prev;
       }
@@ -306,6 +288,7 @@ const handleBack = () => {
               currentSection={currentSection}
               isCollapsed={menuCollapsed}
               onCollapse={setMenuCollapsed}
+              highlightedMenuKeys={hasFilteredElements ? ['eventos'] : []}
             />
           </div>
 
@@ -319,7 +302,7 @@ const handleBack = () => {
             flexDirection: 'column'
           }}
         >
-          <GlobalFilterBar context="evento" />
+          <GlobalFilterBar context="evento" eventElementOptions={eventElementOptionsData} onEventElementToggle={handleVisualizationToggle} />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
               width={sidebarWidth}
@@ -377,6 +360,7 @@ const handleBack = () => {
             currentSection={currentSection}
             isCollapsed={menuCollapsed}
             onCollapse={setMenuCollapsed}
+            highlightedMenuKeys={hasFilteredElements ? ['eventos'] : []}
           />
         </div>
 
@@ -390,7 +374,7 @@ const handleBack = () => {
             flexDirection: 'column'
           }}
         >
-          <GlobalFilterBar context="evento" />
+          <GlobalFilterBar context="evento" eventElementOptions={eventElementOptionsData} onEventElementToggle={handleVisualizationToggle} />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
               width={sidebarWidth}

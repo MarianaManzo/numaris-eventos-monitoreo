@@ -13,6 +13,7 @@ import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
+import { usePaginationStore } from '@/lib/stores/paginationStore';
 
 const { Content, Sider } = Layout;
 
@@ -49,6 +50,9 @@ export default function EventosView() {
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const eventsPage = usePaginationStore((state) => state.page.events);
+  const eventsPageSize = usePaginationStore((state) => state.pageSize.events);
+  const setPaginationPage = usePaginationStore((state) => state.setPage);
 
   // Use global map store for cross-view visibility
   const { showEventsOnMap, setShowEventsOnMap, showVehiclesOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
@@ -61,6 +65,44 @@ export default function EventosView() {
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const filterByMapVehicles = useFilterStore((state) => state.events.filterByMapVehicles);
   const isFocusModeActive = useFilterStore((state) => state.events.focusMode);
+
+  const eventListTotalPages = filteredEvents.length === 0 ? 0 : Math.ceil(filteredEvents.length / eventsPageSize);
+  const clampedEventsPage = eventListTotalPages === 0 ? 0 : Math.min(eventsPage, eventListTotalPages - 1);
+
+  const paginatedEvents = useMemo(() => {
+    const start = clampedEventsPage * eventsPageSize;
+    return filteredEvents.slice(start, start + eventsPageSize);
+  }, [filteredEvents, clampedEventsPage, eventsPageSize]);
+
+  useEffect(() => {
+    if (eventListTotalPages === 0) {
+      if (eventsPage !== 0) {
+        setPaginationPage('events', 0);
+      }
+      return;
+    }
+    if (eventsPage >= eventListTotalPages) {
+      setPaginationPage('events', Math.max(0, eventListTotalPages - 1));
+    }
+  }, [eventListTotalPages, eventsPage, setPaginationPage]);
+
+  const eventDropdownEntries = useMemo(
+    () =>
+      filteredEvents.map((event) => {
+        const timestamp = new Date(event.fechaCreacion);
+        const formattedTimestamp = Number.isNaN(timestamp.getTime())
+          ? event.fechaCreacion
+          : timestamp.toLocaleString('es-MX', { hour12: false });
+        return {
+          id: event.id,
+          title: event.evento,
+          subtitle: event.vehicleId ? `Unidad ${event.vehicleId}` : event.responsable,
+          severity: event.severidad,
+          timestamp: formattedTimestamp
+        };
+      }),
+    [filteredEvents]
+  );
 
   // Get actual vehicle markers from the shared Unidades generation
   const vehicleMarkers = useMemo(() => {
@@ -142,13 +184,28 @@ export default function EventosView() {
     setFilteredEvents(generatedEvents);
   }, []);
 
+  useEffect(() => {
+    if (!selectedEventId || filteredEvents.length === 0) {
+      return;
+    }
+    const selectedIndex = filteredEvents.findIndex((event) => event.id === selectedEventId);
+    if (selectedIndex === -1) {
+      return;
+    }
+    const targetPage = Math.floor(selectedIndex / eventsPageSize);
+    if (targetPage !== eventsPage) {
+      setPaginationPage('events', targetPage);
+    }
+  }, [selectedEventId, filteredEvents, eventsPageSize, eventsPage, setPaginationPage]);
+
   const handleEventSelect = useCallback((eventId: string | null) => {
     setSelectedEventId(eventId);
   }, []);
 
   const handleFiltersChange = useCallback((filtered: Event[]) => {
     setFilteredEvents(filtered);
-  }, []);
+    setPaginationPage('events', 0);
+  }, [setPaginationPage]);
 
   const handleVisibleVehiclesChange = useCallback((visibleIds: string[]) => {
     setVisibleVehicleIds(visibleIds);
@@ -301,7 +358,12 @@ export default function EventosView() {
               flexDirection: 'column'
             }}
           >
-            <GlobalFilterBar context="monitoreo" />
+            <GlobalFilterBar
+              context="monitoreo"
+              eventEntries={eventDropdownEntries}
+              selectedEventId={selectedEventId}
+              onEventSelect={handleEventSelect}
+            />
             <Layout style={{ flex: 1, display: 'flex' }}>
               <Sider
                 width={sidebarWidth}
@@ -317,6 +379,7 @@ export default function EventosView() {
                 <EventosSidebar
                   events={events}
                   filteredEvents={filteredEvents}
+                  displayedEvents={paginatedEvents}
                   onEventsGenerated={handleEventsGenerated}
                   onEventSelect={handleEventSelect}
                   onFiltersChange={handleFiltersChange}
@@ -325,6 +388,10 @@ export default function EventosView() {
                   onToggleFocusMode={handleToggleFocusMode}
                   vehiclesWithEvents={vehiclesWithEvents}
                   totalVehiclesCount={vehicleMarkers.length}
+                  currentPage={clampedEventsPage}
+                  totalPages={eventListTotalPages}
+                  pageSize={eventsPageSize}
+                  onPageChange={(page) => setPaginationPage('events', page)}
                 />
                 <div
                   onMouseDown={handleSidebarResize}
@@ -345,7 +412,7 @@ export default function EventosView() {
 
               <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
                 <EventosMapView
-                  eventMarkers={showEventsOnMap ? filteredEvents.map(e => ({
+                  eventMarkers={showEventsOnMap ? paginatedEvents.map(e => ({
                     id: e.id,
                     position: e.position,
                     evento: e.evento,

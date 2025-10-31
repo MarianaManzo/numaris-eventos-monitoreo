@@ -8,9 +8,11 @@ import CollapsibleMenu from '@/components/Layout/CollapsibleMenu';
 import dynamic from 'next/dynamic';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
-import { isPointInZona, calculateCentroid } from '@/lib/zonas/generateZonas';
+import { isPointInZona, calculateCentroid, filterZonas } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
+import { usePaginationStore } from '@/lib/stores/paginationStore';
+import { useFilterStore } from '@/lib/stores/filterStore';
 
 const { Content, Sider } = Layout;
 
@@ -30,8 +32,12 @@ export default function ZonasView() {
     return 450;
   });
   const [isLoading, setIsLoading] = useState(true);
+  const zoneTagFilters = useFilterStore((state) => state.units.zoneTags);
+  const zonesPage = usePaginationStore((state) => state.page.zones);
+  const zonesPageSize = usePaginationStore((state) => state.pageSize.zones);
+  const setPaginationPage = usePaginationStore((state) => state.setPage);
 
-  const { zonas, selectedZonaId, selectZona } = useZonaStore();
+  const { zonas, selectedZonaId, selectZona, searchQuery } = useZonaStore();
 
   // Initial loading effect
   useEffect(() => {
@@ -56,6 +62,49 @@ export default function ZonasView() {
       localStorage.setItem('zonas-sidebar-width', sidebarWidth.toString());
     }
   }, [sidebarWidth]);
+
+  const filteredZonas = useMemo(
+    () => filterZonas(zonas, searchQuery, zoneTagFilters),
+    [zonas, searchQuery, zoneTagFilters]
+  );
+
+  const zoneListTotalPages = filteredZonas.length === 0 ? 0 : Math.ceil(filteredZonas.length / zonesPageSize);
+  const clampedZonesPage = zoneListTotalPages === 0 ? 0 : Math.min(zonesPage, zoneListTotalPages - 1);
+
+  const paginatedZonas = useMemo(() => {
+    const start = clampedZonesPage * zonesPageSize;
+    return filteredZonas.slice(start, start + zonesPageSize);
+  }, [filteredZonas, clampedZonesPage, zonesPageSize]);
+
+  useEffect(() => {
+    if (zoneListTotalPages === 0) {
+      if (zonesPage !== 0) {
+        setPaginationPage('zones', 0);
+      }
+      return;
+    }
+    if (zonesPage >= zoneListTotalPages) {
+      setPaginationPage('zones', Math.max(0, zoneListTotalPages - 1));
+    }
+  }, [zoneListTotalPages, zonesPage, setPaginationPage]);
+
+  useEffect(() => {
+    setPaginationPage('zones', 0);
+  }, [searchQuery, zoneTagFilters, setPaginationPage]);
+
+  useEffect(() => {
+    if (!selectedZonaId || filteredZonas.length === 0) {
+      return;
+    }
+    const selectedIndex = filteredZonas.findIndex((zona) => zona.id === selectedZonaId);
+    if (selectedIndex === -1) {
+      return;
+    }
+    const targetPage = Math.floor(selectedIndex / zonesPageSize);
+    if (targetPage !== zonesPage) {
+      setPaginationPage('zones', targetPage);
+    }
+  }, [selectedZonaId, filteredZonas, zonesPageSize, zonesPage, setPaginationPage]);
 
   const handleZonaSelect = useCallback((zonaId: string | null) => {
     selectZona(zonaId);
@@ -160,6 +209,27 @@ export default function ZonasView() {
       };
     });
   }, [zonas, vehicleMarkers, eventMarkers]);
+
+  const filteredZonasWithRelations = useMemo(() => {
+    const filteredIds = new Set(filteredZonas.map((zona) => zona.id));
+    return zonasWithRelations.filter((zona) => filteredIds.has(zona.id));
+  }, [filteredZonas, zonasWithRelations]);
+
+  const paginatedZonasWithRelations = useMemo(() => {
+    const start = clampedZonesPage * zonesPageSize;
+    return filteredZonasWithRelations.slice(start, start + zonesPageSize);
+  }, [filteredZonasWithRelations, clampedZonesPage, zonesPageSize]);
+
+  const zoneDropdownEntries = useMemo(
+    () =>
+      filteredZonas.map((zona) => ({
+        id: zona.id,
+        name: zona.nombre,
+        color: zona.color,
+        tags: zona.etiquetas ?? []
+      })),
+    [filteredZonas]
+  );
 
   if (isLoading) {
     return (
@@ -272,7 +342,12 @@ export default function ZonasView() {
             flexDirection: 'column'
           }}
         >
-          <GlobalFilterBar context="zona" />
+          <GlobalFilterBar
+            context="zona"
+            zoneEntries={zoneDropdownEntries}
+            selectedZoneId={selectedZonaId}
+            onZoneSelect={handleZonaSelect}
+          />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
               width={sidebarWidth}
@@ -285,7 +360,14 @@ export default function ZonasView() {
                 overflow: 'hidden'
               }}
             >
-              <ZonasSidebar zonasWithRelations={zonasWithRelations} />
+              <ZonasSidebar
+                zonasWithRelations={filteredZonasWithRelations}
+                displayedZonas={paginatedZonasWithRelations}
+                currentPage={clampedZonesPage}
+                totalPages={zoneListTotalPages}
+                pageSize={zonesPageSize}
+                onPageChange={(page) => setPaginationPage('zones', page)}
+              />
               <div
                 onMouseDown={handleSidebarResize}
                 style={{
@@ -305,7 +387,7 @@ export default function ZonasView() {
 
             <Content className="relative" style={{ flex: 1, height: '100%' }}>
               <ZonasMapView
-                zonas={zonas}
+                zonas={paginatedZonas}
                 selectedZonaId={selectedZonaId}
                 onZonaSelect={handleZonaSelect}
                 vehicleMarkers={vehicleMarkers}

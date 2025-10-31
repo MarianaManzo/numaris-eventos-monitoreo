@@ -6,6 +6,7 @@ import { MagnifyingGlass, SortAscending } from 'phosphor-react';
 import type { EventWithLocation, EventNavigationContext } from '@/lib/events/types';
 import type { Dayjs } from 'dayjs';
 import VehicleEventCard from './VehicleEventCard';
+import tableStyles from './EventTable.module.css';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import { useFilterStore } from '@/lib/stores/filterStore';
 
@@ -334,46 +335,44 @@ export default function EventListView({
         </div>
       )}
 
-      {/* Event Cards List */}
-      <div
-        ref={scrollContainerRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          padding: '16px',
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#cbd5e1 #f1f5f9',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        } as React.CSSProperties}
-      >
-        {filteredAndSortedEvents.map((event) => {
-          // Check if this event is selected (either base ID or with -inicio/-fin suffix)
-          const isSelected = selectedEventId === event.id ||
+      {/* Event Table */}
+      <div className={tableStyles.tableWrapper} style={{ flex: 1, minHeight: 0 }}>
+        <div ref={scrollContainerRef} className={tableStyles.tableScroll}>
+          <div className={tableStyles.header}>
+            <span>Evento</span>
+            <span>Estado</span>
+            <span>Unidad</span>
+            <span>Horario</span>
+            <span>Ubicación</span>
+            <span>Responsable</span>
+            <span>Duración</span>
+          </div>
+          {filteredAndSortedEvents.map((event) => {
+            // Check if this event is selected (either base ID or with -inicio/-fin suffix)
+            const isSelected = selectedEventId === event.id ||
                             selectedEventId === `${event.id}-inicio` ||
                             selectedEventId === `${event.id}-fin`;
 
-          return (
-            <div
-              key={event.id}
-              ref={(el) => { itemRefs.current[event.id] = el; }}
-            >
-              <VehicleEventCard
-                event={event}
-                isSelected={isSelected}
-                onClick={(id) => onEventSelect(id, 'list')}
-                vehicleId={navigationContext?.vehicleId} // Get vehicleId from navigation context
-                viewDate={viewDate}
-                showLocationData={showLocationData}
-                showVehicle={false} // Don't show vehicle row in historical day view (single vehicle context)
-                showNotes={false} // Don't show notes in historical day view
-                navigationContext={navigationContext}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={event.id}
+                ref={(el) => { itemRefs.current[event.id] = el; }}
+              >
+                <VehicleEventCard
+                  event={event}
+                  isSelected={isSelected}
+                  onClick={(id) => onEventSelect(id, 'list')}
+                  vehicleId={navigationContext?.vehicleId}
+                  viewDate={viewDate}
+                  showLocationData={showLocationData}
+                  showVehicle={false}
+                  showNotes={false}
+                  navigationContext={navigationContext}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Footer with Severity Counts */}

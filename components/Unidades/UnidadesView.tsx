@@ -11,6 +11,7 @@ import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateEventsForMap } from './generateEventsForUnidades';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
+import { usePaginationStore } from '@/lib/stores/paginationStore';
 
 const { Content, Sider } = Layout;
 
@@ -43,6 +44,9 @@ export default function UnidadesView() {
   const [unidades, setUnidades] = useState<Unidad[]>([]);
   const [filteredUnidades, setFilteredUnidades] = useState<Unidad[]>([]);
   const [selectedUnidadId, setSelectedUnidadId] = useState<string | null>(null);
+  const unitsPage = usePaginationStore((state) => state.page.units);
+  const unitsPageSize = usePaginationStore((state) => state.pageSize.units);
+  const setPaginationPage = usePaginationStore((state) => state.setPage);
 
   // Use global map store for cross-view visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
@@ -52,6 +56,38 @@ export default function UnidadesView() {
 
   // Generate event markers for context layer
   const eventMarkers = useMemo(() => generateEventsForMap(), []);
+
+  const unitListTotalPages = filteredUnidades.length === 0 ? 0 : Math.ceil(filteredUnidades.length / unitsPageSize);
+  const clampedUnitsPage = unitListTotalPages === 0 ? 0 : Math.min(unitsPage, unitListTotalPages - 1);
+
+  const paginatedUnidades = useMemo(() => {
+    const start = clampedUnitsPage * unitsPageSize;
+    return filteredUnidades.slice(start, start + unitsPageSize);
+  }, [filteredUnidades, clampedUnitsPage, unitsPageSize]);
+
+  const unitDropdownEntries = useMemo(
+    () =>
+      filteredUnidades.map((unidad) => ({
+        id: unidad.id,
+        name: unidad.nombre,
+        tag: unidad.etiqueta,
+        status: unidad.estado,
+        responsable: unidad.responsable
+      })),
+    [filteredUnidades]
+  );
+
+  useEffect(() => {
+    if (unitListTotalPages === 0) {
+      if (unitsPage !== 0) {
+        setPaginationPage('units', 0);
+      }
+      return;
+    }
+    if (unitsPage >= unitListTotalPages) {
+      setPaginationPage('units', Math.max(0, unitListTotalPages - 1));
+    }
+  }, [unitListTotalPages, unitsPage, setPaginationPage]);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -98,7 +134,22 @@ export default function UnidadesView() {
 
   const handleFiltersChange = useCallback((filtered: Unidad[]) => {
     setFilteredUnidades(filtered);
-  }, []);
+    setPaginationPage('units', 0);
+  }, [setPaginationPage]);
+
+  useEffect(() => {
+    if (!selectedUnidadId || filteredUnidades.length === 0) {
+      return;
+    }
+    const selectedIndex = filteredUnidades.findIndex((unidad) => unidad.id === selectedUnidadId);
+    if (selectedIndex === -1) {
+      return;
+    }
+    const targetPage = Math.floor(selectedIndex / unitsPageSize);
+    if (targetPage !== unitsPage) {
+      setPaginationPage('units', targetPage);
+    }
+  }, [selectedUnidadId, filteredUnidades, unitsPageSize, unitsPage, setPaginationPage]);
 
   const handleSidebarResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -227,7 +278,7 @@ export default function UnidadesView() {
               flexDirection: 'column'
             }}
           >
-            <GlobalFilterBar context="monitoreo" />
+            <GlobalFilterBar context="monitoreo" unitEntries={unitDropdownEntries} />
             <Layout style={{ flex: 1, display: 'flex' }}>
               <Sider
                 width={sidebarWidth}
@@ -243,10 +294,15 @@ export default function UnidadesView() {
                 <UnidadesSidebar
                   unidades={unidades}
                   filteredUnidades={filteredUnidades}
+                  displayedUnidades={paginatedUnidades}
                   onUnidadesGenerated={handleUnidadesGenerated}
                   onUnidadSelect={handleUnidadSelect}
                   onFiltersChange={handleFiltersChange}
                   selectedUnidadId={selectedUnidadId}
+                  currentPage={clampedUnitsPage}
+                  totalPages={unitListTotalPages}
+                  pageSize={unitsPageSize}
+                  onPageChange={(page) => setPaginationPage('units', page)}
                 />
                 <div
                   onMouseDown={handleSidebarResize}
@@ -267,7 +323,7 @@ export default function UnidadesView() {
 
               <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
                 <UnidadesMapView
-                  unidadMarkers={showVehiclesOnMap ? filteredUnidades.map(u => ({
+                  unidadMarkers={showVehiclesOnMap ? paginatedUnidades.map(u => ({
                     id: u.id,
                     position: u.position,
                     nombre: u.nombre,

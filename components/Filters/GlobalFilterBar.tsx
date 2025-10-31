@@ -1,17 +1,65 @@
 'use client';
 
+import { Collapse, CollapseProps, Tooltip } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { CaretDown, CaretUp, FunnelSimple, MagnifyingGlass, X } from 'phosphor-react';
 import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
 import { EVENT_TAGS } from '@/lib/events/generateEvent';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
+import PaginationControls from '@/components/Common/PaginationControls';
+import { usePaginationStore } from '@/lib/stores/paginationStore';
 
 type GlobalFilterContext = 'monitoreo' | 'unidad' | 'evento' | 'zona';
 
+type EventElementId = 'start' | 'end' | 'vehicle';
+
+interface EventElementOption {
+  id: EventElementId;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+}
+
+interface UnitDropdownEntry {
+  id: string;
+  name: string;
+  tag?: string;
+  status?: string;
+  responsable?: string;
+  zones?: string[];
+  zoneTags?: string[];
+}
+
+interface EventDropdownEntry {
+  id: string;
+  title: string;
+  subtitle?: string;
+  severity?: string;
+  timestamp?: string;
+}
+
+interface ZoneDropdownEntry {
+  id: string;
+  name: string;
+  color?: string;
+  subtitle?: string;
+  tags?: string[];
+}
+
 interface GlobalFilterBarProps {
   context: GlobalFilterContext;
+  eventElementOptions?: EventElementOption[];
+  onEventElementToggle?: (id: EventElementId) => void;
+  unitEntries?: UnitDropdownEntry[];
+  eventEntries?: EventDropdownEntry[];
+  zoneEntries?: ZoneDropdownEntry[];
+  selectedEventId?: string | null;
+  selectedZoneId?: string | null;
+  onEventSelect?: (eventId: string) => void;
+  onZoneSelect?: (zoneId: string | null) => void;
 }
 
 type DropdownKey = 'units' | 'events' | 'zones' | null;
@@ -47,9 +95,96 @@ const EVENT_NAME_OPTIONS = [
 const HEADER_HEIGHT = 64;
 const COLLAPSED_HEIGHT = 0;
 const ROW_HEIGHT = 64;
-const PILLS_HEIGHT = 48;
+const DROPDOWN_PAGE_SIZE = 10;
 
-export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
+const clampPageIndex = (page: number, totalPages: number): number => {
+  if (totalPages === 0) {
+    return 0;
+  }
+  return Math.min(page, totalPages - 1);
+};
+
+const paginateArray = <T,>(items: T[], page: number, pageSize = DROPDOWN_PAGE_SIZE): T[] => {
+  if (items.length === 0) {
+    return items;
+  }
+  const start = page * pageSize;
+  return items.slice(start, start + pageSize);
+};
+
+const renderCheckboxOption = ({
+  label,
+  checked,
+  onToggle,
+  disabled = false,
+  highlighted = false
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+  highlighted?: boolean;
+}): ReactNode => {
+  const handleToggle = () => {
+    if (!disabled) {
+      onToggle();
+    }
+  };
+
+  const isActive = highlighted || checked;
+
+  return (
+    <div
+      key={label}
+      role="button"
+      tabIndex={0}
+      onClick={handleToggle}
+      onKeyDown={(event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          handleToggle();
+        }
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 8px',
+        borderRadius: '10px',
+        backgroundColor: isActive ? '#eef2ff' : 'transparent',
+        border: isActive ? '1px solid #c7d2fe' : '1px solid transparent',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'background-color 0.15s ease, border 0.15s ease',
+        outline: 'none'
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        readOnly
+        disabled={disabled}
+        style={{ width: '16px', height: '16px', pointerEvents: 'none' }}
+      />
+      <span style={{ fontSize: '13px', fontWeight: 500, color: disabled ? '#94a3b8' : '#0f172a' }}>
+        {label}
+      </span>
+    </div>
+  );
+};
+
+export default function GlobalFilterBar({
+  context,
+  eventElementOptions,
+  onEventElementToggle,
+  unitEntries,
+  eventEntries,
+  zoneEntries,
+  selectedEventId,
+  selectedZoneId,
+  onEventSelect,
+  onZoneSelect
+}: GlobalFilterBarProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isBarOpen = useFilterUiStore((state) => state.isBarOpen);
   const activeDropdown = useFilterUiStore((state) => state.activeDropdown);
@@ -58,54 +193,116 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
 
   const eventsFilters = useFilterStore((state) => state.events);
   const unitsFilters = useFilterStore((state) => state.units);
-  const appliedFilters = useFilterStore((state) => state.appliedFilters);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
-  const removeFilter = useFilterStore((state) => state.removeFilter);
   const toggleUnitFilterValue = useFilterStore((state) => state.toggleUnitFilterValue);
   const toggleEventFilterValue = useFilterStore((state) => state.toggleEventFilterValue);
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+  const unitsPage = usePaginationStore((state) => state.page.units);
+  const eventsPage = usePaginationStore((state) => state.page.events);
+  const zonesPage = usePaginationStore((state) => state.page.zones);
+  const unitsPageSize = usePaginationStore((state) => state.pageSize.units);
+  const eventsPageSize = usePaginationStore((state) => state.pageSize.events);
+  const zonesPageSize = usePaginationStore((state) => state.pageSize.zones);
+  const setPage = usePaginationStore((state) => state.setPage);
 
-  const unidadesData = useMemo(() => generateUnidades().slice(0, 16), []);
+  const unidadesData = useMemo<UnitDropdownEntry[]>(() => {
+    if (unitEntries && unitEntries.length > 0) {
+      return unitEntries;
+    }
+    return generateUnidades()
+      .map((unidad) => ({
+        id: unidad.id,
+        name: unidad.nombre
+      }))
+      .slice(0, 32);
+  }, [unitEntries]);
+
   const unitNameOptions = useMemo(() => {
-    const names = new Set<string>();
-    unidadesData.forEach((unidad) => names.add(unidad.nombre));
-    unitsFilters.unidades.forEach((unidad) => names.add(unidad));
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [unidadesData, unitsFilters.unidades]);
+    const names: string[] = [];
+    unidadesData.forEach((unidad) => {
+      if (!names.includes(unidad.name)) {
+        names.push(unidad.name);
+      }
+    });
+    unitsFilters.unidades.forEach((unidad) => {
+      if (!names.includes(unidad)) {
+        names.push(unidad);
+      }
+    });
+    if (unitEntries && unitEntries.length > 0) {
+      return names;
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [unidadesData, unitsFilters.unidades, unitEntries]);
 
   const unitTagOptions = useMemo(() => {
     const tags = new Set<string>();
     unidadesData.forEach((unidad) => {
-      if (unidad.etiqueta) {
-        tags.add(unidad.etiqueta);
+      if (unidad.tag) {
+        tags.add(unidad.tag);
       }
     });
     unitsFilters.tags.forEach((tag) => tags.add(tag));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
   }, [unidadesData, unitsFilters.tags]);
 
-  const zonasData = useMemo(() => generateGuadalajaraZonas().slice(0, 18), []);
+  const zonasData = useMemo<ZoneDropdownEntry[]>(() => {
+    if (zoneEntries && zoneEntries.length > 0) {
+      return zoneEntries;
+    }
+    return generateGuadalajaraZonas()
+      .slice(0, 18)
+      .map((zona) => ({
+        id: zona.id,
+        name: zona.nombre,
+        color: zona.color,
+        tags: zona.etiquetas
+      }));
+  }, [zoneEntries]);
 
   const zoneNameOptions = useMemo(() => {
-    const names = new Set<string>();
-    zonasData.forEach((zona) => names.add(zona.nombre));
-    unitsFilters.zones.forEach((zona) => names.add(zona));
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [zonasData, unitsFilters.zones]);
+    const names: string[] = [];
+    zonasData.forEach((zona) => {
+      if (!names.includes(zona.name)) {
+        names.push(zona.name);
+      }
+    });
+    unitsFilters.zones.forEach((zona) => {
+      if (!names.includes(zona)) {
+        names.push(zona);
+      }
+    });
+    if (zoneEntries && zoneEntries.length > 0) {
+      return names;
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [zonasData, unitsFilters.zones, zoneEntries]);
 
   const zoneTagOptions = useMemo(() => {
     const tags = new Set<string>();
     zonasData.forEach((zona) => {
-      zona.etiquetas?.forEach((tag) => tags.add(tag));
+      zona.tags?.forEach((tag) => tags.add(tag));
     });
     unitsFilters.zoneTags.forEach((tag) => tags.add(tag));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
   }, [zonasData, unitsFilters.zoneTags]);
+  const zoneNameToId = useMemo(() => {
+    const map = new Map<string, string>();
+    zonasData.forEach((zona) => {
+      if (!map.has(zona.name)) {
+        map.set(zona.name, zona.id);
+      }
+    });
+    return map;
+  }, [zonasData]);
 
   const [unitSearch, setUnitSearch] = useState('');
   const [eventSearch, setEventSearchLocal] = useState('');
   const [zoneSearch, setZoneSearch] = useState('');
+  const [unitTagPage, setUnitTagPage] = useState(0);
+  const [zoneTagPage, setZoneTagPage] = useState(0);
+  const [eventTagPage, setEventTagPage] = useState(0);
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
@@ -122,6 +319,16 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
     };
   }, [setActiveDropdown]);
 
+  const eventDropdownEntries = useMemo<EventDropdownEntry[]>(() => {
+    if (eventEntries && eventEntries.length > 0) {
+      return eventEntries;
+    }
+    return EVENT_NAME_OPTIONS.map((title, index) => ({
+      id: `static-event-${index}`,
+      title
+    }));
+  }, [eventEntries]);
+
   const filteredUnitNames = useMemo(() => {
     const query = unitSearch.trim().toLowerCase();
     if (!query) {
@@ -130,13 +337,21 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
     return unitNameOptions.filter((name) => name.toLowerCase().includes(query));
   }, [unitSearch, unitNameOptions]);
 
-  const filteredEventNames = useMemo(() => {
+  const filteredEventEntries = useMemo(() => {
     const query = eventSearch.trim().toLowerCase();
     if (!query) {
-      return EVENT_NAME_OPTIONS;
+      return eventDropdownEntries;
     }
-    return EVENT_NAME_OPTIONS.filter((name) => name.toLowerCase().includes(query));
-  }, [eventSearch]);
+    return eventDropdownEntries.filter((entry) => {
+      const composite = `${entry.title} ${entry.subtitle ?? ''} ${entry.severity ?? ''}`.toLowerCase();
+      return composite.includes(query);
+    });
+  }, [eventSearch, eventDropdownEntries]);
+
+  const filteredEventNames = useMemo(
+    () => filteredEventEntries.map((entry) => entry.title),
+    [filteredEventEntries]
+  );
 
   const filteredZoneNames = useMemo(() => {
     const query = zoneSearch.trim().toLowerCase();
@@ -146,19 +361,138 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
     return zoneNameOptions.filter((name) => name.toLowerCase().includes(query));
   }, [zoneSearch, zoneNameOptions]);
 
+  const unitListTotalPages = filteredUnitNames.length === 0 ? 0 : Math.ceil(filteredUnitNames.length / unitsPageSize);
+  const clampedUnitsPage = unitListTotalPages === 0 ? 0 : Math.min(unitsPage, unitListTotalPages - 1);
+
+  useEffect(() => {
+    if (unitListTotalPages === 0) {
+      if (unitsPage !== 0) {
+        setPage('units', 0);
+      }
+      return;
+    }
+    if (unitsPage >= unitListTotalPages) {
+      setPage('units', unitListTotalPages - 1);
+    }
+  }, [unitListTotalPages, unitsPage, setPage]);
+
+  const eventListTotalPages = filteredEventEntries.length === 0 ? 0 : Math.ceil(filteredEventEntries.length / eventsPageSize);
+  const clampedEventsPage = eventListTotalPages === 0 ? 0 : Math.min(eventsPage, eventListTotalPages - 1);
+
+  useEffect(() => {
+    if (eventListTotalPages === 0) {
+      if (eventsPage !== 0) {
+        setPage('events', 0);
+      }
+      return;
+    }
+    if (eventsPage >= eventListTotalPages) {
+      setPage('events', eventListTotalPages - 1);
+    }
+  }, [eventListTotalPages, eventsPage, setPage]);
+
+  const unitTagTotalPages = unitTagOptions.length === 0 ? 0 : Math.ceil(unitTagOptions.length / DROPDOWN_PAGE_SIZE);
+  const zoneListTotalPages = filteredZoneNames.length === 0 ? 0 : Math.ceil(filteredZoneNames.length / zonesPageSize);
+  const clampedZonesPage = zoneListTotalPages === 0 ? 0 : Math.min(zonesPage, zoneListTotalPages - 1);
+  const zoneTagTotalPages = zoneTagOptions.length === 0 ? 0 : Math.ceil(zoneTagOptions.length / DROPDOWN_PAGE_SIZE);
+  const eventTagTotalPages = EVENT_TAGS.length === 0 ? 0 : Math.ceil(EVENT_TAGS.length / DROPDOWN_PAGE_SIZE);
+
+  useEffect(() => {
+    setUnitTagPage((prev) => {
+      const clamped = clampPageIndex(prev, unitTagTotalPages);
+      return clamped === prev ? prev : clamped;
+    });
+  }, [unitTagTotalPages]);
+
+  useEffect(() => {
+    if (zoneListTotalPages === 0) {
+      if (zonesPage !== 0) {
+        setPage('zones', 0);
+      }
+      return;
+    }
+    if (zonesPage >= zoneListTotalPages) {
+      setPage('zones', zoneListTotalPages - 1);
+    }
+  }, [zoneListTotalPages, zonesPage, setPage]);
+
+  useEffect(() => {
+    setZoneTagPage((prev) => {
+      const clamped = clampPageIndex(prev, zoneTagTotalPages);
+      return clamped === prev ? prev : clamped;
+    });
+  }, [zoneTagTotalPages]);
+
+  useEffect(() => {
+    setEventTagPage((prev) => {
+      const clamped = clampPageIndex(prev, eventTagTotalPages);
+      return clamped === prev ? prev : clamped;
+    });
+  }, [eventTagTotalPages]);
+
+  const paginatedUnitNames = useMemo(
+    () => paginateArray(filteredUnitNames, clampedUnitsPage, unitsPageSize),
+    [filteredUnitNames, clampedUnitsPage, unitsPageSize]
+  );
+  const paginatedEventEntries = useMemo(
+    () => paginateArray(filteredEventEntries, clampedEventsPage, eventsPageSize),
+    [filteredEventEntries, clampedEventsPage, eventsPageSize]
+  );
+  const unitTagLastPage = Math.max(0, unitTagTotalPages - 1);
+  const paginatedUnitTags = useMemo(() => paginateArray(unitTagOptions, Math.min(unitTagPage, unitTagLastPage)), [unitTagOptions, unitTagPage, unitTagLastPage]);
+  const paginatedZoneNames = useMemo(
+    () => paginateArray(filteredZoneNames, clampedZonesPage, zonesPageSize),
+    [filteredZoneNames, clampedZonesPage, zonesPageSize]
+  );
+  const zoneTagLastPage = Math.max(0, zoneTagTotalPages - 1);
+  const paginatedZoneTags = useMemo(() => paginateArray(zoneTagOptions, Math.min(zoneTagPage, zoneTagLastPage)), [zoneTagOptions, zoneTagPage, zoneTagLastPage]);
+  const eventTagLastPage = Math.max(0, eventTagTotalPages - 1);
+  const paginatedEventTags = useMemo(() => paginateArray(EVENT_TAGS, Math.min(eventTagPage, eventTagLastPage)), [eventTagPage, eventTagLastPage]);
+
   useEffect(() => {
     setEventSearchLocal(eventsFilters.searchText);
   }, [eventsFilters.searchText]);
 
-  const filteredAppliedFilters = appliedFilters;
+  const isEventElementOverride = context === 'evento' && eventElementOptions && eventElementOptions.length > 0;
 
   const isUnitsDisabled = context === 'unidad' || context === 'evento';
-  const isEventsDisabled = context === 'evento';
+  const isEventsDisabled = context === 'evento' && !isEventElementOverride;
   const isZonesDisabled = context === 'zona';
 
-  const pillsAreaHeight = filteredAppliedFilters.length > 0 ? PILLS_HEIGHT : 0;
-  const containerHeight = isBarOpen ? ROW_HEIGHT + pillsAreaHeight : COLLAPSED_HEIGHT;
+  const containerHeight = isBarOpen ? ROW_HEIGHT : COLLAPSED_HEIGHT;
   const contentOpacity = isBarOpen ? 1 : 0;
+
+  const renderCollapsibleSection = ({ title, children, disabled }: { title: string; children: ReactNode; disabled?: boolean; }): ReactNode => {
+    const content = (
+      <Collapse
+        bordered={false}
+        defaultActiveKey={disabled ? [] : ['1']}
+        style={{ background: 'transparent' }}
+        className="global-filter-collapse"
+        items={[
+          {
+            key: '1',
+            label: title,
+            children
+          } as CollapseProps['items'][number]
+        ]}
+      />
+    );
+
+    if (!disabled) {
+      return content;
+    }
+
+    return (
+      <Tooltip title="Unavailable in this view">
+        <div style={{ opacity: 0.5, pointerEvents: 'none' }}>{content}</div>
+      </Tooltip>
+    );
+  };
+
+  const eventDropdownBadgeCount = (eventsFilters.estado !== 'todos' ? 1 : 0) +
+    (eventsFilters.severidades.length !== DEFAULT_EVENT_SEVERITIES.length ? eventsFilters.severidades.length : 0) +
+    eventsFilters.etiquetas.length;
 
   const handleDropdownToggle = (key: DropdownKey, disabled?: boolean) => {
     if (disabled) {
@@ -170,20 +504,26 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
   const handleUnitSearchChange = (value: string) => {
     setUnitSearch(value);
     setUnitsFilters({ searchText: value });
+    setPage('units', 0);
   };
 
   const handleEventSearchChange = (value: string) => {
     setEventSearchLocal(value);
     setEventsFilters({ searchText: value });
+    setPage('events', 0);
   };
 
   const handleZoneSearchChange = (value: string) => {
     setZoneSearch(value);
+    setPage('zones', 0);
   };
 
   const handleClearFilters = () => {
     setActiveDropdown(null);
     clearAllFilters();
+    setPage('units', 0);
+    setPage('events', 0);
+    setPage('zones', 0);
   };
 
   return (
@@ -191,12 +531,12 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
     style={{
       position: 'sticky',
       top: HEADER_HEIGHT,
-      zIndex: 80,
-        transition: 'height 0.24s ease',
-        height: containerHeight,
-        overflow: isBarOpen ? 'visible' : 'hidden',
-        pointerEvents: 'auto'
-      }}
+      zIndex: 5000,
+      transition: 'height 0.24s ease',
+      height: containerHeight,
+      overflow: isBarOpen ? 'visible' : 'hidden',
+      pointerEvents: 'auto'
+    }}
     >
       <div
         ref={containerRef}
@@ -247,36 +587,52 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
                 value={unitSearch}
                 onChange={handleUnitSearchChange}
               />
-              <DropdownSection title="Listado de unidades">
-                <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {filteredUnitNames.map((name) => {
-                    const active = unitsFilters.unidades.includes(name);
-                    return (
-                      <DropdownToggleChip
-                        key={name}
-                        label={name}
-                        active={active}
-                        onClick={() => toggleUnitFilterValue('unidades', name)}
-                      />
-                    );
-                  })}
-                </div>
-              </DropdownSection>
-              <DropdownSection title="Etiquetas de unidad">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '120px', overflowY: 'auto' }}>
-                  {unitTagOptions.map((tag) => {
-                    const active = unitsFilters.tags.includes(tag);
-                    return (
-                      <DropdownToggleChip
-                        key={tag}
-                        label={tag}
-                        active={active}
-                        onClick={() => toggleUnitFilterValue('tags', tag)}
-                      />
-                    );
-                  })}
-                </div>
-              </DropdownSection>
+              {renderCollapsibleSection({
+                title: 'Listado de unidades',
+                disabled: false,
+                children: (
+                  <>
+                    <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {paginatedUnitNames.map((name) => {
+                        const active = unitsFilters.unidades.includes(name);
+                        return renderCheckboxOption({
+                          label: name,
+                          checked: active,
+                          onToggle: () => toggleUnitFilterValue('unidades', name)
+                        });
+                      })}
+                    </div>
+                    <PaginationControls
+                      currentPage={clampedUnitsPage}
+                      totalPages={unitListTotalPages}
+                      onPageChange={(page) => setPage('units', clampPageIndex(page, unitListTotalPages))}
+                    />
+                  </>
+                )
+              })}
+              {renderCollapsibleSection({
+                title: 'Etiquetas de unidad',
+                disabled: false,
+                children: (
+                  <>
+                    <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {paginatedUnitTags.map((tag) => {
+                        const active = unitsFilters.tags.includes(tag);
+                        return renderCheckboxOption({
+                          label: tag,
+                          checked: active,
+                          onToggle: () => toggleUnitFilterValue('tags', tag)
+                        });
+                      })}
+                    </div>
+                    <PaginationControls
+                      currentPage={Math.min(unitTagPage, unitTagLastPage)}
+                      totalPages={unitTagTotalPages}
+                      onPageChange={(page) => setUnitTagPage(clampPageIndex(page, unitTagTotalPages))}
+                    />
+                  </>
+                )
+              })}
             </div>
           </FilterDropdown>
 
@@ -285,56 +641,185 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
             disabled={isEventsDisabled}
             isOpen={activeDropdown === 'events'}
             onToggle={() => handleDropdownToggle('events', isEventsDisabled)}
-            badgeCount={
-              (eventsFilters.estado !== 'todos' ? 1 : 0) +
-              (eventsFilters.severidades.length !== DEFAULT_EVENT_SEVERITIES.length ? eventsFilters.severidades.length : 0) +
-              eventsFilters.etiquetas.length
-            }
-            disabledReason="Unavailable in this view."
+            badgeCount={eventDropdownBadgeCount}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {isEventElementOverride && eventElementOptions && eventElementOptions.length > 0 && (
+                <Collapse
+                  bordered={false}
+                  defaultActiveKey={['1']}
+                  items={[{
+                    key: '1',
+                    label: 'Elementos del evento',
+                    children: (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {eventElementOptions.map((option) => (
+                          <label
+                            key={option.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 12px',
+                              borderRadius: '12px',
+                              border: option.checked ? '2px solid #1867ff' : '1px solid #e2e8f0',
+                              backgroundColor: option.disabled ? '#f5f5f5' : option.checked ? '#f1f5ff' : '#ffffff',
+                              cursor: option.disabled ? 'not-allowed' : 'pointer',
+                              opacity: option.disabled ? 0.6 : 1
+                            }}
+                          >
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: option.disabled ? '#94a3b8' : '#0f172a' }}>{option.label}</span>
+                            <input
+                              type="checkbox"
+                              checked={option.checked}
+                              onChange={() => {
+                                if (!option.disabled) {
+                                  onEventElementToggle?.(option.id);
+                                }
+                              }}
+                              disabled={option.disabled}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )
+                  }]}
+                />
+              )}
+
               <DropdownSearchInput
                 placeholder="Buscar evento"
                 value={eventSearch}
                 onChange={handleEventSearchChange}
                 optionsPreview={filteredEventNames.slice(0, 4)}
               />
-              <DropdownSection title="Estado">
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {(['todos', 'abiertos', 'cerrados'] as const).map((estado) => (
-                    <DropdownToggleChip
-                      key={estado}
-                      label={estado === 'todos' ? 'Todos' : estado === 'abiertos' ? 'Abiertos' : 'Cerrados'}
-                      active={eventsFilters.estado === estado}
-                      onClick={() => setEventsFilters({ estado })}
+
+              {context === 'evento' && eventDropdownEntries.length > 0 && renderCollapsibleSection({
+                title: 'Listado de eventos',
+                disabled: false,
+                children: (
+                  <>
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {paginatedEventEntries.map((event) => {
+                        const isSelected = selectedEventId === event.id;
+                        return (
+                          <button
+                            key={event.id}
+                            type="button"
+                            disabled={!onEventSelect}
+                            onClick={() => onEventSelect?.(event.id)}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              gap: '4px',
+                              padding: '10px 12px',
+                              borderRadius: '12px',
+                              border: isSelected ? '2px solid #1867ff' : '1px solid #e2e8f0',
+                              backgroundColor: isSelected ? '#f1f5ff' : '#ffffff',
+                              cursor: onEventSelect ? 'pointer' : 'default',
+                              opacity: onEventSelect ? 1 : 0.75,
+                              textAlign: 'left',
+                              transition: 'border 0.15s ease, background-color 0.15s ease'
+                            }}
+                          >
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                              {event.title}
+                            </span>
+                            {event.subtitle && (
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>{event.subtitle}</span>
+                            )}
+                            {(event.severity || event.timestamp) && (
+                              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: '#64748b' }}>
+                                {event.severity && <span style={{ fontWeight: 600 }}>{event.severity}</span>}
+                                {event.timestamp && <span>{event.timestamp}</span>}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <PaginationControls
+                      currentPage={clampedEventsPage}
+                      totalPages={eventListTotalPages}
+                      onPageChange={(page) => setPage('events', clampPageIndex(page, eventListTotalPages))}
                     />
-                  ))}
-                </div>
-              </DropdownSection>
-              <DropdownSection title="Severidad">
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {DEFAULT_EVENT_SEVERITIES.map((severity) => (
-                    <DropdownToggleChip
-                      key={severity}
-                      label={severity}
-                      active={eventsFilters.severidades.includes(severity)}
-                      onClick={() => toggleEventFilterValue('severidades', severity)}
+                  </>
+                )
+              })}
+
+              {renderCollapsibleSection({
+                title: 'Estado',
+                disabled: isEventElementOverride,
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {(['todos', 'abiertos', 'cerrados'] as const).map((estado) => {
+                      const isActive = eventsFilters.estado === estado;
+                      return renderCheckboxOption({
+                        label: estado === 'todos' ? 'Todos' : estado === 'abiertos' ? 'Abiertos' : 'Cerrados',
+                        checked: isActive,
+                        disabled: isEventElementOverride,
+                        onToggle: () => {
+                          if (estado === 'todos') {
+                            setEventsFilters({ estado });
+                            return;
+                          }
+                          if (isActive) {
+                            setEventsFilters({ estado: 'todos' });
+                          } else {
+                            setEventsFilters({ estado });
+                          }
+                        }
+                      });
+                    })}
+                  </div>
+                )
+              })}
+
+              {renderCollapsibleSection({
+                title: 'Severidad',
+                disabled: isEventElementOverride,
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {DEFAULT_EVENT_SEVERITIES.map((severity) => {
+                      const isActive = eventsFilters.severidades.includes(severity);
+                      return renderCheckboxOption({
+                        label: severity,
+                        checked: isActive,
+                        disabled: isEventElementOverride,
+                        onToggle: () => toggleEventFilterValue('severidades', severity)
+                      });
+                    })}
+                  </div>
+                )
+              })}
+
+              {renderCollapsibleSection({
+                title: 'Etiquetas',
+                disabled: isEventElementOverride,
+                children: (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                      {paginatedEventTags.map((tag) => {
+                        const isActive = eventsFilters.etiquetas.includes(tag);
+                        return renderCheckboxOption({
+                          label: tag,
+                          checked: isActive,
+                          disabled: isEventElementOverride,
+                          onToggle: () => toggleEventFilterValue('etiquetas', tag)
+                        });
+                      })}
+                    </div>
+                    <PaginationControls
+                      currentPage={Math.min(eventTagPage, eventTagLastPage)}
+                      totalPages={eventTagTotalPages}
+                      onPageChange={(page) => setEventTagPage(clampPageIndex(page, eventTagTotalPages))}
+                      disabled={isEventElementOverride}
                     />
-                  ))}
-                </div>
-              </DropdownSection>
-              <DropdownSection title="Etiquetas">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '120px', overflowY: 'auto' }}>
-                  {EVENT_TAGS.map((tag) => (
-                    <DropdownToggleChip
-                      key={tag}
-                      label={tag}
-                      active={eventsFilters.etiquetas.includes(tag)}
-                      onClick={() => toggleEventFilterValue('etiquetas', tag)}
-                    />
-                  ))}
-                </div>
-              </DropdownSection>
+                  </>
+                )
+              })}
             </div>
           </FilterDropdown>
 
@@ -352,36 +837,60 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
                 value={zoneSearch}
                 onChange={handleZoneSearchChange}
               />
-              <DropdownSection title="Listado de zonas">
-                <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {filteredZoneNames.map((zoneName) => {
-                    const active = unitsFilters.zones.includes(zoneName);
-                    return (
-                      <DropdownToggleChip
-                        key={zoneName}
-                        label={zoneName}
-                        active={active}
-                        onClick={() => toggleUnitFilterValue('zones', zoneName)}
-                      />
-                    );
-                  })}
-                </div>
-              </DropdownSection>
-              <DropdownSection title="Etiquetas de zona">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '120px', overflowY: 'auto' }}>
-                  {zoneTagOptions.map((tag) => {
-                    const active = unitsFilters.zoneTags.includes(tag);
-                    return (
-                      <DropdownToggleChip
-                        key={tag}
-                        label={tag}
-                        active={active}
-                        onClick={() => toggleUnitFilterValue('zoneTags', tag)}
-                      />
-                    );
-                  })}
-                </div>
-              </DropdownSection>
+              {renderCollapsibleSection({
+                title: 'Listado de zonas',
+                disabled: false,
+                children: (
+                  <>
+                    <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {paginatedZoneNames.map((zoneName) => {
+                        const active = unitsFilters.zones.includes(zoneName);
+                        const zoneId = zoneNameToId.get(zoneName);
+                        return renderCheckboxOption({
+                          label: zoneName,
+                          checked: active,
+                          highlighted: selectedZoneId === zoneId,
+                          onToggle: () => {
+                            toggleUnitFilterValue('zones', zoneName);
+                            if (zoneId) {
+                              const nextSelection = active && selectedZoneId === zoneId ? null : zoneId;
+                              onZoneSelect?.(nextSelection);
+                            }
+                          }
+                        });
+                      })}
+                    </div>
+                    <PaginationControls
+                      currentPage={clampedZonesPage}
+                      totalPages={zoneListTotalPages}
+                      onPageChange={(page) => setPage('zones', clampPageIndex(page, zoneListTotalPages))}
+                    />
+                  </>
+                )
+              })}
+              {renderCollapsibleSection({
+                title: 'Etiquetas de zona',
+                disabled: false,
+                children: (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                      {paginatedZoneTags.map((tag) => {
+                        const active = unitsFilters.zoneTags.includes(tag);
+                        return renderCheckboxOption({
+                          label: tag,
+                          checked: active,
+                          onToggle: () => toggleUnitFilterValue('zoneTags', tag)
+                        });
+                      })}
+                    </div>
+                    <PaginationControls
+                      currentPage={Math.min(zoneTagPage, zoneTagLastPage)}
+                      totalPages={zoneTagTotalPages}
+                      onPageChange={(page) => setZoneTagPage(clampPageIndex(page, zoneTagTotalPages))}
+                    />
+                  </>
+                )
+              })}
             </div>
           </FilterDropdown>
         </div>
@@ -420,30 +929,6 @@ export default function GlobalFilterBar({ context }: GlobalFilterBarProps) {
           </button>
         </div>
       </div>
-
-      {isBarOpen && filteredAppliedFilters.length > 0 && (
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            padding: '10px 24px 18px',
-            opacity: contentOpacity,
-            transition: 'padding 0.24s ease, opacity 0.24s ease'
-          }}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-            {filteredAppliedFilters.map((filter) => (
-              <FilterPill
-                key={filter.id}
-                label={filter.label}
-                value={filter.value}
-                removable={filter.removable !== false}
-                domain={filter.domain}
-                onRemove={() => removeFilter(filter.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -456,6 +941,7 @@ interface DropdownProps {
   onToggle: () => void;
   children: React.ReactNode;
   badgeCount?: number;
+  customLabel?: React.ReactNode;
 }
 
 function FilterDropdown({
@@ -465,10 +951,18 @@ function FilterDropdown({
   isOpen,
   onToggle,
   children,
-  badgeCount = 0
+  badgeCount = 0,
+  customLabel
 }: DropdownProps) {
   return (
-    <div style={{ position: 'relative', minWidth: '220px', flex: '1 1 220px' }}>
+    <div
+      style={{
+        position: 'relative',
+        minWidth: '220px',
+        flex: '1 1 220px',
+        zIndex: isOpen ? 6000 : undefined
+      }}
+    >
       <button
         onClick={onToggle}
         disabled={disabled}
@@ -489,7 +983,7 @@ function FilterDropdown({
           transition: 'box-shadow 0.2s ease'
         }}
       >
-        <span>{label}</span>
+        <span>{customLabel ?? label}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {badgeCount > 0 && (
             <span
@@ -519,7 +1013,7 @@ function FilterDropdown({
             top: `calc(100% + 8px)`,
             left: 0,
             right: 0,
-            zIndex: 30,
+            zIndex: 7000,
             backgroundColor: '#ffffff',
             borderRadius: '14px',
             boxShadow: '0 20px 45px rgba(15,23,42,0.18)',
@@ -603,79 +1097,5 @@ function DropdownSection({ title, children }: DropdownSectionProps) {
       <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>{title}</div>
       {children}
     </div>
-  );
-}
-
-interface DropdownToggleChipProps {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}
-
-function DropdownToggleChip({ label, active, onClick }: DropdownToggleChipProps) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '8px 12px',
-        borderRadius: '10px',
-        border: `1px solid ${active ? '#1867ff' : '#e2e8f0'}`,
-        backgroundColor: active ? '#eff6ff' : '#ffffff',
-        color: active ? '#1867ff' : '#334155',
-        fontSize: '12px',
-        fontWeight: 600,
-        cursor: 'pointer',
-        transition: 'all 0.15s ease'
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-interface FilterPillProps {
-  label: string;
-  value: string;
-  removable: boolean;
-  domain: 'events' | 'units';
-  onRemove: () => void;
-}
-
-function FilterPill({ label, value, removable, domain, onRemove }: FilterPillProps) {
-  const color = domain === 'events' ? '#1d4ed8' : '#047857';
-  const background = domain === 'events' ? '#eff6ff' : '#ecfdf5';
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 10px',
-        borderRadius: '999px',
-        border: `1px solid ${color}1a`,
-        backgroundColor: background,
-        color
-      }}
-    >
-      <span style={{ fontSize: '12px', fontWeight: 600 }}>
-        {label}: <span style={{ fontWeight: 500 }}>{value}</span>
-      </span>
-      {removable && (
-        <button
-          onClick={onRemove}
-          style={{
-            border: 'none',
-            background: 'transparent',
-            color,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <X size={12} weight="bold" />
-        </button>
-      )}
-    </span>
   );
 }

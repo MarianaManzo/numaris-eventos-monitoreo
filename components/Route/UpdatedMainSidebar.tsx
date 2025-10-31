@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
+import tableStyles from '@/components/Events/EventTable.module.css';
 import type { EventWithLocation } from '@/lib/events/types';
 import type { EventLocation } from '@/lib/events/generateEvent';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
@@ -383,8 +384,6 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
     // No stored tab - default to telematica
     return 'telematica';
   });
-  const [columnWidths] = useState({ evento: 250, fecha: 200, severidad: 150 });
-
   // Search/Filter/Sort state for Eventos tab
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -1093,27 +1092,24 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
                 </div>
               </div>
 
-              {/* Vehicle Event Cards */}
-              <div
-                ref={scrollContainerRef}
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  padding: '16px',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#cbd5e1 #f1f5f9',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                } as React.CSSProperties}
-              >
-                {filteredAndSortedEvents.map((event) => {
-                  // Generate location from event ID (geofence or address)
-                  const address = generateLocationString(generateSeedFromEventId(event.id));
+              {/* Vehicle Event Table */}
+              <div className={tableStyles.tableWrapper} style={{ flex: 1, minHeight: 0 }}>
+                <div ref={scrollContainerRef} className={tableStyles.tableScroll}>
+                  <div className={tableStyles.header}>
+                    <span>Evento</span>
+                    <span>Estado</span>
+                    <span>Unidad</span>
+                    <span>Horario</span>
+                    <span>Ubicación</span>
+                    <span>Responsable</span>
+                    <span>Duración</span>
+                  </div>
+                  {filteredAndSortedEvents.map((event) => {
+                    // Generate location from event ID (geofence or address)
+                    const address = generateLocationString(generateSeedFromEventId(event.id));
 
-                  // Convert Event to EventWithLocation format
-                  const eventWithLocation: EventWithLocation = {
+                    // Convert Event to EventWithLocation format
+                    const eventWithLocation: EventWithLocation = {
                     id: event.id,
                     position: event.position,
                     evento: event.evento,
@@ -1164,180 +1160,10 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
                     </div>
                   );
                 })}
-              </div>
-            </>
-          )}
-
-          {/* OLD TABLE IMPLEMENTATION - Preserved for future use */}
-          {false && (
-            <>
-              {/* Events Table Header */}
-              <div style={{
-                padding: '12px 16px',
-                borderBottom: '1px solid #e5e7eb',
-                backgroundColor: '#f8f9fb',
-                display: 'flex',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#64748b',
-                alignItems: 'center',
-                flexShrink: 0,
-                borderTop: '1px solid #e5e7eb',
-                borderLeftWidth: 1,
-                borderLeftStyle: 'solid',
-                borderLeftColor: '#e5e7eb',
-                borderRight: '1px solid #e5e7eb'
-              }}>
-                <div style={{ width: `${columnWidths.evento}px`, minWidth: `${columnWidths.evento}px`, maxWidth: `${columnWidths.evento}px`, display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '16px', flexShrink: 0 }}>
-                  <div style={{ width: '24px', minWidth: '24px' }}></div>
-                  <span>Evento</span>
-                </div>
-                <div style={{ width: `${columnWidths.fecha}px`, flexShrink: 0, paddingRight: '16px' }}>
-                  Fecha de creación
-                </div>
-                <div style={{ width: `${columnWidths.severidad}px`, flexShrink: 0 }}>
-                  Severidad
                 </div>
               </div>
-
-              {/* Events Table Content */}
-              <div
-                ref={scrollContainerRef}
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  overflowX: 'auto',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#cbd5e1 #f1f5f9',
-                  borderLeftWidth: 1,
-                  borderLeftStyle: 'solid',
-                  borderLeftColor: '#e5e7eb',
-                  borderRight: '1px solid #e5e7eb',
-                  position: 'relative'
-                } as React.CSSProperties}>
-                {events.map((event) => {
-                  const severityStyle = getSeverityColor(event.severidad);
-                  const isSelected = selectedEventId === event.id;
-                  return (
-                    <div
-                      key={event.id}
-                      ref={(el) => { itemRefs.current[event.id] = el; }}
-                      onClick={() => handleEventClick(event.id)}
-                      style={{
-                        display: 'flex',
-                        padding: '0 16px',
-                        minHeight: '48px',
-                        height: 'auto',
-                        borderBottom: '1px solid #e5e7eb',
-                        alignItems: 'center',
-                        fontSize: '14px',
-                        backgroundColor: isSelected ? '#eff6ff' : '#fff',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s',
-                        borderLeftWidth: 4,
-                        borderLeftStyle: 'solid',
-                        borderLeftColor: isSelected ? '#3b82f6' : 'transparent',
-                        boxSizing: 'border-box'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) e.currentTarget.style.backgroundColor = '#f9fafb';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) e.currentTarget.style.backgroundColor = '#fff';
-                      }}
-                    >
-                      <div style={{ width: `${columnWidths.evento}px`, minWidth: `${columnWidths.evento}px`, maxWidth: `${columnWidths.evento}px`, display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '16px', flexShrink: 0 }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          minWidth: '24px',
-                          minHeight: '24px',
-                          borderRadius: '50%',
-                          backgroundColor: severityStyle.bg,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: severityStyle.text,
-                          flexShrink: 0
-                        }}>
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px' }}>
-                            {event.icon}
-                          </span>
-                        </div>
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Build URL with vehicle live context
-                            const params = new URLSearchParams({
-                              context: 'vehicle'
-                            });
-                            if (unidadId) {
-                              params.set('vehicleId', unidadId);
-                            }
-                            router.push(`/eventos/${event.id}?${params.toString()}`);
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#0047cc';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#1867ff';
-                          }}
-                          style={{
-                            color: '#1867ff',
-                            fontWeight: 400,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            flex: 1,
-                            lineHeight: 1.4,
-                            cursor: 'pointer',
-                            transition: 'color 0.2s'
-                          }}
-                        >
-                          {event.evento}
-                        </span>
-                      </div>
-                      <span style={{
-                        width: `${columnWidths.fecha}px`,
-                        flexShrink: 0,
-                        color: '#6b7280',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        paddingRight: '16px'
-                      }} title={dayjs(event.fechaCreacion).format('hh:mm:ss a')}>{dayjs(event.fechaCreacion).format('hh:mm:ss a')}</span>
-                      <div style={{
-                        width: `${columnWidths.severidad}px`,
-                        flexShrink: 0,
-                        display: 'flex'
-                      }}>
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '4px 12px',
-                          borderRadius: '9999px',
-                          backgroundColor: severityStyle.bg,
-                          color: severityStyle.text,
-                          fontSize: '13px',
-                          fontWeight: 500,
-                          width: 'fit-content'
-                        }}>
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px' }}>
-                            {event.icon}
-                          </span>
-                          {severityStyle.label}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
 
           {/* Events Footer - Always visible */}
-          {!isTabLoading && (
           <div style={{
             height: '80px',
             minHeight: '80px',
@@ -1382,7 +1208,8 @@ export default function UpdatedMainSidebar({ onEventSelect, onEventsGenerated, o
               </div>
             </div>
           </div>
-          )}
+          </>
+        )}
         </div>
       )}
 

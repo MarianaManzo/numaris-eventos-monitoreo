@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
-import { Button, Typography, Input, Switch } from 'antd';
+import { useState, useRef, useEffect, type ComponentType } from 'react';
+import { Button, Typography, Input } from 'antd';
 import type { IconProps } from 'phosphor-react';
 import {
   MagnifyingGlass,
@@ -17,11 +17,11 @@ import {
   WarningOctagon,
   FirstAid
 } from 'phosphor-react';
-import { generateGuadalajaraZonas, filterZonas } from '@/lib/zonas/generateZonas';
+import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useZonaStore } from '@/lib/stores/zonaStore';
-import { useFilterStore } from '@/lib/stores/filterStore';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
+import PaginationControls from '@/components/Common/PaginationControls';
 
 const { Text } = Typography;
 
@@ -46,9 +46,21 @@ function getIconComponent(name?: string): ComponentType<IconProps> {
 
 interface ZonasSidebarProps {
   zonasWithRelations: ZonaWithRelations[];
+  displayedZonas: ZonaWithRelations[];
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
-export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) {
+export default function ZonasSidebar({
+  zonasWithRelations,
+  displayedZonas,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageChange
+}: ZonasSidebarProps) {
 
   // Global map store for context layer visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap } = useGlobalMapStore();
@@ -69,7 +81,6 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
     deselectAllZonas,
     getVisibleZonas
   } = useZonaStore();
-  const zoneTagFilters = useFilterStore((state) => state.units.zoneTags);
 
   // Generate zonas once on mount
   useEffect(() => {
@@ -79,15 +90,11 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
     }
   }, []); 
 
-  // Filter zonas based on search and tags
-  const filteredZonasWithRelations = useMemo(() => {
-    const filtered = filterZonas(zonas, searchQuery, zoneTagFilters);
-    const filteredIds = new Set(filtered.map(z => z.id));
-    return zonasWithRelations.filter(z => filteredIds.has(z.id));
-  }, [zonasWithRelations, searchQuery, zoneTagFilters, zonas]);
-
   const visibleZonas = getVisibleZonas();
   const visibleCount = visibleZonas.length;
+  const hasZonas = zonasWithRelations.length > 0;
+  const pageStart = hasZonas ? currentPage * pageSize + 1 : 0;
+  const pageEnd = hasZonas ? Math.min(zonasWithRelations.length, pageStart + pageSize - 1) : 0;
 
   // Check if all zonas are visible
   const allZonasVisible = zonas.length > 0 && zonas.every(z => z.visible);
@@ -192,7 +199,7 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
           scrollbarColor: '#cbd5e1 #f1f5f9',
           position: 'relative'
         } as React.CSSProperties}>
-        {filteredZonasWithRelations.map((zona) => {
+        {displayedZonas.map((zona) => {
           const isSelected = selectedZonaId === zona.id;
           return (
             <div
@@ -264,6 +271,24 @@ export default function ZonasSidebar({ zonasWithRelations }: ZonasSidebarProps) 
             </div>
           );
         })}
+      </div>
+
+      <div style={{
+        padding: '12px 16px',
+        borderLeft: '1px solid #e5e7eb',
+        borderRight: '1px solid #e5e7eb',
+        borderTop: '1px solid #e5e7eb',
+        backgroundColor: '#ffffff',
+        flexShrink: 0
+      }}>
+        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+          {hasZonas ? `Mostrando ${pageStart}-${pageEnd} de ${zonasWithRelations.length}` : 'Sin zonas'}
+        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
       </div>
 
       {/* Footer */}

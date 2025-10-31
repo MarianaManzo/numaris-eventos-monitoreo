@@ -9,6 +9,7 @@ import { List, Typography, Button } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import type { EventNavigationContext, EventWithLocation } from '@/lib/events/types';
 import VehicleEventCard from '@/components/Events/VehicleEventCard';
+import tableStyles from '@/components/Events/EventTable.module.css';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
 import { getSeverityColor } from '@/lib/events/eventStyles';
@@ -605,24 +606,25 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
         </div>
       </div>
 
-      <div
-        ref={eventListRef}
-        style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        scrollbarWidth: 'thin',
-        scrollbarColor: '#cbd5e1 #f1f5f9',
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      } as React.CSSProperties}>
-        {events.map((event) => {
-          // Check if this event is selected (either base ID or with -inicio/-fin suffix)
-          const isSelected = selectedEventId === event.id ||
-                            selectedEventId === `${event.id}-inicio` ||
-                            selectedEventId === `${event.id}-fin`;
+      <div className={tableStyles.tableWrapper} style={{ flex: 1, minHeight: 0 }}>
+        <div
+          ref={eventListRef}
+          className={tableStyles.tableScroll}
+        >
+          <div className={tableStyles.header}>
+            <span>Evento</span>
+            <span>Estado</span>
+            <span>Unidad</span>
+            <span>Horario</span>
+            <span>Ubicación</span>
+            <span>Responsable</span>
+            <span>Duración</span>
+          </div>
+          {events.map((event) => {
+            // Check if this event is selected (either base ID or with -inicio/-fin suffix)
+            const isSelected = selectedEventId === event.id ||
+                              selectedEventId === `${event.id}-inicio` ||
+                              selectedEventId === `${event.id}-fin`;
 
           // Generate location data for the event
           const locationName = generateLocationString(generateSeedFromEventId(event.id));
@@ -687,7 +689,8 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
               />
             </div>
           );
-        })}
+          })}
+        </div>
       </div>
 
       <div style={{

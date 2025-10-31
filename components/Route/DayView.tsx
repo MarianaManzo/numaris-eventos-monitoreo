@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Layout, Button, Space, Typography, Tabs, DatePicker, Dropdown, Switch } from 'antd';
+import { Layout, Button, Space, Typography, Tabs, DatePicker, Dropdown } from 'antd';
 import { ArrowLeftOutlined, CalendarOutlined, LeftOutlined, RightOutlined, MoreOutlined } from '@ant-design/icons';
 import dynamic from 'next/dynamic';
 import { useRouteStore } from '@/lib/stores/routeStore';
@@ -20,6 +20,7 @@ import type { EventNavigationContext } from '@/lib/events/types';
 import { generateVehicleName } from '@/lib/events/addressGenerator';
 import { getVehicleCurrentPosition } from '@/lib/unidades/generateUnidades';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
+import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
@@ -243,7 +244,8 @@ function EventosOnlyView({ eventMarkers, selectedEventId, onEventSelect, selecte
       showSeverityCounts={true}
       navigationContext={navigationContext}
       onFilteredEventsChange={onFilteredEventsChange}
-      // Don't show Unidades switch in historical day view - vehicle context is implicit
+      showUnidadesOnMap={showUnidadesOnMap}
+      onToggleUnidadesVisibility={onToggleUnidadesVisibility}
     />
   );
 }
@@ -818,7 +820,8 @@ export default function DayView() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTabSwitching, setIsTabSwitching] = useState(false);
-  const [showUnidadesOnMap, setShowUnidadesOnMap] = useState(true);
+  const showVehiclesOnMap = useGlobalMapStore((state) => state.showVehiclesOnMap);
+  const setShowVehiclesOnMap = useGlobalMapStore((state) => state.setShowVehiclesOnMap);
   const [filteredEventIds, setFilteredEventIds] = useState<string[] | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -1765,8 +1768,8 @@ export default function DayView() {
                     onEventSelect={handleEventSelect}
                     selectedDate={selectedDate}
                     vehicleId={unidadId}
-                    showUnidadesOnMap={showUnidadesOnMap}
-                    onToggleUnidadesVisibility={setShowUnidadesOnMap}
+                    showUnidadesOnMap={showVehiclesOnMap}
+                    onToggleUnidadesVisibility={setShowVehiclesOnMap}
                     onFilteredEventsChange={setFilteredEventIds}
                   />
                 )}
@@ -1850,8 +1853,8 @@ export default function DayView() {
               primaryTab={primaryTab}
               isTabSwitching={isTabSwitching}
               selectedDate={selectedDate}
-              vehicleMarkers={showUnidadesOnMap ? vehicleMarkers : []}
-              showVehicleMarkers={showUnidadesOnMap}
+              vehicleMarkers={showVehiclesOnMap ? vehicleMarkers : []}
+              showVehicleMarkers={showVehiclesOnMap}
               vehicleCurrentPosition={vehicleCurrentPosition || undefined}
             />
           </Content>
