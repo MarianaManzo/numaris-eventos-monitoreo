@@ -72,6 +72,7 @@ interface GlobalFilterBarProps {
   eventEntries?: EventDropdownEntry[];
   zoneEntries?: ZoneDropdownEntry[];
   selectedEventId?: string | null;
+  selectedEventIds?: string[];
   selectedZoneId?: string | null;
   onEventSelect?: (eventId: string) => void;
   onZoneSelect?: (zoneId: string | null) => void;
@@ -196,6 +197,7 @@ export default function GlobalFilterBar({
   eventEntries,
   zoneEntries,
   selectedEventId,
+  selectedEventIds,
   selectedZoneId,
   onEventSelect,
   onZoneSelect
