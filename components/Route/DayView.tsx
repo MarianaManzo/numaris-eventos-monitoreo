@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Layout, Button, Space, Typography, Tabs, DatePicker, Dropdown } from 'antd';
-import { ArrowLeftOutlined, CalendarOutlined, LeftOutlined, RightOutlined, MoreOutlined } from '@ant-design/icons';
+import { Layout, Space, Dropdown } from 'antd';
 import dynamic from 'next/dynamic';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import DaySidebar from './DaySidebar';
@@ -21,9 +20,9 @@ import { generateVehicleName } from '@/lib/events/addressGenerator';
 import { getVehicleCurrentPosition } from '@/lib/unidades/generateUnidades';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { usePaginationStore } from '@/lib/stores/paginationStore';
 
-const { Content, Sider } = Layout;
-const { Title } = Typography;
+const { Content } = Layout;
 
 const SingleRouteMapView = dynamic(
   () => import('@/components/Map/SingleRouteMapAdapter'),
@@ -51,6 +50,15 @@ interface Event {
   etiqueta?: string;
   responsable?: string;
 }
+
+type EventSeverityLevel = EventMarker['severidad'];
+
+const SEVERITY_META: Record<EventSeverityLevel, { label: string; dot: string }> = {
+  Alta: { label: 'Alta', dot: '#fecaca' },
+  Media: { label: 'Media', dot: '#fed7aa' },
+  Baja: { label: 'Baja', dot: '#bfdbfe' },
+  Informativa: { label: 'Informativa', dot: '#a5f3fc' }
+};
 
 const getEventIconBySeverity = (severidad: string) => {
   const getSeverityStyle = (sev: string) => {
@@ -162,6 +170,8 @@ const generateEventsForDay = (date: dayjs.Dayjs): Event[] => {
   return events.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
 };
 
+const clampPanelWidth = (value: number): number => Math.min(Math.max(value, 320), 420);
+
 // Determine event status based on event index and selected date
 // Mix of: Iniciado, En curso, and Finalizado
 const getEventStatus = (eventId: string, eventStartDate: dayjs.Dayjs, selectedDate: dayjs.Dayjs): 'en_curso' | 'finalizado' | 'iniciado' => {
@@ -241,7 +251,7 @@ function EventosOnlyView({ eventMarkers, selectedEventId, onEventSelect, selecte
       onEventSelect={onEventSelect}
       viewDate={selectedDate}
       showLocationData={true}
-      showSeverityCounts={true}
+      showSeverityCounts={false}
       navigationContext={navigationContext}
       onFilteredEventsChange={onFilteredEventsChange}
       showUnidadesOnMap={showUnidadesOnMap}
@@ -822,14 +832,21 @@ export default function DayView() {
   const [isTabSwitching, setIsTabSwitching] = useState(false);
   const showVehiclesOnMap = useGlobalMapStore((state) => state.showVehiclesOnMap);
   const setShowVehiclesOnMap = useGlobalMapStore((state) => state.setShowVehiclesOnMap);
+  const setPaginationPageStore = usePaginationStore((state) => state.setPage);
   const [filteredEventIds, setFilteredEventIds] = useState<string[] | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('dayview-sidebar-width');
-      return saved ? parseInt(saved) : 450;
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!Number.isNaN(parsed)) {
+          return clampPanelWidth(parsed);
+        }
+      }
     }
-    return 450;
+    return 360;
   });
+  const panelWidth = clampPanelWidth(sidebarWidth);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   // Extract unidadId from pathname and generate vehicle name
@@ -937,9 +954,9 @@ export default function DayView() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('dayview-sidebar-width', sidebarWidth.toString());
+      localStorage.setItem('dayview-sidebar-width', panelWidth.toString());
     }
-  }, [sidebarWidth]);
+  }, [panelWidth]);
 
   const months = [
     'Enero 2025', 'Febrero 2025', 'Marzo 2025', 'Abril 2025',
@@ -1217,12 +1234,45 @@ export default function DayView() {
     return eventMarkers.filter(marker => filteredEventIds.includes(marker.id));
   }, [eventMarkers, filteredEventIds]);
 
+  const eventSeveritySummary = useMemo(() => {
+    const counts: Record<EventSeverityLevel, number> = {
+      Alta: 0,
+      Media: 0,
+      Baja: 0,
+      Informativa: 0
+    };
+
+    filteredEventMarkers.forEach((marker) => {
+      counts[marker.severidad] += 1;
+    });
+
+    return {
+      counts,
+      total: filteredEventMarkers.length
+    };
+  }, [filteredEventMarkers]);
+
   // Memoize vehicle name to ensure stable reference
   const vehicleName = useMemo(() => {
     return getVehicleName(unidadId);
   }, [unidadId, getVehicleName]);
 
+  useEffect(() => {
+    if (unidadId) {
+      setPaginationPageStore('events', 0);
+    }
+  }, [unidadId, setPaginationPageStore]);
+
   // Generate vehicle/unidades markers for the map
+  const unitEventDropdownEntries = useMemo(() => filteredEventMarkers.map((event) => ({
+    id: event.id,
+    name: event.evento,
+    severity: event.severidad,
+    status: event.status as 'abierto' | 'en_progreso' | 'cerrado' | undefined,
+    timestamp: event.fechaCreacion,
+    unitName: vehicleName || undefined
+  })), [filteredEventMarkers, vehicleName]);
+
   const vehicleMarkers = useMemo(() => {
     if (!generateRouteForDate) return [];
 
@@ -1373,11 +1423,11 @@ export default function DayView() {
   const handleSidebarResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = sidebarWidth;
+    const startWidth = panelWidth;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const diff = moveEvent.clientX - startX;
-      setSidebarWidth(Math.max(450, Math.min(450, startWidth + diff)));
+      setSidebarWidth(clampPanelWidth(startWidth + diff));
     };
 
     const handleMouseUp = () => {
@@ -1434,429 +1484,484 @@ export default function DayView() {
           </div>
         )}
 
-        {/* Main Layout with Sidebar and Content */}
+        {/* Main Layout */}
         <Layout style={{
           marginLeft: isFullscreen ? 0 : (menuCollapsed ? '48px' : '240px'),
           transition: 'margin-left 0.3s ease',
           height: '100%',
           width: isFullscreen ? '100vw' : 'auto',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}>
-          {!isFullscreen && (
-            <Sider
-            width={sidebarWidth}
+          <Content
+            className="history-content"
             style={{
-              position: 'relative',
-              background: '#fff',
-              borderRight: '1px solid #f0f0f0',
-              boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
+              flex: 1,
+              minWidth: 0,
+              width: '100%',
               height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              background: 'transparent',
               overflow: 'hidden'
             }}
           >
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <div style={{ flexShrink: 0, padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Space>
-                <button onClick={handleBackToMain} style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}>
-                  <svg style={{ width: '16px', height: '16px', color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 500, color: '#111827' }}>
-                  Historial: {getVehicleName(unidadId)}
-                </h1>
-              </Space>
-              <Dropdown menu={{ items: menuItems }} placement="bottomRight" trigger={['click']}>
-                <button style={{
-                  width: '40px',
-                  height: '40px',
-                  border: 'none',
-                  background: 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#6b7280'
-                }}>
-                  <svg style={{ width: '20px', height: '20px' }} fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                  </svg>
-                </button>
-              </Dropdown>
-            </div>
-
-
-            {/* Date Picker */}
-            <div style={{ flexShrink: 0, padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ flex: 1, position: 'relative' }} ref={datePickerRef}>
-                  <button
-                    onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                    style={{
-                      width: '100%',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0 12px',
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 400,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <span style={{ color: '#111827' }}>{selectedDate.format('DD [de] MMMM, YYYY')}</span>
-                    <svg style={{ width: '20px', height: '20px', color: '#6b7280' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-
-                  {isDatePickerOpen && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      marginTop: '4px',
-                      backgroundColor: '#fff',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                      border: '1px solid #e5e7eb',
-                      padding: '12px',
-                      zIndex: 20,
-                      width: '300px'
-                    }}>
-                      <div style={{ marginBottom: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', color: '#111827' }}>
-                        {dayjs().format('MMMM YYYY')}
+            <div
+              className={`history-layout${isFullscreen ? ' history-layout--fullscreen' : ''}`}
+              style={{
+                gridTemplateColumns: isFullscreen ? '1fr' : `minmax(320px, ${panelWidth}px) 1fr`
+              }}
+            >
+              <div className="history-layout__filters">
+                <GlobalFilterBar
+                  context={unidadId ? 'unidad' : 'monitoreo'}
+                  eventEntries={unidadId ? unitEventDropdownEntries : undefined}
+                  selectedEventId={selectedEventId}
+                  selectedEventIds={selectedEventId ? [selectedEventId] : []}
+                  onEventSelect={(eventId) => handleEventSelect(eventId, 'list')}
+                />
+              </div>
+              {!isFullscreen && (
+                <aside
+                  className="history-panel"
+                  style={{ width: `${panelWidth}px` }}
+                >
+                  <div className="history-panel__inner">
+                    <div className="history-panel__header">
+                      <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Space>
+                          <button
+                            onClick={handleBackToMain}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: '#fff',
+                              border: '1px solid #e5e7eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <svg style={{ width: '16px', height: '16px', color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 500, color: '#111827' }}>
+                            Historial: {getVehicleName(unidadId)}
+                          </h1>
+                        </Space>
+                        <Dropdown menu={{ items: menuItems }} placement="bottomRight" trigger={['click']}>
+                          <button style={{
+                            width: '40px',
+                            height: '40px',
+                            border: 'none',
+                            background: 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#6b7280'
+                          }}>
+                            <svg style={{ width: '20px', height: '20px' }} fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                            </svg>
+                          </button>
+                        </Dropdown>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '8px' }}>
-                        {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, i) => (
-                          <div key={i} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#6b7280', padding: '4px' }}>
-                            {day}
+
+                      <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ flex: 1, position: 'relative' }} ref={datePickerRef}>
+                            <button
+                              onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+                              style={{
+                                width: '100%',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '0 12px',
+                                backgroundColor: '#fff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: 400,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <span style={{ color: '#111827' }}>{selectedDate.format('DD [de] MMMM, YYYY')}</span>
+                              <svg style={{ width: '20px', height: '20px', color: '#6b7280' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+
+                            {isDatePickerOpen && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                marginTop: '4px',
+                                backgroundColor: '#fff',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                border: '1px solid #e5e7eb',
+                                padding: '12px',
+                                zIndex: 20,
+                                width: '300px'
+                              }}>
+                                <div style={{ marginBottom: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', color: '#111827' }}>
+                                  {dayjs().format('MMMM YYYY')}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '8px' }}>
+                                  {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, index) => (
+                                    <div key={index} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#6b7280', padding: '4px' }}>
+                                      {day}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                                  {(() => {
+                                    const today = dayjs();
+                                    const startOfMonth = today.startOf('month');
+                                    const endOfMonth = today.endOf('month');
+                                    const startDay = startOfMonth.day();
+                                    const daysInMonth = endOfMonth.date();
+                                    const availableDates = Array.from({ length: 7 }, (_, i) => today.subtract(i + 1, 'day'));
+                                    const availableDateStrs = new Set(availableDates.map(d => d.format('YYYY-MM-DD')));
+
+                                    const cells = [];
+
+                                    for (let i = 0; i < startDay; i++) {
+                                      cells.push(<div key={`empty-${i}`} style={{ padding: '8px' }} />);
+                                    }
+
+                                    for (let day = 1; day <= daysInMonth; day++) {
+                                      const date = startOfMonth.date(day);
+                                      const dateStr = date.format('YYYY-MM-DD');
+                                      const isAvailable = availableDateStrs.has(dateStr);
+                                      const isSelected = dateStr === selectedDate.format('YYYY-MM-DD');
+                                      const eventCount = isAvailable ? generateEventsForDay(date).length : 0;
+
+                                      cells.push(
+                                        <button
+                                          key={day}
+                                          disabled={!isAvailable}
+                                          onClick={() => {
+                                            if (isAvailable) {
+                                              setSelectedDate(date);
+                                              setIsDatePickerOpen(false);
+                                            }
+                                          }}
+                                          style={{
+                                            padding: '8px',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            background: isSelected ? '#3b82f6' : 'transparent',
+                                            color: isSelected ? '#fff' : isAvailable ? '#111827' : '#d1d5db',
+                                            fontSize: '14px',
+                                            cursor: isAvailable ? 'pointer' : 'not-allowed',
+                                            position: 'relative',
+                                            fontWeight: isSelected ? 600 : 400,
+                                            transition: 'all 0.2s'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            if (isAvailable && !isSelected) {
+                                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                            }
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            if (isAvailable && !isSelected) {
+                                              e.currentTarget.style.backgroundColor = 'transparent';
+                                            }
+                                          }}
+                                        >
+                                          <div>{day}</div>
+                                          {isAvailable && eventCount > 0 && (
+                                            <div style={{
+                                              position: 'absolute',
+                                              bottom: '2px',
+                                              left: '50%',
+                                              transform: 'translateX(-50%)',
+                                              width: '4px',
+                                              height: '4px',
+                                              borderRadius: '50%',
+                                              backgroundColor: isSelected ? '#fff' : '#3b82f6'
+                                            }} />
+                                          )}
+                                        </button>
+                                      );
+                                    }
+
+                                    return cells;
+                                  })()}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        ))}
+
+                          <button
+                            onClick={() => setSelectedDate(selectedDate.subtract(1, 'day'))}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: '#fff',
+                              border: '1px solid #e5e7eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <svg style={{ width: '16px', height: '16px', color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setSelectedDate(selectedDate.add(1, 'day'))}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: '#fff',
+                              border: '1px solid #e5e7eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <svg style={{ width: '16px', height: '16px', color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-                        {(() => {
-                          const today = dayjs();
-                          const startOfMonth = today.startOf('month');
-                          const endOfMonth = today.endOf('month');
-                          const startDay = startOfMonth.day();
-                          const daysInMonth = endOfMonth.date();
-                          const availableDates = Array.from({ length: 7 }, (_, i) => today.subtract(i + 1, 'day'));
-                          const availableDateStrs = new Set(availableDates.map(d => d.format('YYYY-MM-DD')));
 
-                          const cells = [];
-
-                          for (let i = 0; i < startDay; i++) {
-                            cells.push(<div key={`empty-${i}`} style={{ padding: '8px' }} />);
-                          }
-
-                          for (let day = 1; day <= daysInMonth; day++) {
-                            const date = startOfMonth.date(day);
-                            const dateStr = date.format('YYYY-MM-DD');
-                            const isAvailable = availableDateStrs.has(dateStr);
-                            const isSelected = dateStr === selectedDate.format('YYYY-MM-DD');
-                            const eventCount = isAvailable ? generateEventsForDay(date).length : 0;
-
-                            cells.push(
-                              <button
-                                key={day}
-                                disabled={!isAvailable}
-                                onClick={() => {
-                                  if (isAvailable) {
-                                    setSelectedDate(date);
-                                    setIsDatePickerOpen(false);
-                                  }
-                                }}
-                                style={{
-                                  padding: '8px',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  background: isSelected ? '#3b82f6' : 'transparent',
-                                  color: isSelected ? '#fff' : isAvailable ? '#111827' : '#d1d5db',
-                                  fontSize: '14px',
-                                  cursor: isAvailable ? 'pointer' : 'not-allowed',
-                                  position: 'relative',
-                                  fontWeight: isSelected ? 600 : 400,
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (isAvailable && !isSelected) {
-                                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (isAvailable && !isSelected) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                  }
-                                }}
-                              >
-                                <div>{day}</div>
-                                {isAvailable && eventCount > 0 && (
-                                  <div style={{
-                                    position: 'absolute',
-                                    bottom: '2px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    width: '4px',
-                                    height: '4px',
-                                    borderRadius: '50%',
-                                    backgroundColor: isSelected ? '#fff' : '#3b82f6'
-                                  }} />
-                                )}
-                              </button>
-                            );
-                          }
-
-                          return cells;
-                        })()}
+                      <div style={{ padding: '0 16px', borderBottom: '1px solid #f0f0f0' }}>
+                        <div style={{ display: 'flex', gap: '32px' }}>
+                          <button
+                            onClick={() => setPrimaryTab('trayectos')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '16px 0',
+                              fontSize: '15px',
+                              color: primaryTab === 'trayectos' ? '#3b82f6' : '#6b7280',
+                              fontWeight: primaryTab === 'trayectos' ? 600 : 400,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              lineHeight: 1.5
+                            }}
+                          >
+                            Trayectos
+                            {primaryTab === 'trayectos' && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '-1px',
+                                left: 0,
+                                right: 0,
+                                height: '3px',
+                                backgroundColor: '#3b82f6',
+                                borderRadius: '3px 3px 0 0'
+                              }} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setPrimaryTab('eventos')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '16px 0',
+                              fontSize: '15px',
+                              color: primaryTab === 'eventos' ? '#3b82f6' : '#6b7280',
+                              fontWeight: primaryTab === 'eventos' ? 600 : 400,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              lineHeight: 1.5
+                            }}
+                          >
+                            Eventos del día
+                            {primaryTab === 'eventos' && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '-1px',
+                                left: 0,
+                                right: 0,
+                                height: '3px',
+                                backgroundColor: '#3b82f6',
+                                borderRadius: '3px 3px 0 0'
+                              }} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setPrimaryTab('registros')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '16px 0',
+                              fontSize: '15px',
+                              color: primaryTab === 'registros' ? '#3b82f6' : '#6b7280',
+                              fontWeight: primaryTab === 'registros' ? 600 : 400,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              lineHeight: 1.5
+                            }}
+                          >
+                            Registros
+                            {primaryTab === 'registros' && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '-1px',
+                                left: 0,
+                                right: 0,
+                                height: '3px',
+                                backgroundColor: '#3b82f6',
+                                borderRadius: '3px 3px 0 0'
+                              }} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  )}
+
+                    <div className="history-panel__body">
+                      <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                        {/* Note: Registros tab now shows only Telemática content directly, no subtabs needed */}
+                        {primaryTab === 'trayectos' && (
+                          <EventosTab
+                            segments={segments}
+                            onSegmentClick={handleSegmentClick}
+                            selectedSegment={selectedSegment}
+                            onSubTabChange={() => {}}
+                            eventMarkers={eventMarkers}
+                            selectedEventId={selectedEventId}
+                            onEventSelect={handleEventSelect}
+                            selectedDate={selectedDate}
+                            hideSubTabs={true}
+                            selectedStopId={selectedStopId}
+                            onStopSelect={handleStopSelect}
+                            vehicleId={unidadId}
+                            onFilteredEventsChange={setFilteredEventIds}
+                            showSummaryFooter={false}
+                          />
+                        )}
+
+                        {primaryTab === 'eventos' && (
+                          <EventosOnlyView
+                            eventMarkers={eventMarkers}
+                            selectedEventId={selectedEventId}
+                            onEventSelect={handleEventSelect}
+                            selectedDate={selectedDate}
+                            vehicleId={unidadId}
+                            showUnidadesOnMap={showVehiclesOnMap}
+                            onToggleUnidadesVisibility={setShowVehiclesOnMap}
+                            onFilteredEventsChange={setFilteredEventIds}
+                          />
+                        )}
+
+                    {primaryTab === 'registros' && (
+                      <ReportesOnlyView
+                        selectedDate={selectedDate}
+                        stopNodes={stopNodes}
+                        selectedReporteId={selectedReporteId}
+                        selectedStopId={selectedStopId}
+                        onReporteSelect={handleReporteSelect}
+                        onStopSelect={handleStopSelect}
+                        routeColor={generateRouteForDate?.color || '#3b82f6'}
+                      />
+                    )}
+                  </div>
                 </div>
-
-                <button onClick={() => setSelectedDate(selectedDate.subtract(1, 'day'))} style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}>
-                  <svg style={{ width: '16px', height: '16px', color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button onClick={() => setSelectedDate(selectedDate.add(1, 'day'))} style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}>
-                  <svg style={{ width: '16px', height: '16px', color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <div className="history-panel__footer">
+                  <div className="history-panel__footer-header">
+                    <span className="history-panel__footer-title">Eventos</span>
+                    <span className="history-panel__footer-total">
+                      Total: <span className="history-panel__footer-total-count">{eventSeveritySummary.total}</span>
+                    </span>
+                  </div>
+                  <div className="history-panel__footer-stats">
+                    {(['Alta', 'Media', 'Baja', 'Informativa'] as EventSeverityLevel[]).map((severity) => {
+                      const meta = SEVERITY_META[severity];
+                      return (
+                        <div key={severity} className="history-panel__footer-chip">
+                          <span
+                            className="history-panel__footer-dot"
+                            style={{ backgroundColor: meta.dot }}
+                          />
+                          <span>
+                            <span className="history-panel__footer-chip-label">{meta.label}:</span>{' '}
+                            <span className="history-panel__footer-chip-count">
+                              {eventSeveritySummary.counts[severity]}
+                            </span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
+              <div
+                className="history-panel__resize-handle"
+                onMouseDown={handleSidebarResize}
+              />
+                </aside>
+              )}
 
-            {/* Primary Navigation Tabs */}
-            <div style={{ flexShrink: 0, padding: '0 16px', borderBottom: '1px solid #f0f0f0' }}>
-              <div style={{ display: 'flex', gap: '32px' }}>
-                <button onClick={() => setPrimaryTab('trayectos')} style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '16px 0',
-                  fontSize: '15px',
-                  color: primaryTab === 'trayectos' ? '#3b82f6' : '#6b7280',
-                  fontWeight: primaryTab === 'trayectos' ? 600 : 400,
-                  cursor: 'pointer',
-                  position: 'relative',
-                  lineHeight: 1.5
-                }}>
-                  Trayectos
-                  {primaryTab === 'trayectos' && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-1px',
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      backgroundColor: '#3b82f6',
-                      borderRadius: '3px 3px 0 0'
-                    }}></div>
-                  )}
-                </button>
-                <button onClick={() => setPrimaryTab('eventos')} style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '16px 0',
-                  fontSize: '15px',
-                  color: primaryTab === 'eventos' ? '#3b82f6' : '#6b7280',
-                  fontWeight: primaryTab === 'eventos' ? 600 : 400,
-                  cursor: 'pointer',
-                  position: 'relative',
-                  lineHeight: 1.5
-                }}>
-                  Eventos del día
-                  {primaryTab === 'eventos' && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-1px',
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      backgroundColor: '#3b82f6',
-                      borderRadius: '3px 3px 0 0'
-                    }}></div>
-                  )}
-                </button>
-                <button onClick={() => setPrimaryTab('registros')} style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '16px 0',
-                  fontSize: '15px',
-                  color: primaryTab === 'registros' ? '#3b82f6' : '#6b7280',
-                  fontWeight: primaryTab === 'registros' ? 600 : 400,
-                  cursor: 'pointer',
-                  position: 'relative',
-                  lineHeight: 1.5
-                }}>
-                  Registros
-                  {primaryTab === 'registros' && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-1px',
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      backgroundColor: '#3b82f6',
-                      borderRadius: '3px 3px 0 0'
-                    }}></div>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Note: Registros tab now shows only Telemática content directly, no subtabs needed */}
-
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                {primaryTab === 'trayectos' && (
-                  <EventosTab
+              <section className="history-map">
+                <div className="history-map__canvas">
+                  <SingleRouteMapView
+                    route={generateRouteForDate ? {
+                      ...generateRouteForDate,
+                      id: generateRouteForDate.id || 'generated-route',
+                      name: generateVehicleName(unidadId),
+                      distance: generateRouteForDate.distance || '0 km',
+                      color: generateRouteForDate.color || '#3b82f6',
+                      visible: generateRouteForDate.visible ?? true
+                    } : selectedRoute}
+                    highlightedSegment={selectedSegment?.coordinates}
+                    onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+                    isFullscreen={isFullscreen}
                     segments={segments}
-                    onSegmentClick={handleSegmentClick}
-                    selectedSegment={selectedSegment}
-                    onSubTabChange={(tab) => {}}
-                    eventMarkers={eventMarkers}
-                    selectedEventId={selectedEventId}
-                    onEventSelect={handleEventSelect}
-                    selectedDate={selectedDate}
-                    hideSubTabs={true}
-                    selectedStopId={selectedStopId}
-                    onStopSelect={handleStopSelect}
-                    vehicleId={unidadId}
-                    onFilteredEventsChange={setFilteredEventIds}
-                  />
-                )}
-
-                {primaryTab === 'eventos' && (
-                  <EventosOnlyView
-                    eventMarkers={eventMarkers}
-                    selectedEventId={selectedEventId}
-                    onEventSelect={handleEventSelect}
-                    selectedDate={selectedDate}
-                    vehicleId={unidadId}
-                    showUnidadesOnMap={showVehiclesOnMap}
-                    onToggleUnidadesVisibility={setShowVehiclesOnMap}
-                    onFilteredEventsChange={setFilteredEventIds}
-                  />
-                )}
-
-                {primaryTab === 'registros' && (
-                  <ReportesOnlyView
-                    selectedDate={selectedDate}
+                    selectedSegmentId={selectedSegment?.id ? parseInt(selectedSegment.id.toString()) : null}
                     stopNodes={stopNodes}
+                    selectedSegmentType={selectedSegment?.type ?? null}
+                    onSegmentDeselect={() => {
+                      console.log('[DayView] Clearing segment selection from map click or recenter');
+                      setSelectedSegment(null);
+                      setHasUserSelectedSegment(false);
+                    }}
+                    showEventMarkers={true}
+                    alwaysShowStops={true}
+                    eventMarkers={filteredEventMarkers}
+                    selectedEventId={selectedEventId}
+                    onEventSelect={handleEventSelect}
+                    reporteMarkers={reporteMarkers}
                     selectedReporteId={selectedReporteId}
-                    selectedStopId={selectedStopId}
                     onReporteSelect={handleReporteSelect}
-                    onStopSelect={handleStopSelect}
-                    routeColor={generateRouteForDate?.color || '#3b82f6'}
+                    selectedStopId={selectedStopId ? parseInt(selectedStopId) : null}
+                    onStopSelect={(stopId: number | null, source: 'list' | 'map') => {
+                      handleStopSelect(stopId ? stopId.toString() : null, source);
+                    }}
+                    hasInitializedEventBoundsRef={hasInitializedEventBoundsRef}
+                    hasUserSelectedSegment={hasUserSelectedSegment}
+                    sidebarWidth={panelWidth}
+                    selectionSource={selectionSource || undefined}
+                    allowZoom={allowZoom}
+                    primaryTab={primaryTab}
+                    isTabSwitching={isTabSwitching}
+                    selectedDate={selectedDate}
+                    vehicleMarkers={showVehiclesOnMap ? vehicleMarkers : []}
+                    showVehicleMarkers={showVehiclesOnMap}
+                    vehicleCurrentPosition={vehicleCurrentPosition || undefined}
                   />
-                )}
-              </div>
+                </div>
+              </section>
             </div>
-            <div
-              onMouseDown={handleSidebarResize}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '8px',
-                cursor: 'col-resize',
-                backgroundColor: 'transparent',
-                zIndex: 1000
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            />
-          </Sider>
-          )}
-
-          <Content className="relative" style={{
-            flex: 1,
-            minWidth: 0,
-            width: '100%',
-            height: '100%'
-          }}>
-            <GlobalFilterBar context={unidadId ? 'unidad' : 'monitoreo'} />
-            <SingleRouteMapView
-              route={generateRouteForDate ? {
-                ...generateRouteForDate,
-                id: generateRouteForDate.id || 'generated-route',
-                name: generateVehicleName(unidadId), // Use formatted vehicle name (e.g., ADH00)
-                distance: generateRouteForDate.distance || '0 km',
-                color: generateRouteForDate.color || '#3b82f6',
-                visible: generateRouteForDate.visible ?? true
-              } : selectedRoute}
-              highlightedSegment={selectedSegment?.coordinates}
-              onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-              isFullscreen={isFullscreen}
-              segments={segments}
-              selectedSegmentId={selectedSegment?.id ? parseInt(selectedSegment.id.toString()) : null}
-              stopNodes={stopNodes}
-              selectedSegmentType={selectedSegment?.type ?? null}
-              onSegmentDeselect={() => {
-                console.log('[DayView] Clearing segment selection from map click or recenter');
-                setSelectedSegment(null);
-                setHasUserSelectedSegment(false);
-              }}
-              showEventMarkers={true}
-              alwaysShowStops={true}
-              eventMarkers={filteredEventMarkers}
-              selectedEventId={selectedEventId}
-              onEventSelect={handleEventSelect}
-              reporteMarkers={reporteMarkers}
-              selectedReporteId={selectedReporteId}
-              onReporteSelect={handleReporteSelect}
-              selectedStopId={selectedStopId ? parseInt(selectedStopId) : null}
-              onStopSelect={(stopId: number | null, source: 'list' | 'map') => {
-                handleStopSelect(stopId ? stopId.toString() : null, source);
-              }}
-              hasInitializedEventBoundsRef={hasInitializedEventBoundsRef}
-              hasUserSelectedSegment={hasUserSelectedSegment}
-              sidebarWidth={sidebarWidth}
-              selectionSource={selectionSource || undefined}
-              allowZoom={allowZoom}
-              primaryTab={primaryTab}
-              isTabSwitching={isTabSwitching}
-              selectedDate={selectedDate}
-              vehicleMarkers={showVehiclesOnMap ? vehicleMarkers : []}
-              showVehicleMarkers={showVehiclesOnMap}
-              vehicleCurrentPosition={vehicleCurrentPosition || undefined}
-            />
           </Content>
         </Layout>
       </Layout>

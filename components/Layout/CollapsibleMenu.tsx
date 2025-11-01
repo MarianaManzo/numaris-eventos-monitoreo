@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
+import FilterGlyph from '@/components/Icons/FilterGlyph';
 
 interface MenuItem {
   key: string;
@@ -141,9 +142,7 @@ export default function CollapsibleMenu({
               color: '#1867ff'
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
-              <path d="M240,56a8,8,0,0,0-8-8H24a8,8,0,0,0-5.66,13.66L112,155.31V216a8,8,0,0,0,11.37,7.16l32-16A8,8,0,0,0,160,200V155.31L245.66,61.66A8,8,0,0,0,240,56Z" />
-            </svg>
+            <FilterGlyph size={20} color="#1867ff" />
           </span>
           {!isCollapsed && (
             <span style={{ flex: 1, textAlign: 'left' }}>

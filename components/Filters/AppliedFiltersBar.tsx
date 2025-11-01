@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, KeyboardEvent, useMemo, useRef, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Button, Tooltip } from 'antd';
-import { X, FunnelSimple, Truck } from 'phosphor-react';
+import { X, Truck } from 'phosphor-react';
+import FilterGlyph from '@/components/Icons/FilterGlyph';
 import { useFilterStore, type FilterDomain } from '@/lib/stores/filterStore';
 
 const FILTER_DOMAINS: FilterDomain[] = ['units', 'events'];
@@ -12,10 +14,10 @@ const domainAccent: Record<FilterDomain, string> = {
   units: '#10b981'
 };
 
-const domainIcon = {
-  events: FunnelSimple,
-  units: Truck
-} as const;
+const domainIconRender: Record<FilterDomain, (accent: string) => ReactNode> = {
+  events: (accent) => <FilterGlyph size={14} color={accent} />,
+  units: (accent) => <Truck size={14} weight="bold" color={accent} />
+};
 
 const domainLabel: Record<FilterDomain, string> = {
   events: 'Eventos:',
@@ -112,7 +114,6 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
                 <span className="applied-filters-bar__group-label">{domainLabel[domain]}</span>
                 <div className="applied-filters-bar__group-pills">
                   {filters.map((filter) => {
-                    const IconComponent = domainIcon[filter.domain];
                     const accent = domainAccent[filter.domain];
                     const pillLabel = `${filter.label}: ${filter.value}`;
                     const duplicateNote = filter.count && filter.count > 1 ? ` (+${filter.count - 1})` : '';
@@ -134,7 +135,7 @@ export default function AppliedFiltersBar({ variant = 'header' }: AppliedFilters
                           }}
                         >
                           <span className="applied-filter-pill__icon" aria-hidden="true">
-                            <IconComponent size={14} weight="bold" color={accent} />
+                            {domainIconRender[filter.domain](accent)}
                           </span>
                           <span className="applied-filter-pill__label">
                             {filter.label}:{' '}

@@ -39,6 +39,7 @@ interface EventosTabProps {
   onStopSelect?: (id: string | null, source?: 'list' | 'map') => void;
   vehicleId?: string; // NEW: Vehicle context for historical navigation
   onFilteredEventsChange?: (filteredEventIds: string[]) => void; // NEW: Callback for filtered events
+  showSummaryFooter?: boolean;
 }
 
 interface Event {
@@ -155,7 +156,7 @@ const generateEventsForDate = (date: dayjs.Dayjs): Event[] => {
   return events.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
 };
 
-export default function EventosTab({ segments, onSegmentClick, selectedSegment, onSubTabChange, eventMarkers, selectedEventId, onEventSelect, selectedDate, hideSubTabs = false, selectedStopId, onStopSelect, vehicleId, onFilteredEventsChange }: EventosTabProps) {
+export default function EventosTab({ segments, onSegmentClick, selectedSegment, onSubTabChange, eventMarkers, selectedEventId, onEventSelect, selectedDate, hideSubTabs = false, selectedStopId, onStopSelect, vehicleId, onFilteredEventsChange, showSummaryFooter = true }: EventosTabProps) {
   const [activeSubTab, setActiveSubTab] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('dayview-active-subtab') || 'trayectos';
@@ -693,47 +694,49 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
         </div>
       </div>
 
-      <div style={{
-        height: '80px',
-        minHeight: '80px',
-        padding: '16px',
-        borderTop: '1px solid #eeeeee',
-        backgroundColor: '#ffffff',
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center'
-      }}>
+      {showSummaryFooter && (
         <div style={{
+          height: '80px',
+          minHeight: '80px',
+          padding: '16px',
+          borderTop: '1px solid #eeeeee',
+          backgroundColor: '#ffffff',
+          flexShrink: 0,
           display: 'flex',
-          alignItems: 'center',
-          width: '100%'
+          alignItems: 'center'
         }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', color: '#1e293b', marginBottom: '4px' }}>
-              Eventos
-            </div>
-            <div style={{ fontSize: '14px', color: '#475569', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#fecaca' }}></div>
-                <span><span style={{ fontWeight: 400 }}>Alta: </span><span style={{ fontWeight: 600 }}>{severityCounts.Alta}</span></span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            width: '100%'
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '16px', color: '#1e293b', marginBottom: '4px' }}>
+                Eventos
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#fed7aa' }}></div>
-                <span><span style={{ fontWeight: 400 }}>Media: </span><span style={{ fontWeight: 600 }}>{severityCounts.Media}</span></span>
+              <div style={{ fontSize: '14px', color: '#475569', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#fecaca' }}></div>
+                  <span><span style={{ fontWeight: 400 }}>Alta: </span><span style={{ fontWeight: 600 }}>{severityCounts.Alta}</span></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#fed7aa' }}></div>
+                  <span><span style={{ fontWeight: 400 }}>Media: </span><span style={{ fontWeight: 600 }}>{severityCounts.Media}</span></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#bfdbfe' }}></div>
+                  <span><span style={{ fontWeight: 400 }}>Baja: </span><span style={{ fontWeight: 600 }}>{severityCounts.Baja}</span></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#a5f3fc' }}></div>
+                  <span><span style={{ fontWeight: 400 }}>Informativa: </span><span style={{ fontWeight: 600 }}>{severityCounts.Informativa}</span></span>
+                </div>
+                <span style={{ marginLeft: 'auto' }}><span style={{ fontWeight: 400 }}>Total: </span><span style={{ fontWeight: 600 }}>{events.length}</span></span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#bfdbfe' }}></div>
-                <span><span style={{ fontWeight: 400 }}>Baja: </span><span style={{ fontWeight: 600 }}>{severityCounts.Baja}</span></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#a5f3fc' }}></div>
-                <span><span style={{ fontWeight: 400 }}>Informativa: </span><span style={{ fontWeight: 600 }}>{severityCounts.Informativa}</span></span>
-              </div>
-              <span style={{ marginLeft: 'auto' }}><span style={{ fontWeight: 400 }}>Total: </span><span style={{ fontWeight: 600 }}>{events.length}</span></span>
             </div>
           </div>
         </div>
-      </div>
+      )}
         </>
       )}
     </div>

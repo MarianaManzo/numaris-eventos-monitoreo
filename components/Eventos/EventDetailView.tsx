@@ -330,6 +330,7 @@ export default function EventDetailView({
             onEventElementToggle={handleVisualizationToggle}
             eventEntries={detailEventEntries}
             selectedEventId={event?.id ?? null}
+            selectedEventIds={event ? [event.id] : []}
           />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider
@@ -408,6 +409,7 @@ export default function EventDetailView({
             onEventElementToggle={handleVisualizationToggle}
             eventEntries={detailEventEntries}
             selectedEventId={event?.id ?? null}
+            selectedEventIds={event ? [event.id] : []}
           />
           <Layout style={{ flex: 1, display: 'flex' }}>
             <Sider

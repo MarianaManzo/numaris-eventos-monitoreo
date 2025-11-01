@@ -51,7 +51,7 @@ export default function EventosView() {
   });
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const eventsPage = usePaginationStore((state) => state.page.events);
   const eventsPageSize = usePaginationStore((state) => state.pageSize.events);
   const setPaginationPage = usePaginationStore((state) => state.setPage);
@@ -67,6 +67,8 @@ export default function EventosView() {
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const filterByMapVehicles = useFilterStore((state) => state.events.filterByMapVehicles);
   const isFocusModeActive = useFilterStore((state) => state.events.focusMode);
+
+  const primarySelectedEventId = selectedEventIds[0] ?? null;
 
   const eventListTotalPages = filteredEvents.length === 0 ? 0 : Math.ceil(filteredEvents.length / eventsPageSize);
   const clampedEventsPage = eventListTotalPages === 0 ? 0 : Math.min(eventsPage, eventListTotalPages - 1);
@@ -182,7 +184,7 @@ export default function EventosView() {
       if (eventExists) {
         // Small delay to ensure map and markers are fully rendered
         setTimeout(() => {
-          setSelectedEventId(eventIdFromUrl);
+          setSelectedEventIds([eventIdFromUrl]);
         }, 500);
       }
     }
@@ -191,13 +193,16 @@ export default function EventosView() {
   const handleEventsGenerated = useCallback((generatedEvents: Event[]) => {
     setEvents(generatedEvents);
     setFilteredEvents(generatedEvents);
+    setSelectedEventIds((prev) =>
+      prev.filter((id) => generatedEvents.some((event) => event.id === id))
+    );
   }, []);
 
   useEffect(() => {
-    if (!selectedEventId || filteredEvents.length === 0) {
+    if (!primarySelectedEventId || filteredEvents.length === 0) {
       return;
     }
-    const selectedIndex = filteredEvents.findIndex((event) => event.id === selectedEventId);
+    const selectedIndex = filteredEvents.findIndex((event) => event.id === primarySelectedEventId);
     if (selectedIndex === -1) {
       return;
     }
@@ -205,15 +210,25 @@ export default function EventosView() {
     if (targetPage !== eventsPage) {
       setPaginationPage('events', targetPage);
     }
-  }, [selectedEventId, filteredEvents, eventsPageSize, eventsPage, setPaginationPage]);
+  }, [primarySelectedEventId, filteredEvents, eventsPageSize, eventsPage, setPaginationPage]);
 
   const handleEventSelect = useCallback((eventId: string | null) => {
-    setSelectedEventId(eventId);
+    if (!eventId) {
+      setSelectedEventIds([]);
+      return;
+    }
+    setSelectedEventIds((prev) => {
+      if (prev.includes(eventId)) {
+        return prev.filter((id) => id !== eventId);
+      }
+      return [eventId, ...prev];
+    });
   }, []);
 
   const handleFiltersChange = useCallback((filtered: Event[]) => {
     setFilteredEvents(filtered);
     setPaginationPage('events', 0);
+    setSelectedEventIds((prev) => prev.filter((id) => filtered.some((event) => event.id === id)));
   }, [setPaginationPage]);
 
   const handleVisibleVehiclesChange = useCallback((visibleIds: string[]) => {
@@ -258,8 +273,8 @@ export default function EventosView() {
   };
 
   // Get the selected event's position for map centering
-  const selectedEventPosition = selectedEventId
-    ? filteredEvents.find(e => e.id === selectedEventId)?.position
+  const selectedEventPosition = primarySelectedEventId
+    ? filteredEvents.find((e) => e.id === primarySelectedEventId)?.position
     : null;
 
   if (isLoading) {
@@ -370,7 +385,8 @@ export default function EventosView() {
             <GlobalFilterBar
               context="monitoreo"
               eventEntries={eventDropdownEntries}
-              selectedEventId={selectedEventId}
+              selectedEventId={primarySelectedEventId}
+              selectedEventIds={selectedEventIds}
               onEventSelect={handleEventSelect}
             />
             <Layout style={{ flex: 1, display: 'flex' }}>
@@ -392,7 +408,7 @@ export default function EventosView() {
                   onEventsGenerated={handleEventsGenerated}
                   onEventSelect={handleEventSelect}
                   onFiltersChange={handleFiltersChange}
-                  selectedEventId={selectedEventId}
+                  selectedEventId={primarySelectedEventId}
                   visibleVehicleIds={visibleVehicleIds}
                   onToggleFocusMode={handleToggleFocusMode}
                   vehiclesWithEvents={vehiclesWithEvents}
@@ -431,7 +447,7 @@ export default function EventosView() {
                     responsable: e.responsable,
                     vehicleId: e.vehicleId
                   })) : []}
-                  selectedEventId={selectedEventId}
+                  selectedEventId={primarySelectedEventId}
                   selectedEventPosition={selectedEventPosition || undefined}
                   onEventSelect={handleEventSelect}
                   vehicleMarkers={vehicleMarkers}
