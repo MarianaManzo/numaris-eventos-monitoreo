@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
+import { useZonaStore } from '@/lib/stores/zonaStore';
 import FilterGlyph from '@/components/Icons/FilterGlyph';
 
 interface MenuItem {
@@ -32,7 +33,8 @@ export default function CollapsibleMenu({
   const router = useRouter();
   const pathname = usePathname();
   const appliedFilters = useFilterStore((state) => state.appliedFilters);
-  const removableFilterCount = appliedFilters.filter((filter) => filter.removable !== false).length;
+  const zonaSearchQuery = useZonaStore((state) => state.searchQuery);
+  const hasAnyFiltersActive = appliedFilters.length > 0 || zonaSearchQuery.trim().length > 0;
   const isBarOpen = useFilterUiStore((state) => state.isBarOpen);
   const toggleBar = useFilterUiStore((state) => state.toggleBar);
 
@@ -149,24 +151,20 @@ export default function CollapsibleMenu({
               Filtros
             </span>
           )}
-          {removableFilterCount > 0 && (
+          {hasAnyFiltersActive && (
             <span
+              aria-hidden="true"
               style={{
-                minWidth: '20px',
-                height: '20px',
-                padding: '0 6px',
-                borderRadius: '999px',
-                backgroundColor: '#1867ff',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                position: 'absolute',
+                top: isCollapsed ? 6 : 8,
+                right: isCollapsed ? 6 : 14,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: '#dc2626',
+                pointerEvents: 'none'
               }}
-            >
-              {removableFilterCount}
-            </span>
+            />
           )}
         </button>
       </div>

@@ -339,10 +339,11 @@ export default function EventListView({
       <div className={tableStyles.tableWrapper} style={{ flex: 1, minHeight: 0 }}>
         <div ref={scrollContainerRef} className={tableStyles.tableScroll}>
           <div className={tableStyles.header}>
+            <span className={tableStyles.headerIcon} aria-hidden="true" />
             <span>Evento</span>
-            <span>Estado</span>
+            <span>Fecha</span>
             <span>Unidad</span>
-            <span>Horario</span>
+            <span>Estado</span>
             <span>Ubicación</span>
             <span>Responsable</span>
             <span>Duración</span>

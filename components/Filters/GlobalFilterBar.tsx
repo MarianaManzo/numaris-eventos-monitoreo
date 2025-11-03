@@ -1,10 +1,12 @@
 'use client';
 
-import { Collapse, CollapseProps, Tooltip } from 'antd';
+import { Collapse, CollapseProps, Tooltip, Spin } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CaretDown, CaretUp, FunnelSimple, MagnifyingGlass, X } from 'phosphor-react';
-import { useFilterStore, DEFAULT_EVENT_SEVERITIES } from '@/lib/stores/filterStore';
+import { useFilterStore, DEFAULT_EVENT_SEVERITIES, DEFAULT_UNIT_STATUS } from '@/lib/stores/filterStore';
+import type { EventsFilters, UnitsFilters } from '@/lib/stores/filterStore';
 import { EVENT_TAGS } from '@/lib/events/generateEvent';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
@@ -12,6 +14,8 @@ import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import PaginationControls from '@/components/Common/PaginationControls';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
 import { getSeverityColor, getEventIconPath } from '@/lib/events/eventStyles';
+import { cloneEventsFilters, cloneUnitsFilters } from '@/lib/stores/filterClones';
+import { useZonaStore } from '@/lib/stores/zonaStore';
 
 type GlobalFilterContext = 'monitoreo' | 'unidad' | 'evento' | 'zona';
 
@@ -78,6 +82,8 @@ interface GlobalFilterBarProps {
   onZoneSelect?: (zoneId: string | null) => void;
 }
 
+type FilterDomainKey = 'units' | 'events' | 'zones';
+
 type DropdownKey = 'units' | 'events' | 'zones' | null;
 
 const EVENT_NAME_OPTIONS = [
@@ -112,6 +118,96 @@ const HEADER_HEIGHT = 64;
 const COLLAPSED_HEIGHT = 0;
 const ROW_HEIGHT = 64;
 const DROPDOWN_PAGE_SIZE = 10;
+
+type ZonesFilterDraft = {
+  zones: string[];
+  zoneTags: string[];
+};
+
+const cloneZonesFilterDraft = (filters: ZonesFilterDraft): ZonesFilterDraft => ({
+  zones: [...filters.zones],
+  zoneTags: [...filters.zoneTags]
+});
+
+const toggleArrayMember = <T,>(values: readonly T[], value: T): T[] =>
+  values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+
+const buildUnitsCommitPartial = (filters: UnitsFilters): Partial<UnitsFilters> => ({
+  tags: [...filters.tags],
+  unidades: [...filters.unidades],
+  brandModels: [...filters.brandModels],
+  status: [...filters.status],
+  responsables: [...filters.responsables],
+  searchText: filters.searchText,
+  lastSeenRange: filters.lastSeenRange ? { ...filters.lastSeenRange } : null
+});
+
+const arraysHaveSameMembers = <T,>(a: readonly T[], b: readonly T[]) => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const setA = new Set(a);
+  return b.every((value) => setA.has(value));
+};
+
+const areDateRangesEqual = (
+  a: UnitsFilters['lastSeenRange'] | EventsFilters['dateRange'],
+  b: UnitsFilters['lastSeenRange'] | EventsFilters['dateRange']
+) => {
+  if (a === null && b === null) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return a.start === b.start && a.end === b.end;
+};
+
+const UNIT_DOMAIN_ARRAY_KEYS: Array<keyof UnitsFilters> = ['tags', 'unidades', 'brandModels', 'status', 'responsables'];
+const EVENT_DOMAIN_ARRAY_KEYS: Array<keyof EventsFilters> = [
+  'severidades',
+  'etiquetas',
+  'unidades',
+  'assignedUsers',
+  'location',
+  'eventTypes'
+];
+
+const areUnitDomainEqual = (a: UnitsFilters, b: UnitsFilters) => {
+  const arraysMatch = UNIT_DOMAIN_ARRAY_KEYS.every((key) =>
+    arraysHaveSameMembers(a[key] as string[], b[key] as string[])
+  );
+  return (
+    arraysMatch &&
+    areDateRangesEqual(a.lastSeenRange, b.lastSeenRange) &&
+    a.searchText === b.searchText
+  );
+};
+
+const areEventsFiltersEqual = (a: EventsFilters, b: EventsFilters) => {
+  const arraysMatch = EVENT_DOMAIN_ARRAY_KEYS.every((key) =>
+    arraysHaveSameMembers(a[key] as string[], b[key] as string[])
+  );
+  return (
+    arraysMatch &&
+    areDateRangesEqual(a.dateRange, b.dateRange) &&
+    a.estado === b.estado &&
+    a.filterByMapVehicles === b.filterByMapVehicles &&
+    a.focusMode === b.focusMode &&
+    a.searchText === b.searchText
+  );
+};
+
+const areZoneFiltersEqual = (draft: ZonesFilterDraft, committed: ZonesFilterDraft) =>
+  arraysHaveSameMembers(draft.zones, committed.zones) &&
+  arraysHaveSameMembers(draft.zoneTags, committed.zoneTags);
+
+const buildZonesDraftFromUnits = (units: UnitsFilters): ZonesFilterDraft => ({
+  zones: [...units.zones],
+  zoneTags: [...units.zoneTags]
+});
 
 const clampPageIndex = (page: number, totalPages: number): number => {
   if (totalPages === 0) {
@@ -207,12 +303,13 @@ export default function GlobalFilterBar({
   const activeDropdown = useFilterUiStore((state) => state.activeDropdown);
   const toggleBar = useFilterUiStore((state) => state.toggleBar);
   const setActiveDropdown = useFilterUiStore((state) => state.setActiveDropdown);
+  const pending = useFilterUiStore((state) => state.pending);
+  const setDomainPending = useFilterUiStore((state) => state.setDomainPending);
+  const zonaSearchQuery = useZonaStore((state) => state.searchQuery);
 
   const eventsFilters = useFilterStore((state) => state.events);
   const unitsFilters = useFilterStore((state) => state.units);
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
-  const toggleUnitFilterValue = useFilterStore((state) => state.toggleUnitFilterValue);
-  const toggleEventFilterValue = useFilterStore((state) => state.toggleEventFilterValue);
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
   const unitsPage = usePaginationStore((state) => state.page.units);
@@ -222,6 +319,135 @@ export default function GlobalFilterBar({
   const eventsPageSize = usePaginationStore((state) => state.pageSize.events);
   const zonesPageSize = usePaginationStore((state) => state.pageSize.zones);
   const setPage = usePaginationStore((state) => state.setPage);
+
+  const [stagedUnitsFilters, setStagedUnitsFilters] = useState<UnitsFilters>(() => cloneUnitsFilters(unitsFilters));
+  const [stagedEventsFilters, setStagedEventsFilters] = useState<EventsFilters>(() => cloneEventsFilters(eventsFilters));
+  const [stagedZoneFilters, setStagedZoneFilters] = useState<ZonesFilterDraft>(() => buildZonesDraftFromUnits(unitsFilters));
+  const [stagedPagination, setStagedPagination] = useState<Record<FilterDomainKey, number>>({
+    units: unitsPage,
+    events: eventsPage,
+    zones: zonesPage
+  });
+  const [dirtyFlags, setDirtyFlags] = useState<Record<FilterDomainKey, boolean>>({
+    units: false,
+    events: false,
+    zones: false
+  });
+  const [applyingDomain, setApplyingDomain] = useState<FilterDomainKey | null>(null);
+
+  const committedZoneFilters = useMemo(() => buildZonesDraftFromUnits(unitsFilters), [unitsFilters.zones, unitsFilters.zoneTags]);
+
+  const markDomainDirty = (domain: FilterDomainKey) => {
+    setDirtyFlags((prev) => {
+      if (prev[domain]) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [domain]: true
+      };
+    });
+  };
+
+  const pendingTimersRef = useRef<Record<FilterDomainKey, ReturnType<typeof setTimeout> | null>>({
+    units: null,
+    events: null,
+    zones: null
+  });
+  const applyingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerDomainPending = (domain: FilterDomainKey, duration = 260) => {
+    setDomainPending(domain, true);
+    const existingTimer = pendingTimersRef.current[domain];
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    pendingTimersRef.current[domain] = setTimeout(() => {
+      setDomainPending(domain, false);
+      pendingTimersRef.current[domain] = null;
+    }, duration);
+  };
+
+  const scheduleApplyComplete = () => {
+    if (applyingTimeoutRef.current) {
+      clearTimeout(applyingTimeoutRef.current);
+    }
+    applyingTimeoutRef.current = setTimeout(() => {
+      setApplyingDomain(null);
+      applyingTimeoutRef.current = null;
+    }, 260);
+  };
+
+  useEffect(() => {
+    if (dirtyFlags.units) {
+      return;
+    }
+    setStagedUnitsFilters((prev) => {
+      if (areUnitDomainEqual(prev, unitsFilters) && arraysHaveSameMembers(prev.zones, unitsFilters.zones) && arraysHaveSameMembers(prev.zoneTags, unitsFilters.zoneTags)) {
+        return prev;
+      }
+      return cloneUnitsFilters(unitsFilters);
+    });
+  }, [unitsFilters, dirtyFlags.units]);
+
+  useEffect(() => {
+    if (dirtyFlags.events) {
+      return;
+    }
+    setStagedEventsFilters((prev) => {
+      if (areEventsFiltersEqual(prev, eventsFilters)) {
+        return prev;
+      }
+      return cloneEventsFilters(eventsFilters);
+    });
+  }, [eventsFilters, dirtyFlags.events]);
+
+  useEffect(() => {
+    if (dirtyFlags.zones) {
+      return;
+    }
+    setStagedZoneFilters((prev) => {
+      if (areZoneFiltersEqual(prev, committedZoneFilters)) {
+        return prev;
+      }
+      return cloneZonesFilterDraft(committedZoneFilters);
+    });
+  }, [committedZoneFilters, dirtyFlags.zones]);
+
+  useEffect(() => {
+    if (dirtyFlags.units) {
+      return;
+    }
+    setStagedPagination((prev) => (prev.units === unitsPage ? prev : { ...prev, units: unitsPage }));
+  }, [unitsPage, dirtyFlags.units]);
+
+  useEffect(() => {
+    if (dirtyFlags.events) {
+      return;
+    }
+    setStagedPagination((prev) => (prev.events === eventsPage ? prev : { ...prev, events: eventsPage }));
+  }, [eventsPage, dirtyFlags.events]);
+
+  useEffect(() => {
+    if (dirtyFlags.zones) {
+      return;
+    }
+    setStagedPagination((prev) => (prev.zones === zonesPage ? prev : { ...prev, zones: zonesPage }));
+  }, [zonesPage, dirtyFlags.zones]);
+
+  useEffect(() => {
+    return () => {
+      (Object.values(pendingTimersRef.current) as Array<ReturnType<typeof setTimeout> | null>).forEach((timer) => {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      });
+      if (applyingTimeoutRef.current) {
+        clearTimeout(applyingTimeoutRef.current);
+        applyingTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const unidadesData = useMemo<UnitDropdownEntry[]>(() => {
     if (unitEntries && unitEntries.length > 0) {
@@ -242,7 +468,7 @@ export default function GlobalFilterBar({
         names.push(unidad.name);
       }
     });
-    unitsFilters.unidades.forEach((unidad) => {
+    stagedUnitsFilters.unidades.forEach((unidad) => {
       if (!names.includes(unidad)) {
         names.push(unidad);
       }
@@ -251,7 +477,7 @@ export default function GlobalFilterBar({
       return names;
     }
     return [...names].sort((a, b) => a.localeCompare(b));
-  }, [unidadesData, unitsFilters.unidades, unitEntries]);
+  }, [unidadesData, stagedUnitsFilters.unidades, unitEntries]);
 
   const unitTagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -260,9 +486,9 @@ export default function GlobalFilterBar({
         tags.add(unidad.tag);
       }
     });
-    unitsFilters.tags.forEach((tag) => tags.add(tag));
+    stagedUnitsFilters.tags.forEach((tag) => tags.add(tag));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
-  }, [unidadesData, unitsFilters.tags]);
+  }, [unidadesData, stagedUnitsFilters.tags]);
 
   const zonasData = useMemo<ZoneDropdownEntry[]>(() => {
     if (zoneEntries && zoneEntries.length > 0) {
@@ -285,7 +511,7 @@ export default function GlobalFilterBar({
         names.push(zona.name);
       }
     });
-    unitsFilters.zones.forEach((zona) => {
+    stagedZoneFilters.zones.forEach((zona) => {
       if (!names.includes(zona)) {
         names.push(zona);
       }
@@ -294,16 +520,16 @@ export default function GlobalFilterBar({
       return names;
     }
     return [...names].sort((a, b) => a.localeCompare(b));
-  }, [zonasData, unitsFilters.zones, zoneEntries]);
+  }, [zonasData, stagedZoneFilters.zones, zoneEntries]);
 
   const zoneTagOptions = useMemo(() => {
     const tags = new Set<string>();
     zonasData.forEach((zona) => {
       zona.tags?.forEach((tag) => tags.add(tag));
     });
-    unitsFilters.zoneTags.forEach((tag) => tags.add(tag));
+    stagedZoneFilters.zoneTags.forEach((tag) => tags.add(tag));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
-  }, [zonasData, unitsFilters.zoneTags]);
+  }, [zonasData, stagedZoneFilters.zoneTags]);
   const zoneNameToId = useMemo(() => {
     const map = new Map<string, string>();
     zonasData.forEach((zona) => {
@@ -314,9 +540,17 @@ export default function GlobalFilterBar({
     return map;
   }, [zonasData]);
 
-  const [unitSearch, setUnitSearch] = useState('');
-  const [eventSearch, setEventSearchLocal] = useState('');
+  const [unitSearch, setUnitSearch] = useState(() => stagedUnitsFilters.searchText);
+  const [eventSearch, setEventSearchLocal] = useState(() => stagedEventsFilters.searchText);
   const [zoneSearch, setZoneSearch] = useState('');
+
+  useEffect(() => {
+    setUnitSearch(stagedUnitsFilters.searchText);
+  }, [stagedUnitsFilters.searchText]);
+
+  useEffect(() => {
+    setEventSearchLocal(stagedEventsFilters.searchText);
+  }, [stagedEventsFilters.searchText]);
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
@@ -377,49 +611,34 @@ export default function GlobalFilterBar({
   }, [zoneSearch, zoneNameOptions]);
 
   const unitListTotalPages = filteredUnitNames.length === 0 ? 0 : Math.ceil(filteredUnitNames.length / unitsPageSize);
-  const clampedUnitsPage = unitListTotalPages === 0 ? 0 : Math.min(unitsPage, unitListTotalPages - 1);
+  const clampedUnitsPage = unitListTotalPages === 0 ? 0 : clampPageIndex(stagedPagination.units, unitListTotalPages);
 
   useEffect(() => {
-    if (unitListTotalPages === 0) {
-      if (unitsPage !== 0) {
-        setPage('units', 0);
-      }
-      return;
-    }
-    if (unitsPage >= unitListTotalPages) {
-      setPage('units', unitListTotalPages - 1);
-    }
-  }, [unitListTotalPages, unitsPage, setPage]);
+    setStagedPagination((prev) => {
+      const desired = unitListTotalPages === 0 ? 0 : clampPageIndex(prev.units, unitListTotalPages);
+      return prev.units === desired ? prev : { ...prev, units: desired };
+    });
+  }, [unitListTotalPages]);
 
   const eventListTotalPages = filteredEventEntries.length === 0 ? 0 : Math.ceil(filteredEventEntries.length / eventsPageSize);
-  const clampedEventsPage = eventListTotalPages === 0 ? 0 : Math.min(eventsPage, eventListTotalPages - 1);
+  const clampedEventsPage = eventListTotalPages === 0 ? 0 : clampPageIndex(stagedPagination.events, eventListTotalPages);
 
   useEffect(() => {
-    if (eventListTotalPages === 0) {
-      if (eventsPage !== 0) {
-        setPage('events', 0);
-      }
-      return;
-    }
-    if (eventsPage >= eventListTotalPages) {
-      setPage('events', eventListTotalPages - 1);
-    }
-  }, [eventListTotalPages, eventsPage, setPage]);
+    setStagedPagination((prev) => {
+      const desired = eventListTotalPages === 0 ? 0 : clampPageIndex(prev.events, eventListTotalPages);
+      return prev.events === desired ? prev : { ...prev, events: desired };
+    });
+  }, [eventListTotalPages]);
 
   const zoneListTotalPages = filteredZoneNames.length === 0 ? 0 : Math.ceil(filteredZoneNames.length / zonesPageSize);
-  const clampedZonesPage = zoneListTotalPages === 0 ? 0 : Math.min(zonesPage, zoneListTotalPages - 1);
+  const clampedZonesPage = zoneListTotalPages === 0 ? 0 : clampPageIndex(stagedPagination.zones, zoneListTotalPages);
 
   useEffect(() => {
-    if (zoneListTotalPages === 0) {
-      if (zonesPage !== 0) {
-        setPage('zones', 0);
-      }
-      return;
-    }
-    if (zonesPage >= zoneListTotalPages) {
-      setPage('zones', zoneListTotalPages - 1);
-    }
-  }, [zoneListTotalPages, zonesPage, setPage]);
+    setStagedPagination((prev) => {
+      const desired = zoneListTotalPages === 0 ? 0 : clampPageIndex(prev.zones, zoneListTotalPages);
+      return prev.zones === desired ? prev : { ...prev, zones: desired };
+    });
+  }, [zoneListTotalPages]);
 
   const paginatedUnitNames = useMemo(
     () => paginateArray(filteredUnitNames, clampedUnitsPage, unitsPageSize),
@@ -431,9 +650,6 @@ export default function GlobalFilterBar({
     () => paginateArray(filteredZoneNames, clampedZonesPage, zonesPageSize),
     [filteredZoneNames, clampedZonesPage, zonesPageSize]
   );
-  useEffect(() => {
-    setEventSearchLocal(eventsFilters.searchText);
-  }, [eventsFilters.searchText]);
 
   const isEventElementOverride = context === 'evento' && eventElementOptions && eventElementOptions.length > 0;
 
@@ -495,9 +711,79 @@ const renderCollapsibleSection = ({
   );
 };
 
-  const eventDropdownBadgeCount = (eventsFilters.estado !== 'todos' ? 1 : 0) +
-    (eventsFilters.severidades.length !== DEFAULT_EVENT_SEVERITIES.length ? eventsFilters.severidades.length : 0) +
-    eventsFilters.etiquetas.length;
+  const unitsFiltersChanged = !areUnitDomainEqual(stagedUnitsFilters, unitsFilters);
+  const eventsFiltersChanged = !areEventsFiltersEqual(stagedEventsFilters, eventsFilters);
+  const zonesFiltersChanged = !areZoneFiltersEqual(stagedZoneFilters, committedZoneFilters);
+
+  const unitsPageChanged = stagedPagination.units !== unitsPage;
+  const eventsPageChanged = stagedPagination.events !== eventsPage;
+  const zonesPageChanged = stagedPagination.zones !== zonesPage;
+
+  const unitsHasPendingChanges = unitsFiltersChanged || unitsPageChanged;
+  const eventsHasPendingChanges = eventsFiltersChanged || eventsPageChanged;
+  const zonesHasPendingChanges = zonesFiltersChanged || zonesPageChanged;
+
+  useEffect(() => {
+    if (dirtyFlags.units && !unitsHasPendingChanges) {
+      setDirtyFlags((prev) => ({ ...prev, units: false }));
+    }
+  }, [dirtyFlags.units, unitsHasPendingChanges]);
+
+  useEffect(() => {
+    if (dirtyFlags.events && !eventsHasPendingChanges) {
+      setDirtyFlags((prev) => ({ ...prev, events: false }));
+    }
+  }, [dirtyFlags.events, eventsHasPendingChanges]);
+
+  useEffect(() => {
+    if (dirtyFlags.zones && !zonesHasPendingChanges) {
+      setDirtyFlags((prev) => ({ ...prev, zones: false }));
+    }
+  }, [dirtyFlags.zones, zonesHasPendingChanges]);
+
+  const hasUnitsFilters = useMemo(() => {
+    const searchActive = stagedUnitsFilters.searchText.trim().length > 0;
+    const selectionActive = stagedUnitsFilters.unidades.length > 0 ||
+      stagedUnitsFilters.tags.length > 0 ||
+      stagedUnitsFilters.brandModels.length > 0 ||
+      stagedUnitsFilters.responsables.length > 0;
+    const lastSeenActive = stagedUnitsFilters.lastSeenRange !== null;
+    const statusDiff = stagedUnitsFilters.status.length !== DEFAULT_UNIT_STATUS.length ||
+      DEFAULT_UNIT_STATUS.some((status) => !stagedUnitsFilters.status.includes(status));
+    return searchActive || selectionActive || lastSeenActive || statusDiff;
+  }, [stagedUnitsFilters]);
+
+  const hasEventsFilters = useMemo(() => {
+    const searchActive = stagedEventsFilters.searchText.trim().length > 0;
+    const estadoActive = stagedEventsFilters.estado !== 'todos';
+    const severityDiff = stagedEventsFilters.severidades.length !== DEFAULT_EVENT_SEVERITIES.length ||
+      DEFAULT_EVENT_SEVERITIES.some((sev) => !stagedEventsFilters.severidades.includes(sev));
+    const selectionActive = stagedEventsFilters.etiquetas.length > 0 ||
+      stagedEventsFilters.unidades.length > 0 ||
+      stagedEventsFilters.assignedUsers.length > 0 ||
+      stagedEventsFilters.location.length > 0 ||
+      stagedEventsFilters.eventTypes.length > 0;
+    const togglesActive = stagedEventsFilters.filterByMapVehicles || stagedEventsFilters.focusMode;
+    const dateRangeActive = stagedEventsFilters.dateRange !== null;
+    return searchActive || estadoActive || severityDiff || selectionActive || togglesActive || dateRangeActive;
+  }, [stagedEventsFilters]);
+
+  const hasZonesFilters = useMemo(() => {
+    const selectionActive = stagedZoneFilters.zones.length > 0 || stagedZoneFilters.zoneTags.length > 0;
+    const searchActive = zonaSearchQuery.trim().length > 0;
+    return selectionActive || searchActive;
+  }, [stagedZoneFilters.zones, stagedZoneFilters.zoneTags, zonaSearchQuery]);
+
+  const unitsBadgeCount = hasUnitsFilters ? 1 : 0;
+  const eventDropdownBadgeCount = hasEventsFilters ? 1 : 0;
+  const zonesBadgeCount = hasZonesFilters ? 1 : 0;
+
+  const renderLabel = (label: string, domain: FilterDomainKey) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span>{label}</span>
+      {pending[domain] && <Spin size="small" />}
+    </span>
+  );
 
   const handleDropdownToggle = (key: DropdownKey, disabled?: boolean) => {
     if (disabled) {
@@ -508,19 +794,26 @@ const renderCollapsibleSection = ({
 
   const handleUnitSearchChange = (value: string) => {
     setUnitSearch(value);
-    setUnitsFilters({ searchText: value });
-    setPage('units', 0);
+    markDomainDirty('units');
+    setStagedUnitsFilters((prev) => ({
+      ...prev,
+      searchText: value
+    }));
+    setStagedPagination((prev) => ({ ...prev, units: 0 }));
   };
 
   const handleEventSearchChange = (value: string) => {
     setEventSearchLocal(value);
-    setEventsFilters({ searchText: value });
-    setPage('events', 0);
+    markDomainDirty('events');
+    setStagedEventsFilters((prev) => ({
+      ...prev,
+      searchText: value
+    }));
+    setStagedPagination((prev) => ({ ...prev, events: 0 }));
   };
 
   const handleZoneSearchChange = (value: string) => {
     setZoneSearch(value);
-    setPage('zones', 0);
   };
 
   const handleClearFilters = () => {
@@ -529,6 +822,104 @@ const renderCollapsibleSection = ({
     setPage('units', 0);
     setPage('events', 0);
     setPage('zones', 0);
+    setDirtyFlags({
+      units: false,
+      events: false,
+      zones: false
+    });
+    setStagedPagination({
+      units: 0,
+      events: 0,
+      zones: 0
+    });
+    triggerDomainPending('units');
+    triggerDomainPending('events');
+    triggerDomainPending('zones');
+  };
+
+  const handleReset = (domain: FilterDomainKey) => {
+    if (domain === 'units') {
+      setStagedUnitsFilters(cloneUnitsFilters(unitsFilters));
+      setStagedPagination((prev) => ({ ...prev, units: unitsPage }));
+      setUnitSearch(unitsFilters.searchText);
+      setDirtyFlags((prev) => ({ ...prev, units: false }));
+      return;
+    }
+    if (domain === 'events') {
+      setStagedEventsFilters(cloneEventsFilters(eventsFilters));
+      setStagedPagination((prev) => ({ ...prev, events: eventsPage }));
+      setEventSearchLocal(eventsFilters.searchText);
+      setDirtyFlags((prev) => ({ ...prev, events: false }));
+      return;
+    }
+    if (domain === 'zones') {
+      setStagedZoneFilters(cloneZonesFilterDraft(committedZoneFilters));
+      setStagedPagination((prev) => ({ ...prev, zones: zonesPage }));
+      setDirtyFlags((prev) => ({ ...prev, zones: false }));
+    }
+  };
+
+  const handleApply = (domain: FilterDomainKey) => {
+    if (applyingDomain) {
+      return;
+    }
+    if (domain === 'units') {
+      if (!unitsHasPendingChanges) {
+        return;
+      }
+      setApplyingDomain('units');
+      triggerDomainPending('units');
+      const filtersChanged = unitsFiltersChanged;
+      const pageChanged = unitsPageChanged;
+      if (filtersChanged) {
+        setUnitsFilters(buildUnitsCommitPartial(stagedUnitsFilters));
+        setPage('units', 0);
+        setStagedPagination((prev) => ({ ...prev, units: 0 }));
+      } else if (pageChanged) {
+        setPage('units', clampPageIndex(stagedPagination.units, unitListTotalPages));
+      }
+      setDirtyFlags((prev) => ({ ...prev, units: false }));
+      scheduleApplyComplete();
+      return;
+    }
+    if (domain === 'events') {
+      if (!eventsHasPendingChanges) {
+        return;
+      }
+      setApplyingDomain('events');
+      triggerDomainPending('events');
+      const filtersChanged = eventsFiltersChanged;
+      const pageChanged = eventsPageChanged;
+      if (filtersChanged) {
+        setEventsFilters(cloneEventsFilters(stagedEventsFilters));
+        setPage('events', 0);
+        setStagedPagination((prev) => ({ ...prev, events: 0 }));
+      } else if (pageChanged) {
+        setPage('events', clampPageIndex(stagedPagination.events, eventListTotalPages));
+      }
+      setDirtyFlags((prev) => ({ ...prev, events: false }));
+      scheduleApplyComplete();
+      return;
+    }
+    if (!zonesHasPendingChanges) {
+      return;
+    }
+    setApplyingDomain('zones');
+    triggerDomainPending('zones');
+    const filtersChanged = zonesFiltersChanged;
+    const pageChanged = zonesPageChanged;
+    if (filtersChanged) {
+      setUnitsFilters({
+        zones: [...stagedZoneFilters.zones],
+        zoneTags: [...stagedZoneFilters.zoneTags]
+      });
+      setPage('zones', 0);
+      setStagedPagination((prev) => ({ ...prev, zones: 0 }));
+    } else if (pageChanged) {
+      setPage('zones', clampPageIndex(stagedPagination.zones, zoneListTotalPages));
+    }
+    setDirtyFlags((prev) => ({ ...prev, zones: false }));
+    scheduleApplyComplete();
   };
 
   return (
@@ -580,11 +971,18 @@ const renderCollapsibleSection = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
           <FilterDropdown
             label="Unidades"
+            customLabel={renderLabel('Unidades', 'units')}
             disabled={isUnitsDisabled}
             isOpen={activeDropdown === 'units'}
             onToggle={() => handleDropdownToggle('units', isUnitsDisabled)}
-            badgeCount={unitsFilters.unidades.length + unitsFilters.tags.length}
+            badgeCount={unitsBadgeCount}
             disabledReason="Unavailable in this view."
+            hasUnsavedChanges={!isUnitsDisabled && unitsHasPendingChanges}
+            onApply={() => handleApply('units')}
+            onReset={() => handleReset('units')}
+            isApplyDisabled={isUnitsDisabled || !unitsHasPendingChanges}
+            isResetDisabled={!unitsHasPendingChanges}
+            isApplying={applyingDomain === 'units'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <DropdownSearchInput
@@ -601,18 +999,30 @@ const renderCollapsibleSection = ({
                   <>
                     <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {paginatedUnitNames.map((name) => {
-                        const active = unitsFilters.unidades.includes(name);
+                        const active = stagedUnitsFilters.unidades.includes(name);
                         return renderCheckboxOption({
                           label: name,
                           checked: active,
-                          onToggle: () => toggleUnitFilterValue('unidades', name)
+                          onToggle: () => {
+                            markDomainDirty('units');
+                            setStagedUnitsFilters((prev) => ({
+                              ...prev,
+                              unidades: toggleArrayMember(prev.unidades, name)
+                            }));
+                          }
                         });
                       })}
                     </div>
                     <PaginationControls
                       currentPage={clampedUnitsPage}
                       totalPages={unitListTotalPages}
-                      onPageChange={(page) => setPage('units', clampPageIndex(page, unitListTotalPages))}
+                      onPageChange={(page) => {
+                        markDomainDirty('units');
+                        setStagedPagination((prev) => ({
+                          ...prev,
+                          units: clampPageIndex(page, unitListTotalPages)
+                        }));
+                      }}
                     />
                   </>
                 )
@@ -625,11 +1035,17 @@ const renderCollapsibleSection = ({
                   <>
                     <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {unitTagOptions.map((tag) => {
-                        const active = unitsFilters.tags.includes(tag);
+                        const active = stagedUnitsFilters.tags.includes(tag);
                         return renderCheckboxOption({
                           label: tag,
                           checked: active,
-                          onToggle: () => toggleUnitFilterValue('tags', tag)
+                          onToggle: () => {
+                            markDomainDirty('units');
+                            setStagedUnitsFilters((prev) => ({
+                              ...prev,
+                              tags: toggleArrayMember(prev.tags, tag)
+                            }));
+                          }
                         });
                       })}
                     </div>
@@ -641,10 +1057,17 @@ const renderCollapsibleSection = ({
 
           <FilterDropdown
             label="Eventos"
+            customLabel={renderLabel(context === 'unidad' ? 'Eventos de esta unidad' : 'Eventos', 'events')}
             disabled={isEventsDisabled}
             isOpen={activeDropdown === 'events'}
             onToggle={() => handleDropdownToggle('events', isEventsDisabled)}
             badgeCount={eventDropdownBadgeCount}
+            hasUnsavedChanges={!isEventsDisabled && eventsHasPendingChanges}
+            onApply={() => handleApply('events')}
+            onReset={() => handleReset('events')}
+            isApplyDisabled={isEventsDisabled || !eventsHasPendingChanges}
+            isResetDisabled={!eventsHasPendingChanges}
+            isApplying={applyingDomain === 'events'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {isEventElementOverride && eventElementOptions && eventElementOptions.length > 0 && (
@@ -816,7 +1239,13 @@ const renderCollapsibleSection = ({
                         <PaginationControls
                           currentPage={clampedEventsPage}
                           totalPages={eventListTotalPages}
-                          onPageChange={(page) => setPage('events', clampPageIndex(page, eventListTotalPages))}
+                          onPageChange={(page) => {
+                            markDomainDirty('events');
+                            setStagedPagination((prev) => ({
+                              ...prev,
+                              events: clampPageIndex(page, eventListTotalPages)
+                            }));
+                          }}
                         />
                       </>
                     );
@@ -831,21 +1260,27 @@ const renderCollapsibleSection = ({
                 children: (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {(['todos', 'abiertos', 'cerrados'] as const).map((estado) => {
-                      const isActive = eventsFilters.estado === estado;
+                      const isActive = stagedEventsFilters.estado === estado;
                       return renderCheckboxOption({
                         label: estado === 'todos' ? 'Todos' : estado === 'abiertos' ? 'Abiertos' : 'Cerrados',
                         checked: isActive,
                         disabled: isEventElementOverride,
                         onToggle: () => {
-                          if (estado === 'todos') {
-                            setEventsFilters({ estado });
+                          if (isEventElementOverride) {
                             return;
                           }
-                          if (isActive) {
-                            setEventsFilters({ estado: 'todos' });
-                          } else {
-                            setEventsFilters({ estado });
+                          markDomainDirty('events');
+                          if (estado === 'todos') {
+                            setStagedEventsFilters((prev) => ({
+                              ...prev,
+                              estado
+                            }));
+                            return;
                           }
+                          setStagedEventsFilters((prev) => ({
+                            ...prev,
+                            estado: isActive ? 'todos' : estado
+                          }));
                         }
                       });
                     })}
@@ -860,12 +1295,21 @@ const renderCollapsibleSection = ({
                 children: (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {DEFAULT_EVENT_SEVERITIES.map((severity) => {
-                      const isActive = eventsFilters.severidades.includes(severity);
+                      const isActive = stagedEventsFilters.severidades.includes(severity);
                       return renderCheckboxOption({
                         label: severity,
                         checked: isActive,
                         disabled: isEventElementOverride,
-                        onToggle: () => toggleEventFilterValue('severidades', severity)
+                        onToggle: () => {
+                          if (isEventElementOverride) {
+                            return;
+                          }
+                          markDomainDirty('events');
+                          setStagedEventsFilters((prev) => ({
+                            ...prev,
+                            severidades: toggleArrayMember(prev.severidades, severity)
+                          }));
+                        }
                       });
                     })}
                   </div>
@@ -880,12 +1324,21 @@ const renderCollapsibleSection = ({
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
                       {EVENT_TAGS.map((tag) => {
-                        const isActive = eventsFilters.etiquetas.includes(tag);
+                        const isActive = stagedEventsFilters.etiquetas.includes(tag);
                         return renderCheckboxOption({
                           label: tag,
                           checked: isActive,
                           disabled: isEventElementOverride,
-                          onToggle: () => toggleEventFilterValue('etiquetas', tag)
+                          onToggle: () => {
+                            if (isEventElementOverride) {
+                              return;
+                            }
+                            markDomainDirty('events');
+                            setStagedEventsFilters((prev) => ({
+                              ...prev,
+                              etiquetas: toggleArrayMember(prev.etiquetas, tag)
+                            }));
+                          }
                         });
                       })}
                     </div>
@@ -897,11 +1350,18 @@ const renderCollapsibleSection = ({
 
           <FilterDropdown
             label="Zonas"
+            customLabel={renderLabel('Zonas', 'zones')}
             disabled={isZonesDisabled}
             isOpen={activeDropdown === 'zones'}
             onToggle={() => handleDropdownToggle('zones', isZonesDisabled)}
-            badgeCount={unitsFilters.zones.length + unitsFilters.zoneTags.length}
+            badgeCount={zonesBadgeCount}
             disabledReason="Unavailable in this view."
+            hasUnsavedChanges={!isZonesDisabled && zonesHasPendingChanges}
+            onApply={() => handleApply('zones')}
+            onReset={() => handleReset('zones')}
+            isApplyDisabled={isZonesDisabled || !zonesHasPendingChanges}
+            isResetDisabled={!zonesHasPendingChanges}
+            isApplying={applyingDomain === 'zones'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <DropdownSearchInput
@@ -918,14 +1378,18 @@ const renderCollapsibleSection = ({
                   <>
                     <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {paginatedZoneNames.map((zoneName) => {
-                        const active = unitsFilters.zones.includes(zoneName);
+                        const active = stagedZoneFilters.zones.includes(zoneName);
                         const zoneId = zoneNameToId.get(zoneName);
                         return renderCheckboxOption({
                           label: zoneName,
                           checked: active,
                           highlighted: selectedZoneId === zoneId,
                           onToggle: () => {
-                            toggleUnitFilterValue('zones', zoneName);
+                            markDomainDirty('zones');
+                            setStagedZoneFilters((prev) => ({
+                              ...prev,
+                              zones: toggleArrayMember(prev.zones, zoneName)
+                            }));
                             if (zoneId) {
                               const nextSelection = active && selectedZoneId === zoneId ? null : zoneId;
                               onZoneSelect?.(nextSelection);
@@ -937,7 +1401,13 @@ const renderCollapsibleSection = ({
                     <PaginationControls
                       currentPage={clampedZonesPage}
                       totalPages={zoneListTotalPages}
-                      onPageChange={(page) => setPage('zones', clampPageIndex(page, zoneListTotalPages))}
+                      onPageChange={(page) => {
+                        markDomainDirty('zones');
+                        setStagedPagination((prev) => ({
+                          ...prev,
+                          zones: clampPageIndex(page, zoneListTotalPages)
+                        }));
+                      }}
                     />
                   </>
                 )
@@ -950,11 +1420,17 @@ const renderCollapsibleSection = ({
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
                       {zoneTagOptions.map((tag) => {
-                        const active = unitsFilters.zoneTags.includes(tag);
+                        const active = stagedZoneFilters.zoneTags.includes(tag);
                         return renderCheckboxOption({
                           label: tag,
                           checked: active,
-                          onToggle: () => toggleUnitFilterValue('zoneTags', tag)
+                          onToggle: () => {
+                            markDomainDirty('zones');
+                            setStagedZoneFilters((prev) => ({
+                              ...prev,
+                              zoneTags: toggleArrayMember(prev.zoneTags, tag)
+                            }));
+                          }
                         });
                       })}
                     </div>
@@ -1012,6 +1488,12 @@ interface DropdownProps {
   children: React.ReactNode;
   badgeCount?: number;
   customLabel?: React.ReactNode;
+  hasUnsavedChanges?: boolean;
+  onApply?: () => void;
+  onReset?: () => void;
+  isApplyDisabled?: boolean;
+  isResetDisabled?: boolean;
+  isApplying?: boolean;
 }
 
 function FilterDropdown({
@@ -1022,7 +1504,13 @@ function FilterDropdown({
   onToggle,
   children,
   badgeCount = 0,
-  customLabel
+  customLabel,
+  hasUnsavedChanges = false,
+  onApply,
+  onReset,
+  isApplyDisabled = false,
+  isResetDisabled = false,
+  isApplying = false
 }: DropdownProps) {
   return (
     <div
@@ -1050,31 +1538,40 @@ function FilterDropdown({
           fontWeight: 600,
           cursor: disabled ? 'not-allowed' : 'pointer',
           boxShadow: isOpen ? '0 10px 30px rgba(15,23,42,0.12)' : 'none',
-          transition: 'box-shadow 0.2s ease'
+          transition: 'box-shadow 0.2s ease',
+          position: 'relative'
         }}
       >
         <span>{customLabel ?? label}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {badgeCount > 0 && (
+          {hasUnsavedChanges && !disabled && (
             <span
               style={{
-                minWidth: '18px',
-                height: '18px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '999px',
                 backgroundColor: '#1867ff',
-                color: '#ffffff',
-                fontSize: '11px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0 6px'
+                boxShadow: '0 0 0 2px rgba(24,103,255,0.15)'
               }}
-            >
-              {badgeCount}
-            </span>
+            />
           )}
           {isOpen ? <CaretUp size={16} weight="bold" /> : <CaretDown size={16} weight="bold" />}
         </div>
+        {badgeCount > 0 && (
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 10,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: '#dc2626',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
       </button>
       {isOpen && !disabled && (
         <div
@@ -1088,9 +1585,71 @@ function FilterDropdown({
             borderRadius: '14px',
             boxShadow: '0 20px 45px rgba(15,23,42,0.18)',
             border: '1px solid rgba(15,23,42,0.08)',
-            padding: '16px'
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
           }}
         >
+          {(onApply || onReset) && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px'
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {onReset && (
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    disabled={isResetDisabled}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(15,23,42,0.16)',
+                      backgroundColor: 'transparent',
+                      color: isResetDisabled ? '#94a3b8' : '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: isResetDisabled ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.15s ease, color 0.15s ease'
+                    }}
+                  >
+                    Limpiar
+                  </button>
+                )}
+                {onApply && (
+                  <button
+                    type="button"
+                    onClick={onApply}
+                    disabled={isApplyDisabled}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: isApplyDisabled ? '#cbd5f5' : '#1867ff',
+                      color: '#ffffff',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: isApplyDisabled ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.15s ease, opacity 0.15s ease',
+                      opacity: isApplyDisabled ? 0.7 : 1
+                    }}
+                  >
+                    {isApplying && <LoadingOutlined style={{ fontSize: 14, color: '#ffffff' }} spin />}
+                    Aplicar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {children}
         </div>
       )}

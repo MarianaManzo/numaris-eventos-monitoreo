@@ -16,6 +16,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import ZonaPolygon from '../Map/ZonaPolygon';
 import ZonaLabel from '../Map/ZonaLabel';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -105,6 +106,8 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
     showZonaLabels,
     setShowZonaLabels
   } = useGlobalMapStore();
+  const filtersPending = useFilterUiStore((state) => state.pending);
+  const isFiltersPending = filtersPending.events || filtersPending.units || filtersPending.zones;
 
   const { zonas, setZonas, getVisibleZonas, selectedZonaId, filteredTags, searchQuery } = useZonaStore();
   const { unidades: pillSelectedUnits, zones: pillSelectedZones } = useFilterStore((state) => state.units);
@@ -610,6 +613,7 @@ export default function EventDetailMapView({ event, vehicleId, viewDate, visuali
         isFullscreen={isFullscreen}
         layers={layerOptions}
         labelLayers={labelLayers}
+        isFiltersPending={isFiltersPending}
       />
     </div>
   );

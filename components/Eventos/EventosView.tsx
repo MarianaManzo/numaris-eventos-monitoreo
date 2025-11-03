@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Layout, Skeleton } from 'antd';
+import { Layout, Skeleton, Spin } from 'antd';
 import { useSearchParams } from 'next/navigation';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
 import EventosSidebar from './EventosSidebar';
@@ -12,6 +12,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
@@ -55,6 +56,7 @@ export default function EventosView() {
   const eventsPage = usePaginationStore((state) => state.page.events);
   const eventsPageSize = usePaginationStore((state) => state.pageSize.events);
   const setPaginationPage = usePaginationStore((state) => state.setPage);
+  const isEventsPending = useFilterUiStore((state) => state.pending.events);
 
   // Use global map store for cross-view visibility
   const { showEventsOnMap, setShowEventsOnMap, showVehiclesOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
@@ -436,6 +438,11 @@ export default function EventosView() {
               </Sider>
 
               <Content className="relative" style={{ flex: 1, height: '100%', position: 'relative' }}>
+                {isEventsPending && (
+                  <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 1100 }}>
+                    <Spin size="small" />
+                  </div>
+                )}
                 <EventosMapView
                   eventMarkers={showEventsOnMap ? paginatedEvents.map(e => ({
                     id: e.id,

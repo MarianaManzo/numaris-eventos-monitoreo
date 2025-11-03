@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type ComponentType } from 'react';
-import { Button, Typography, Input } from 'antd';
+import { Button, Typography, Input, Spin, Skeleton } from 'antd';
 import type { IconProps } from 'phosphor-react';
 import {
   MagnifyingGlass,
@@ -20,6 +20,7 @@ import {
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
 import PaginationControls from '@/components/Common/PaginationControls';
 
@@ -64,6 +65,7 @@ export default function ZonasSidebar({
 
   // Global map store for context layer visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap } = useGlobalMapStore();
+  const isZonesPending = useFilterUiStore((state) => state.pending.zones);
 
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -138,6 +140,7 @@ export default function ZonasSidebar({
       }}>
         {/* Title */}
         <Text strong style={{ fontSize: '16px', whiteSpace: 'nowrap' }}>Zonas</Text>
+        {isZonesPending && <Spin size="small" />}
 
         {/* Search and Filter */}
         <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'flex-end' }}>
@@ -199,6 +202,12 @@ export default function ZonasSidebar({
           scrollbarColor: '#cbd5e1 #f1f5f9',
           position: 'relative'
         } as React.CSSProperties}>
+        <div
+          style={{
+            opacity: isZonesPending ? 0.4 : 1,
+            pointerEvents: isZonesPending ? 'none' : 'auto'
+          }}
+        >
         {displayedZonas.map((zona) => {
           const isSelected = selectedZonaId === zona.id;
           return (
@@ -271,6 +280,23 @@ export default function ZonasSidebar({
             </div>
           );
         })}
+        </div>
+        {isZonesPending && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              padding: '16px',
+              background: 'rgba(248,250,252,0.75)',
+              pointerEvents: 'none'
+            }}
+          >
+            <Skeleton
+              active
+              paragraph={{ rows: Math.max(3, Math.min(pageSize, displayedZonas.length || pageSize)) }}
+            />
+          </div>
+        )}
       </div>
 
       <div style={{

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Button, Typography, Input } from 'antd';
+import { Button, Typography, Input, Spin, Skeleton } from 'antd';
 import { MagnifyingGlass } from 'phosphor-react';
 import Link from 'next/link';
 import { type Unidad, generateUnidades } from '@/lib/unidades/generateUnidades';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import PaginationControls from '@/components/Common/PaginationControls';
 
 const { Text } = Typography;
@@ -60,6 +61,7 @@ export default function UnidadesSidebar({
 
   const unitsFilters = useFilterStore((state) => state.units);
   const setUnitsFilters = useFilterStore((state) => state.setUnitsFilters);
+  const isUnitsPending = useFilterUiStore((state) => state.pending.units);
 
   const {
     searchText,
@@ -161,6 +163,7 @@ export default function UnidadesSidebar({
       }}>
         {/* Title */}
         <Text strong style={{ fontSize: '16px', whiteSpace: 'nowrap' }}>Unidades</Text>
+        {isUnitsPending && <Spin size="small" />}
 
         {/* Search and Filter */}
         <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'flex-end' }}>
@@ -258,6 +261,12 @@ export default function UnidadesSidebar({
           borderRight: '1px solid #e5e7eb',
           position: 'relative'
         } as React.CSSProperties}>
+        <div
+          style={{
+            opacity: isUnitsPending ? 0.4 : 1,
+            pointerEvents: isUnitsPending ? 'none' : 'auto'
+          }}
+        >
         {displayedUnidades.map((unidad) => {
           const estadoStyle = getEstadoColor(unidad.estado);
           const isSelected = selectedUnidadId === unidad.id;
@@ -382,6 +391,7 @@ export default function UnidadesSidebar({
             </div>
           );
         })}
+        </div>
       </div>
 
       <div style={{

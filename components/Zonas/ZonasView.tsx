@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Layout, Skeleton } from 'antd';
+import { Layout, Skeleton, Spin } from 'antd';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
 import ZonasSidebar from './ZonasSidebar';
 import CollapsibleMenu from '@/components/Layout/CollapsibleMenu';
@@ -13,6 +13,7 @@ import type { ZonaWithRelations } from '@/lib/zonas/types';
 import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const { Content, Sider } = Layout;
 
@@ -38,6 +39,7 @@ export default function ZonasView() {
   const setPaginationPage = usePaginationStore((state) => state.setPage);
 
   const { zonas, selectedZonaId, selectZona, searchQuery } = useZonaStore();
+  const isZonesPending = useFilterUiStore((state) => state.pending.zones);
 
   // Initial loading effect
   useEffect(() => {
@@ -386,6 +388,11 @@ export default function ZonasView() {
             </Sider>
 
             <Content className="relative" style={{ flex: 1, height: '100%' }}>
+              {isZonesPending && (
+                <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 1100 }}>
+                  <Spin size="small" />
+                </div>
+              )}
               <ZonasMapView
                 zonas={paginatedZonas}
                 selectedZonaId={selectedZonaId}

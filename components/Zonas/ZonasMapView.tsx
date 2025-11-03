@@ -9,6 +9,7 @@ import { useMapFitBounds } from '@/hooks/useMapFitBounds';
 import { isPointInZona } from '@/lib/zonas/generateZonas';
 import type { Zona, ZonaWithRelations } from '@/lib/zonas/types';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -85,6 +86,7 @@ export default function ZonasMapView({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const center: LatLngExpression = [20.6737, -103.3444]; // Guadalajara
   const zoom = 12;
+  const isZonesPending = useFilterUiStore((state) => state.pending.zones);
 
   // Global map store for cross-view layer visibility
   const {
@@ -400,16 +402,17 @@ export default function ZonasMapView({
       </MapContainer>
 
       {map && (
-        <MapToolbar
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onResetView={handleResetView}
-          onRecenterRoute={handleRecenterZonas}
-          onToggleFullscreen={handleToggleFullscreen}
-          isFullscreen={isFullscreen}
-          layers={layerOptions}
-          labelLayers={labelLayers}
-        />
+      <MapToolbar
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetView={handleResetView}
+        onRecenterRoute={handleRecenterZonas}
+        onToggleFullscreen={handleToggleFullscreen}
+        isFullscreen={isFullscreen}
+        layers={layerOptions}
+        labelLayers={labelLayers}
+        isFiltersPending={isZonesPending}
+      />
       )}
     </div>
   );

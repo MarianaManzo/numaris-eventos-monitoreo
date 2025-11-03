@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Button, Typography, Popover, Input, Radio } from 'antd';
+import { Button, Typography, Popover, Input, Radio, Spin, Skeleton } from 'antd';
 import { MagnifyingGlass, SortAscending } from 'phosphor-react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
@@ -12,6 +12,7 @@ import tableStyles from '@/components/Events/EventTable.module.css';
 import { generateLocationString, generateSeedFromEventId } from '@/lib/events/addressGenerator';
 import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import { useFilterStore } from '@/lib/stores/filterStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import PaginationControls from '@/components/Common/PaginationControls';
 
 const { Text } = Typography;
@@ -156,6 +157,7 @@ export default function EventosSidebar({
 
   const eventsFilters = useFilterStore((state) => state.events);
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
+  const isEventsPending = useFilterUiStore((state) => state.pending.events);
 
   const {
     searchText,
@@ -340,6 +342,7 @@ export default function EventosSidebar({
         }}>
           {/* Title */}
           <Text strong style={{ fontSize: '16px', whiteSpace: 'nowrap' }}>Eventos</Text>
+          {isEventsPending && <Spin size="small" />}
 
           {/* Search, Filter and Sort */}
           <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'flex-end' }}>
@@ -413,7 +416,7 @@ export default function EventosSidebar({
 
       {/* Vehicle Event Table */}
       <div className={tableStyles.tableWrapper} style={{ flex: 1, minHeight: 0 }}>
-        <div ref={scrollContainerRef} className={tableStyles.tableScroll}>
+        <div ref={scrollContainerRef} className={tableStyles.tableScroll} style={{ position: 'relative' }}>
           <div className={tableStyles.header}>
             <span>Evento</span>
             <span>Estado</span>
@@ -423,6 +426,12 @@ export default function EventosSidebar({
             <span>Responsable</span>
             <span>Duración</span>
           </div>
+          <div
+            style={{
+              opacity: isEventsPending ? 0.4 : 1,
+              pointerEvents: isEventsPending ? 'none' : 'auto'
+            }}
+          >
           {displayedEvents.map((event) => {
             // Generate consistent location using same seed as map markers
             const locationName = generateLocationString(generateSeedFromEventId(event.id));
@@ -477,6 +486,23 @@ export default function EventosSidebar({
               </div>
             );
           })}
+          </div>
+          {isEventsPending && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                padding: '16px',
+                background: 'rgba(248,250,252,0.75)',
+                pointerEvents: 'none'
+              }}
+            >
+              <Skeleton
+                active
+                paragraph={{ rows: Math.max(4, Math.min(pageSize, displayedEvents.length || pageSize)) }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

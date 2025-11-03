@@ -7,6 +7,7 @@ import type L from 'leaflet';
 import MapToolbar from './MapToolbar';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
 import ZonaPolygon from './ZonaPolygon';
@@ -60,6 +61,8 @@ export default function MapView() {
     showZonaLabels,
     setShowZonaLabels
   } = useGlobalMapStore();
+  const filtersPending = useFilterUiStore((state) => state.pending);
+  const isFiltersPending = filtersPending.units || filtersPending.events || filtersPending.zones;
 
   const zonasBase = useMemo(() => generateGuadalajaraZonas(), []);
   const zonasWithRelations = useMemo< ZonaWithRelations[] >(() => zonasBase.map((zona) => ({
@@ -330,6 +333,7 @@ export default function MapView() {
         isFullscreen={isFullscreen}
         layers={layerOptions}
         labelLayers={labelLayers}
+        isFiltersPending={isFiltersPending}
       />
     </div>
   );

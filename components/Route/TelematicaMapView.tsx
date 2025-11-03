@@ -10,6 +10,7 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
 import ZonaPolygon from '../Map/ZonaPolygon';
 import ZonaLabel from '../Map/ZonaLabel';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -60,6 +61,9 @@ export default function TelematicaMapView({ unidadId }: TelematicaMapViewProps) 
     showZonaLabels,
     setShowZonaLabels
   } = useGlobalMapStore();
+
+  const filtersPending = useFilterUiStore((state) => state.pending);
+  const isFiltersPending = filtersPending.units || filtersPending.events || filtersPending.zones;
 
   const zonasBase = useMemo(() => generateGuadalajaraZonas(), []);
   const zonasWithRelations = useMemo<ZonaWithRelations[]>(() => zonasBase.map((zona) => ({
@@ -231,6 +235,7 @@ export default function TelematicaMapView({ unidadId }: TelematicaMapViewProps) 
           isFullscreen={isFullscreen}
           layers={layerOptions}
           labelLayers={labelLayers}
+          isFiltersPending={isFiltersPending}
         />
       )}
     </div>

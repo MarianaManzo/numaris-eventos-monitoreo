@@ -12,6 +12,7 @@ import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
 import { arePositionsClose } from '@/lib/utils/geoUtils';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import type { Zona } from '@/lib/zonas/types';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -134,6 +135,7 @@ export default function EventosMapView({
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isEventsPending = useFilterUiStore((state) => state.pending.events);
 
   // Global map store for cross-view layer visibility
   const {
@@ -893,6 +895,7 @@ export default function EventosMapView({
         isFullscreen={isFullscreen}
         layers={layerOptions}
         labelLayers={labelLayers}
+        isFiltersPending={isEventsPending}
       />
     </div>
   );

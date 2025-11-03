@@ -8,6 +8,7 @@ import MapToolbar from '../Map/MapToolbar';
 import { useMapFitBounds } from '@/hooks/useMapFitBounds';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import type { Zona } from '@/lib/zonas/types';
+import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -133,6 +134,7 @@ export default function UnidadesMapView({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const center: LatLngExpression = [20.659699, -103.349609]; // Guadalajara
   const zoom = 13;
+  const isUnitsPending = useFilterUiStore((state) => state.pending.units);
 
   // Global map store for cross-view layer visibility (fallback when explicit props are not provided)
   const {
@@ -435,16 +437,17 @@ export default function UnidadesMapView({
       </MapContainer>
 
       {map && (
-      <MapToolbar
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
-        onRecenterRoute={handleRecenterUnidades}
-        onToggleFullscreen={handleToggleFullscreen}
-        isFullscreen={isFullscreen}
-        layers={layerOptions}
-        labelLayers={labelLayers}
-      />
+        <MapToolbar
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetView={handleResetView}
+          onRecenterRoute={handleRecenterUnidades}
+          onToggleFullscreen={handleToggleFullscreen}
+          isFullscreen={isFullscreen}
+          layers={layerOptions}
+          labelLayers={labelLayers}
+          isFiltersPending={isUnitsPending}
+        />
       )}
     </div>
   );

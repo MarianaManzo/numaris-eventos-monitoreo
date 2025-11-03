@@ -613,10 +613,11 @@ export default function EventosTab({ segments, onSegmentClick, selectedSegment, 
           className={tableStyles.tableScroll}
         >
           <div className={tableStyles.header}>
+            <span className={tableStyles.headerIcon} aria-hidden="true" />
             <span>Evento</span>
-            <span>Estado</span>
+            <span>Fecha</span>
             <span>Unidad</span>
-            <span>Horario</span>
+            <span>Estado</span>
             <span>Ubicación</span>
             <span>Responsable</span>
             <span>Duración</span>

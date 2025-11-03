@@ -2,6 +2,7 @@
 
 import { FrameCorners, CornersOut, Target, TextT } from 'phosphor-react';
 import { useState } from 'react';
+import { Spin } from 'antd';
 import LayerToggleButton from './LayerToggleButton';
 
 interface LayerOption {
@@ -23,6 +24,7 @@ interface MapToolbarProps {
   isFullscreen?: boolean;
   layers?: LayerOption[];
   labelLayers?: LayerOption[];
+  isFiltersPending?: boolean;
 }
 
 export default function MapToolbar({
@@ -36,6 +38,7 @@ export default function MapToolbar({
   isFullscreen,
   layers,
   labelLayers,
+  isFiltersPending = false,
 }: MapToolbarProps) {
   const [isRecenterPressed, setIsRecenterPressed] = useState(false);
   const [isFitEventVehiclePressed, setIsFitEventVehiclePressed] = useState(false);
@@ -62,6 +65,11 @@ export default function MapToolbar({
     <div className="absolute right-4 top-4 bottom-4 flex flex-col z-[10000] pointer-events-none">
       {/* Top Section - Fullscreen Button and Layer Controls */}
       <div className="pointer-events-auto mb-auto flex flex-col gap-1">
+        {isFiltersPending && (
+          <div className="flex items-center justify-center pb-1">
+            <Spin size="small" />
+          </div>
+        )}
         {onToggleFullscreen && (
           <button
             onClick={onToggleFullscreen}
