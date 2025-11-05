@@ -60,7 +60,7 @@ export default function ZonesDrawer({ open, onClose }: ZonesDrawerProps) {
     <Drawer
       title="Zonas"
       placement="right"
-      width={380}
+      width={520}
       open={open}
       onClose={onClose}
       destroyOnClose
@@ -69,7 +69,6 @@ export default function ZonesDrawer({ open, onClose }: ZonesDrawerProps) {
         zonasWithRelations={zonasWithRelations}
         displayedZonas={paginatedZonas}
         currentPage={currentPage}
-        totalPages={totalPages}
         pageSize={PAGE_SIZE}
         onPageChange={setCurrentPage}
       />
