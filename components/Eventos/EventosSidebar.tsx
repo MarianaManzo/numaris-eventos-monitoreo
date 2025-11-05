@@ -481,7 +481,6 @@ export default function EventosSidebar({
                     vehicleId: event.vehicleId
                   }}
                   showVehicle={true}
-                  showNotes={true}
                 />
               </div>
             );
