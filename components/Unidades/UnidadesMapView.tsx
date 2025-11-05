@@ -65,18 +65,20 @@ interface UnidadesMapViewProps {
   selectedUnidadId: string | null;
   selectedUnidadPosition?: [number, number];
   onUnidadSelect: (unidadId: string | null) => void;
-  zonas?: Zona[]; // NEW: Zonas to render as context layers
-  selectedEventId?: string | null; // NEW: Selected event ID
-  selectedZonaId?: string | null; // NEW: Selected zona ID
-  onEventSelect?: (eventId: string | null) => void; // NEW: Event selection callback
-  onZonaSelect?: (zonaId: string | null) => void; // NEW: Zona selection callback
-  showVehicleMarkers?: boolean; // Optional, default true
+  zonas?: Zona[];
+  selectedEventId?: string | null;
+  selectedZonaId?: string | null;
+  onEventSelect?: (eventId: string | null) => void;
+  onZonaSelect?: (zonaId: string | null) => void;
+  showVehicleMarkers?: boolean;
   showVehiclesOnMap?: boolean;
   onToggleVehiclesVisibility?: (visible: boolean) => void;
   showZonasOnMap?: boolean;
   onToggleZonasVisibility?: (visible: boolean) => void;
   showEventMarkers?: boolean;
   onToggleEventsVisibility?: (visible: boolean) => void;
+  onOpenZonesDrawer?: () => void;
+  isZonesDrawerOpen?: boolean;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -126,7 +128,9 @@ export default function UnidadesMapView({
   showZonasOnMap: showZonasOnMapProp,
   onToggleZonasVisibility,
   showEventMarkers: showEventMarkersProp,
-  onToggleEventsVisibility
+  onToggleEventsVisibility,
+  onOpenZonesDrawer,
+  isZonesDrawerOpen = false
 }: UnidadesMapViewProps) {
   const [map, setMap] = useState<L.Map | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -181,7 +185,6 @@ export default function UnidadesMapView({
       setShowZonasOnMap(next);
     }
   };
-
   const layerOptions = [
     {
       id: 'vehicles',
@@ -447,6 +450,8 @@ export default function UnidadesMapView({
           layers={layerOptions}
           labelLayers={labelLayers}
           isFiltersPending={isUnitsPending}
+          onToggleZonesDrawer={onOpenZonesDrawer}
+          isZonesDrawerOpen={isZonesDrawerOpen}
         />
       )}
     </div>

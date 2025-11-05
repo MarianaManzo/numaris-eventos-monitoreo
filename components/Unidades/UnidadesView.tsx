@@ -10,8 +10,8 @@ import { generateGuadalajaraZonas } from '@/lib/zonas/generateZonas';
 import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateEventsForMap } from './generateEventsForUnidades';
-import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
+import ZonesDrawer from '@/components/Zonas/ZonesDrawer';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
 
 const { Content, Sider } = Layout;
@@ -49,6 +49,7 @@ export default function UnidadesView() {
   const unitsPageSize = usePaginationStore((state) => state.pageSize.units);
   const setPaginationPage = usePaginationStore((state) => state.setPage);
   const isUnitsPending = useFilterUiStore((state) => state.pending.units);
+  const [isZonesDrawerOpen, setZonesDrawerOpen] = useState(false);
 
   // Use global map store for cross-view visibility
   const { showVehiclesOnMap, setShowVehiclesOnMap, showEventsOnMap, setShowEventsOnMap, showZonasOnMap, setShowZonasOnMap } = useGlobalMapStore();
@@ -280,7 +281,6 @@ export default function UnidadesView() {
               flexDirection: 'column'
             }}
           >
-            <GlobalFilterBar context="monitoreo" unitEntries={unitDropdownEntries} />
             <Layout style={{ flex: 1, display: 'flex' }}>
               <Sider
                 width={sidebarWidth}
@@ -350,12 +350,15 @@ export default function UnidadesView() {
                   onToggleEventsVisibility={setShowEventsOnMap}
                   showVehiclesOnMap={showVehiclesOnMap}
                   onToggleVehiclesVisibility={setShowVehiclesOnMap}
+                  onOpenZonesDrawer={() => setZonesDrawerOpen(true)}
+                  isZonesDrawerOpen={isZonesDrawerOpen}
                 />
               </Content>
             </Layout>
           </Layout>
         </Layout>
       </div>
+      <ZonesDrawer open={isZonesDrawerOpen} onClose={() => setZonesDrawerOpen(false)} />
     </Layout>
   );
 }

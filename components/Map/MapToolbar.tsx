@@ -1,6 +1,6 @@
 'use client';
 
-import { FrameCorners, CornersOut, Target, TextT } from 'phosphor-react';
+import { FrameCorners, CornersOut, MapPinLine, TextT } from 'phosphor-react';
 import { useState } from 'react';
 import { Spin } from 'antd';
 import LayerToggleButton from './LayerToggleButton';
@@ -25,6 +25,8 @@ interface MapToolbarProps {
   layers?: LayerOption[];
   labelLayers?: LayerOption[];
   isFiltersPending?: boolean;
+  onToggleZonesDrawer?: () => void;
+  isZonesDrawerOpen?: boolean;
 }
 
 export default function MapToolbar({
@@ -39,6 +41,8 @@ export default function MapToolbar({
   layers,
   labelLayers,
   isFiltersPending = false,
+  onToggleZonesDrawer,
+  isZonesDrawerOpen = false,
 }: MapToolbarProps) {
   const [isRecenterPressed, setIsRecenterPressed] = useState(false);
   const [isFitEventVehiclePressed, setIsFitEventVehiclePressed] = useState(false);
@@ -62,13 +66,40 @@ export default function MapToolbar({
   };
 
   return (
-    <div className="absolute right-4 top-4 bottom-4 flex flex-col z-[10000] pointer-events-none">
+    <div
+      className="absolute right-4 top-4 bottom-4 flex flex-col pointer-events-none"
+      style={{ zIndex: isZonesDrawerOpen ? 900 : 10000 }}
+    >
       {/* Top Section - Fullscreen Button and Layer Controls */}
       <div className="pointer-events-auto mb-auto flex flex-col gap-1">
         {isFiltersPending && (
           <div className="flex items-center justify-center pb-1">
             <Spin size="small" />
           </div>
+        )}
+        {layers && layers.length > 0 && <LayerToggleButton layers={layers} />}
+        {labelLayers && labelLayers.length > 0 && (
+          <LayerToggleButton
+            layers={labelLayers}
+            buttonIcon={(active) => <TextT size={20} weight="fill" color={active ? 'white' : '#1867ff'} />}
+            buttonTooltip="Etiquetas del mapa"
+            popoverTitle="Etiquetas visibles"
+          />
+        )}
+        {onToggleZonesDrawer && (
+          <button
+            type="button"
+            onClick={onToggleZonesDrawer}
+            title="Zonas"
+            aria-pressed={isZonesDrawerOpen}
+            className="w-10 h-10 rounded-lg shadow-lg border flex items-center justify-center transition-colors"
+            style={{
+              backgroundColor: isZonesDrawerOpen ? '#1867ff' : '#ffffff',
+              borderColor: isZonesDrawerOpen ? '#1867ff' : '#e5e7eb'
+            }}
+          >
+            <MapPinLine size={20} weight="regular" color={isZonesDrawerOpen ? '#ffffff' : '#1867ff'} />
+          </button>
         )}
         {onToggleFullscreen && (
           <button
@@ -81,15 +112,6 @@ export default function MapToolbar({
           >
             <FrameCorners size={20} weight="regular" color={isFullscreen ? 'white' : '#1867ff'} />
           </button>
-        )}
-        {layers && layers.length > 0 && <LayerToggleButton layers={layers} />}
-        {labelLayers && labelLayers.length > 0 && (
-          <LayerToggleButton
-            layers={labelLayers}
-            buttonIcon={(active) => <TextT size={20} weight="fill" color={active ? 'white' : '#1867ff'} />}
-            buttonTooltip="Etiquetas del mapa"
-            popoverTitle="Etiquetas visibles"
-          />
         )}
         {/* Fit Event + Vehicle Button - Only shows when event is selected */}
         {hasEventAndVehicle && onFitEventAndVehicle && (

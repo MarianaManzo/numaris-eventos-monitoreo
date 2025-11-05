@@ -80,19 +80,21 @@ interface EventosMapViewProps {
   vehicleMarkers?: VehicleMarkerData[];
   showVehicleMarkers?: boolean;
   onVisibleVehiclesChange?: (visibleIds: string[]) => void;
-  filterByMapVehicles?: boolean; // When true, only show vehicles with events
-  onToggleFilterByMapVehicles?: (enabled: boolean) => void; // Callback to toggle filter
-  visibleVehicleIds?: string[]; // Array of visible vehicle IDs for display count
-  isFocusModeActive?: boolean; // When true, dim vehicles without events
-  onToggleFocusMode?: () => void; // Callback to toggle focus mode
-  vehiclesWithEvents?: string[]; // Array of vehicle IDs that have events
-  zonas?: Zona[]; // NEW: Zonas to render as context layers
-  selectedZonaId?: string | null; // NEW: Selected zona ID
-  onZonaSelect?: (zonaId: string | null) => void; // NEW: Zona selection callback
+  filterByMapVehicles?: boolean;
+  onToggleFilterByMapVehicles?: (enabled: boolean) => void;
+  visibleVehicleIds?: string[];
+  isFocusModeActive?: boolean;
+  onToggleFocusMode?: () => void;
+  vehiclesWithEvents?: string[];
+  zonas?: Zona[];
+  selectedZonaId?: string | null;
+  onZonaSelect?: (zonaId: string | null) => void;
   showZonasOnMap?: boolean;
   onToggleZonasVisibility?: (show: boolean) => void;
   showEventsOnMap?: boolean;
   onToggleEventsVisibility?: (show: boolean) => void;
+  onOpenZonesDrawer?: () => void;
+  isZonesDrawerOpen?: boolean;
 }
 
 const getSeverityColor = (severidad: string) => {
@@ -130,13 +132,14 @@ export default function EventosMapView({
   showZonasOnMap: showZonasOnMapProp,
   onToggleZonasVisibility,
   showEventsOnMap: showEventsOnMapProp,
-  onToggleEventsVisibility
+  onToggleEventsVisibility,
+  onOpenZonesDrawer,
+  isZonesDrawerOpen = false
 }: EventosMapViewProps) {
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isEventsPending = useFilterUiStore((state) => state.pending.events);
-
   // Global map store for cross-view layer visibility
   const {
     showVehiclesOnMap,
@@ -896,6 +899,8 @@ export default function EventosMapView({
         layers={layerOptions}
         labelLayers={labelLayers}
         isFiltersPending={isEventsPending}
+        onToggleZonesDrawer={onOpenZonesDrawer}
+        isZonesDrawerOpen={isZonesDrawerOpen}
       />
     </div>
   );

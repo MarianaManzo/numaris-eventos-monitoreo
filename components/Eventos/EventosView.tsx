@@ -13,10 +13,8 @@ import { useGlobalMapStore } from '@/lib/stores/globalMapStore';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
-import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
 import { usePaginationStore } from '@/lib/stores/paginationStore';
-import { getOperationalStatusFromId } from '@/lib/events/eventStatus';
-import { generateVehicleName } from '@/lib/events/addressGenerator';
+import ZonesDrawer from '@/components/Zonas/ZonesDrawer';
 
 const { Content, Sider } = Layout;
 
@@ -69,6 +67,7 @@ export default function EventosView() {
   const setEventsFilters = useFilterStore((state) => state.setEventsFilters);
   const filterByMapVehicles = useFilterStore((state) => state.events.filterByMapVehicles);
   const isFocusModeActive = useFilterStore((state) => state.events.focusMode);
+  const [isZonesDrawerOpen, setZonesDrawerOpen] = useState(false);
 
   const primarySelectedEventId = selectedEventIds[0] ?? null;
 
@@ -91,31 +90,6 @@ export default function EventosView() {
       setPaginationPage('events', Math.max(0, eventListTotalPages - 1));
     }
   }, [eventListTotalPages, eventsPage, setPaginationPage]);
-
-  const eventDropdownEntries = useMemo(
-    () =>
-      filteredEvents.map((event) => {
-        const timestamp = new Date(event.fechaCreacion);
-        const formattedTimestamp = Number.isNaN(timestamp.getTime())
-          ? event.fechaCreacion
-          : timestamp.toLocaleString('es-MX', { hour12: false });
-        const status = getOperationalStatusFromId(event.id) ?? 'abierto';
-        const unitName = event.vehicleId
-          ? generateVehicleName(event.vehicleId)
-          : event.responsable;
-
-        return {
-          id: event.id,
-          name: event.evento,
-          severity: event.severidad,
-          status,
-          unitName,
-          vehicleId: event.vehicleId,
-          timestamp: formattedTimestamp
-        };
-      }),
-    [filteredEvents]
-  );
 
   // Get actual vehicle markers from the shared Unidades generation
   const vehicleMarkers = useMemo(() => {
@@ -384,13 +358,6 @@ export default function EventosView() {
               flexDirection: 'column'
             }}
           >
-            <GlobalFilterBar
-              context="monitoreo"
-              eventEntries={eventDropdownEntries}
-              selectedEventId={primarySelectedEventId}
-              selectedEventIds={selectedEventIds}
-              onEventSelect={handleEventSelect}
-            />
             <Layout style={{ flex: 1, display: 'flex' }}>
               <Sider
                 width={sidebarWidth}
@@ -471,12 +438,15 @@ export default function EventosView() {
                   onToggleZonasVisibility={setShowZonasOnMap}
                   showEventsOnMap={showEventsOnMap}
                   onToggleEventsVisibility={setShowEventsOnMap}
+                  onOpenZonesDrawer={() => setZonesDrawerOpen(true)}
+                  isZonesDrawerOpen={isZonesDrawerOpen}
                 />
               </Content>
             </Layout>
           </Layout>
         </Layout>
       </div>
+      <ZonesDrawer open={isZonesDrawerOpen} onClose={() => setZonesDrawerOpen(false)} />
     </Layout>
   );
 }

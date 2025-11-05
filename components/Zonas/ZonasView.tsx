@@ -3,17 +3,15 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Layout, Skeleton, Spin } from 'antd';
 import MainNavTopMenu from '@/components/Layout/MainNavTopMenu';
-import ZonasSidebar from './ZonasSidebar';
 import CollapsibleMenu from '@/components/Layout/CollapsibleMenu';
 import dynamic from 'next/dynamic';
 import { useZonaStore } from '@/lib/stores/zonaStore';
 import { generateUnidades } from '@/lib/unidades/generateUnidades';
 import { isPointInZona, calculateCentroid, filterZonas } from '@/lib/zonas/generateZonas';
 import type { ZonaWithRelations } from '@/lib/zonas/types';
-import GlobalFilterBar from '@/components/Filters/GlobalFilterBar';
-import { usePaginationStore } from '@/lib/stores/paginationStore';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useFilterUiStore } from '@/lib/stores/filterUiStore';
+import ZonesDrawer from '@/components/Zonas/ZonesDrawer';
 
 const { Content, Sider } = Layout;
 
@@ -25,18 +23,10 @@ const ZonasMapView = dynamic(
 export default function ZonasView() {
   const [menuCollapsed, setMenuCollapsed] = useState(true);
   const [currentSection, setCurrentSection] = useState('zonas');
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('zonas-sidebar-width');
-      return saved ? parseInt(saved) : 450;
-    }
-    return 450;
-  });
+  const [sidebarWidth] = useState(450);
   const [isLoading, setIsLoading] = useState(true);
+  const [isZonesDrawerOpen, setZonesDrawerOpen] = useState(false);
   const zoneTagFilters = useFilterStore((state) => state.units.zoneTags);
-  const zonesPage = usePaginationStore((state) => state.page.zones);
-  const zonesPageSize = usePaginationStore((state) => state.pageSize.zones);
-  const setPaginationPage = usePaginationStore((state) => state.setPage);
 
   const { zonas, selectedZonaId, selectZona, searchQuery } = useZonaStore();
   const isZonesPending = useFilterUiStore((state) => state.pending.zones);
@@ -70,66 +60,9 @@ export default function ZonasView() {
     [zonas, searchQuery, zoneTagFilters]
   );
 
-  const zoneListTotalPages = filteredZonas.length === 0 ? 0 : Math.ceil(filteredZonas.length / zonesPageSize);
-  const clampedZonesPage = zoneListTotalPages === 0 ? 0 : Math.min(zonesPage, zoneListTotalPages - 1);
-
-  const paginatedZonas = useMemo(() => {
-    const start = clampedZonesPage * zonesPageSize;
-    return filteredZonas.slice(start, start + zonesPageSize);
-  }, [filteredZonas, clampedZonesPage, zonesPageSize]);
-
-  useEffect(() => {
-    if (zoneListTotalPages === 0) {
-      if (zonesPage !== 0) {
-        setPaginationPage('zones', 0);
-      }
-      return;
-    }
-    if (zonesPage >= zoneListTotalPages) {
-      setPaginationPage('zones', Math.max(0, zoneListTotalPages - 1));
-    }
-  }, [zoneListTotalPages, zonesPage, setPaginationPage]);
-
-  useEffect(() => {
-    setPaginationPage('zones', 0);
-  }, [searchQuery, zoneTagFilters, setPaginationPage]);
-
-  useEffect(() => {
-    if (!selectedZonaId || filteredZonas.length === 0) {
-      return;
-    }
-    const selectedIndex = filteredZonas.findIndex((zona) => zona.id === selectedZonaId);
-    if (selectedIndex === -1) {
-      return;
-    }
-    const targetPage = Math.floor(selectedIndex / zonesPageSize);
-    if (targetPage !== zonesPage) {
-      setPaginationPage('zones', targetPage);
-    }
-  }, [selectedZonaId, filteredZonas, zonesPageSize, zonesPage, setPaginationPage]);
-
   const handleZonaSelect = useCallback((zonaId: string | null) => {
     selectZona(zonaId);
   }, [selectZona]);
-
-  const handleSidebarResize = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = sidebarWidth;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const diff = moveEvent.clientX - startX;
-      setSidebarWidth(Math.max(450, Math.min(800, startWidth + diff)));
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
 
   // Generate mock vehicle and event data
   const vehicleMarkers = useMemo(() => {
@@ -194,45 +127,6 @@ export default function ZonasView() {
   }, [zonas]);
 
   // Calculate zona relationships
-  const zonasWithRelations: ZonaWithRelations[] = useMemo(() => {
-    return zonas.map((zona) => {
-      const vehicleCount = vehicleMarkers.filter((v) =>
-        isPointInZona(v.position, zona)
-      ).length;
-
-      const eventCount = eventMarkers.filter((e) =>
-        isPointInZona(e.position, zona)
-      ).length;
-
-      return {
-        ...zona,
-        vehicleCount,
-        eventCount
-      };
-    });
-  }, [zonas, vehicleMarkers, eventMarkers]);
-
-  const filteredZonasWithRelations = useMemo(() => {
-    const filteredIds = new Set(filteredZonas.map((zona) => zona.id));
-    return zonasWithRelations.filter((zona) => filteredIds.has(zona.id));
-  }, [filteredZonas, zonasWithRelations]);
-
-  const paginatedZonasWithRelations = useMemo(() => {
-    const start = clampedZonesPage * zonesPageSize;
-    return filteredZonasWithRelations.slice(start, start + zonesPageSize);
-  }, [filteredZonasWithRelations, clampedZonesPage, zonesPageSize]);
-
-  const zoneDropdownEntries = useMemo(
-    () =>
-      filteredZonas.map((zona) => ({
-        id: zona.id,
-        name: zona.nombre,
-        color: zona.color,
-        tags: zona.etiquetas ?? []
-      })),
-    [filteredZonas]
-  );
-
   if (isLoading) {
     return (
       <Layout className="h-screen">
@@ -267,7 +161,6 @@ export default function ZonasView() {
               flexDirection: 'column'
             }}
           >
-            <GlobalFilterBar context="zona" />
             <Layout style={{ flex: 1, display: 'flex' }}>
               <Sider
                 width={sidebarWidth}
@@ -334,78 +227,36 @@ export default function ZonasView() {
           />
         </div>
 
-        {/* Main Layout with Sidebar and Content */}
+        {/* Main Layout with Content */}
         <Layout
           style={{
             marginLeft: menuCollapsed ? '48px' : '240px',
             transition: 'margin-left 0.3s ease',
             height: '100%',
-            display: 'flex',
-            flexDirection: 'column'
+            display: 'flex'
           }}
         >
-          <GlobalFilterBar
-            context="zona"
-            zoneEntries={zoneDropdownEntries}
-            selectedZoneId={selectedZonaId}
-            onZoneSelect={handleZonaSelect}
-          />
-          <Layout style={{ flex: 1, display: 'flex' }}>
-            <Sider
-              width={sidebarWidth}
-              style={{
-                position: 'relative',
-                background: '#fff',
-                borderRight: '1px solid #f0f0f0',
-                boxShadow: '2px 0 8px 0 rgba(0,0,0,0.08)',
-                height: '100%',
-                overflow: 'hidden'
-              }}
-            >
-              <ZonasSidebar
-                zonasWithRelations={filteredZonasWithRelations}
-                displayedZonas={paginatedZonasWithRelations}
-                currentPage={clampedZonesPage}
-                totalPages={zoneListTotalPages}
-                pageSize={zonesPageSize}
-                onPageChange={(page) => setPaginationPage('zones', page)}
-              />
-              <div
-                onMouseDown={handleSidebarResize}
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '8px',
-                  cursor: 'col-resize',
-                  backgroundColor: 'transparent',
-                  zIndex: 1000
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cbd5e1'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              />
-            </Sider>
-
-            <Content className="relative" style={{ flex: 1, height: '100%' }}>
-              {isZonesPending && (
-                <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 1100 }}>
-                  <Spin size="small" />
-                </div>
-              )}
-              <ZonasMapView
-                zonas={paginatedZonas}
-                selectedZonaId={selectedZonaId}
-                onZonaSelect={handleZonaSelect}
-                vehicleMarkers={vehicleMarkers}
-                eventMarkers={eventMarkers}
-                showVehicleMarkers={true}
-                showEventMarkers={true}
-              />
-            </Content>
-          </Layout>
+          <Content className="relative" style={{ flex: 1, height: '100%' }}>
+            {isZonesPending && (
+              <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 1100 }}>
+                <Spin size="small" />
+              </div>
+            )}
+            <ZonasMapView
+              zonas={filteredZonas}
+              selectedZonaId={selectedZonaId}
+              onZonaSelect={handleZonaSelect}
+              vehicleMarkers={vehicleMarkers}
+              eventMarkers={eventMarkers}
+              showVehicleMarkers={true}
+              showEventMarkers={true}
+              onOpenZonesDrawer={() => setZonesDrawerOpen(true)}
+              isZonesDrawerOpen={isZonesDrawerOpen}
+            />
+          </Content>
         </Layout>
       </Layout>
+      <ZonesDrawer open={isZonesDrawerOpen} onClose={() => setZonesDrawerOpen(false)} />
     </Layout>
   );
 }

@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useUnifiedMap } from '@/lib/hooks/useUnifiedMap';
 import { useRouteStore } from '@/lib/stores/routeStore';
 import type { EventLocation } from '@/lib/events/generateEvent';
+import ZonesDrawer from '@/components/Zonas/ZonesDrawer';
 
 // Dynamically import the unified map
 const UnifiedMapView = dynamic(() => import('./UnifiedMapView'), { ssr: false });
@@ -52,6 +53,7 @@ export default function MainMapView({
   showVehicleMarkers = false
 }: MainMapViewProps = {}) {
   const { routes, isFullscreen, toggleFullscreen, focusedRouteId, setFocusedRoute } = useRouteStore();
+  const [isZonesDrawerOpen, setZonesDrawerOpen] = useState(false);
 
   // Adapt routes to the unified map format - filter out invalid routes
   // Hide all routes when hideRoutes is true (e.g., in Eventos tab)
@@ -155,6 +157,12 @@ export default function MainMapView({
         onEventSelect={onEventSelect}
         vehicleMarkers={vehicleMarkers}
         showVehicleMarkers={showVehicleMarkers}
+        onToggleZonesDrawer={() => setZonesDrawerOpen((prev) => !prev)}
+        isZonesDrawerOpen={isZonesDrawerOpen}
+      />
+      <ZonesDrawer
+        open={isZonesDrawerOpen}
+        onClose={() => setZonesDrawerOpen(false)}
       />
     </div>
   );

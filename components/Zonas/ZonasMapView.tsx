@@ -65,20 +65,24 @@ interface ZonasMapViewProps {
   zonas: Zona[];
   selectedZonaId: string | null;
   onZonaSelect: (zonaId: string | null) => void;
-  vehicleMarkers: VehicleMarkerData[];
-  eventMarkers: EventMarkerData[];
+  vehicleMarkers?: VehicleMarkerData[];
+  eventMarkers?: EventMarkerData[];
   showVehicleMarkers?: boolean;
   showEventMarkers?: boolean;
+  onOpenZonesDrawer?: () => void;
+  isZonesDrawerOpen?: boolean;
 }
 
 export default function ZonasMapView({
   zonas,
   selectedZonaId,
   onZonaSelect,
-  vehicleMarkers,
-  eventMarkers,
+  vehicleMarkers = [],
+  eventMarkers = [],
   showVehicleMarkers = true,
-  showEventMarkers = true
+  showEventMarkers = true,
+  onOpenZonesDrawer,
+  isZonesDrawerOpen = false
 }: ZonasMapViewProps) {
   const [map, setMap] = useState<L.Map | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -87,7 +91,6 @@ export default function ZonasMapView({
   const center: LatLngExpression = [20.6737, -103.3444]; // Guadalajara
   const zoom = 12;
   const isZonesPending = useFilterUiStore((state) => state.pending.zones);
-
   // Global map store for cross-view layer visibility
   const {
     showVehiclesOnMap,
@@ -402,17 +405,19 @@ export default function ZonasMapView({
       </MapContainer>
 
       {map && (
-      <MapToolbar
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
-        onRecenterRoute={handleRecenterZonas}
-        onToggleFullscreen={handleToggleFullscreen}
-        isFullscreen={isFullscreen}
-        layers={layerOptions}
-        labelLayers={labelLayers}
-        isFiltersPending={isZonesPending}
-      />
+        <MapToolbar
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetView={handleResetView}
+          onRecenterRoute={handleRecenterZonas}
+          onToggleFullscreen={handleToggleFullscreen}
+          isFullscreen={isFullscreen}
+          layers={layerOptions}
+          labelLayers={labelLayers}
+          isFiltersPending={isZonesPending}
+          onToggleZonesDrawer={onOpenZonesDrawer}
+          isZonesDrawerOpen={isZonesDrawerOpen}
+        />
       )}
     </div>
   );

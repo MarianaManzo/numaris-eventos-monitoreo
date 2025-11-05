@@ -104,6 +104,8 @@ interface UnifiedMapViewProps extends UnifiedMapProviderProps {
   vehicleCurrentPosition?: [number, number]; // Current position of the vehicle (for context-aware fitBounds in Historial view)
   vehicleMarkers?: VehicleMarkerData[]; // Vehicle markers to render on the map
   showVehicleMarkers?: boolean; // Whether to show vehicle markers
+  onToggleZonesDrawer?: () => void;
+  isZonesDrawerOpen?: boolean;
 }
 
 /**
@@ -129,7 +131,9 @@ export default function UnifiedMapView({
   selectedDate,
   vehicleCurrentPosition,
   vehicleMarkers = [],
-  showVehicleMarkers = false
+  showVehicleMarkers = false,
+  onToggleZonesDrawer,
+  isZonesDrawerOpen = false
 }: UnifiedMapViewProps) {
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
@@ -1318,6 +1322,8 @@ export default function UnifiedMapView({
         layers={layerOptions}
         labelLayers={labelLayers}
         isFiltersPending={isFiltersPending}
+        onToggleZonesDrawer={onToggleZonesDrawer}
+        isZonesDrawerOpen={isZonesDrawerOpen}
       />
     </div>
   );
